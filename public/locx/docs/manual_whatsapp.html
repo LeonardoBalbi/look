@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Manual WhatsApp - LocX</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:850px;margin:40px auto;padding:0 20px;color:#172033;line-height:1.6}
+    h1,h2{color:#0b6b55} code{background:#eef3f6;padding:3px 6px;border-radius:5px;word-break:break-all}
+    .alert{background:#fff4d6;border-left:4px solid #e5a400;padding:12px 16px}
+  </style>
+</head>
+<body>
+  <h1>Conectar WhatsApp Cloud API</h1>
+  <ol>
+    <li>No Meta for Developers, crie ou abra um aplicativo e adicione o produto <strong>WhatsApp</strong>.</li>
+    <li>Copie o <strong>Phone Number ID</strong> e gere um <strong>Access Token</strong> permanente.</li>
+    <li>No LocX, abra <strong>WhatsApp API</strong>, escolha <strong>Oficial</strong>, cole os dois dados e salve.</li>
+    <li>Clique em <strong>Validar credenciais</strong>.</li>
+    <li>Na Meta, configure a URL pública do webhook e use o mesmo <strong>Verify Token</strong> exibido no LocX.</li>
+  </ol>
+  <h2>Template de cobrança</h2>
+  <p>Crie e aprove na Meta o template <code>locx_cobranca_atraso</code>, em português, com cinco variáveis no corpo:</p>
+  <ol>
+    <li>Nome do cliente</li>
+    <li>Placa da motocicleta</li>
+    <li>Dias em atraso</li>
+    <li>Saldo atualizado</li>
+    <li>PIX copia e cola</li>
+  </ol>
+  <h2>Webhook</h2>
+  <p>Use este formato, trocando pelo seu domínio:</p>
+  <p><code>https://seusite.com/locx/webhooks/whatsapp.php</code></p>
+  <p class="alert"><strong>Importante:</strong> a Meta não consegue acessar localhost. O endereço precisa ser público e usar HTTPS.</p>
+</body>
+</html>

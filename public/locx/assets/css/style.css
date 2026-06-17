@@ -1,0 +1,451 @@
+:root{
+  --bg:#f5f7fb;
+  --bg2:#ffffff;
+  --panel:#ffffff;
+  --panel2:#f8fafc;
+  --line:#e2e8f0;
+  --text:#0f172a;
+  --muted:#64748b;
+  --blue:#2563eb;
+  --indigo:#4f46e5;
+  --purple:#7c3aed;
+  --green:#16a34a;
+  --cyan:#0ea5e9;
+  --yellow:#f59e0b;
+  --orange:#f97316;
+  --red:#ef4444;
+  --card:#ffffff;
+  --input:#ffffff;
+  --shadow:0 16px 40px rgba(15,23,42,.07);
+  --shadow-sm:0 8px 22px rgba(15,23,42,.06);
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;font-family:Inter,Arial,Helvetica,sans-serif;background:var(--bg);color:var(--text);font-size:14px}
+a{text-decoration:none;color:inherit}.app{display:flex;min-height:100vh}
+.sidebar{width:276px;background:#fff;border-right:1px solid var(--line);padding:22px 18px;display:flex;flex-direction:column;position:sticky;top:0;height:100vh;box-shadow:10px 0 30px rgba(15,23,42,.03);z-index:20}.brand{display:flex;gap:12px;align-items:center;margin-bottom:28px}.brand-icon{width:48px;height:48px;border-radius:15px;background:linear-gradient(135deg,var(--blue),var(--purple));display:grid;place-items:center;font-weight: 400color:white;box-shadow:0 12px 24px rgba(79,70,229,.22)}.brand strong{display:block;font-size:28px;letter-spacing:-1px;color:#111827}.brand strong b{color:var(--indigo)}.brand span{font-size:12px;color:var(--muted)}.nav-title{font-size:11px;text-transform:uppercase;color:#94a3b8;margin:8px 0 10px;font-weight: 400letter-spacing:.06em}.menu{display:grid;gap:6px}.menu a{color:#243044;padding:5px 5px;border-radius:12px;display:flex;gap:10px;align-items:center;font-weight:400;font-size:14px;transition:.18s ease}.menu a span{width:24px;text-align:center;color:#52617a}.menu a.active{background:linear-gradient(135deg,#eef2ff,#f5f3ff);color:var(--indigo);box-shadow:inset 3px 0 0 var(--indigo)}.menu a.active span{color:var(--indigo)}.menu a:hover{background:#f1f5f9;color:var(--indigo)}.sidebar-footer{font-size:12px}
+.main{flex:1;padding:22px 24px;max-width:calc(100vw - 276px)}.topbar{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:var(--shadow-sm)}.topbar h1{margin:0;font-size:27px;letter-spacing:-.6px}.topbar p{margin:6px 0 0;color:var(--muted)}.toolbar{display:flex;gap:10px;align-items:center}.btn,button{border:0;background:linear-gradient(135deg,var(--blue),var(--indigo));color:#fff;border-radius:10px;padding:11px 15px;font-weight: 400cursor:pointer;display:inline-flex;align-items:center;gap:8px;box-shadow:0 10px 18px rgba(37,99,235,.18);transition:.16s ease}.btn:hover,button:hover{transform:translateY(-1px)}.btn.secondary{background:#fff;color:#334155;border:1px solid var(--line);box-shadow:var(--shadow-sm)}.btn.danger{background:var(--red)}.btn.success{background:var(--green)}input,select,textarea{width:100%;border:1px solid #d8e0ec;border-radius:10px;padding:11px 13px;background:var(--input);color:var(--text);font-size:14px;outline:none;transition:.16s ease}input:focus,select:focus,textarea:focus{border-color:var(--blue);box-shadow:0 0 0 4px rgba(37,99,235,.10)}label{font-size:13px;color:#475569;display:grid;gap:7px;font-weight:600}.form label,.compact-form label{margin-bottom:14px}.form-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.form-grid label{margin-bottom:0}.span-2{grid-column:span 2}.span-3{grid-column:span 3}.cards{display:grid;grid-template-columns:repeat(4,minmax(170px,1fr));gap:16px;margin-bottom:18px}.metric{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px;box-shadow:var(--shadow);position:relative;overflow:hidden}.metric:after{content:"";position:absolute;right:18px;top:18px;width:48px;height:48px;background:linear-gradient(135deg,#eff6ff,#dbeafe);border-radius:14px}.metric.ok:after{background:linear-gradient(135deg,#ecfdf5,#dcfce7)}.metric.warn:after{background:linear-gradient(135deg,#fffbeb,#fef3c7)}.metric.danger:after{background:linear-gradient(135deg,#fef2f2,#fee2e2)}.metric span{font-size:13px;color:var(--muted);font-weight:400}.metric strong{display:block;font-size:25px;margin-top:8px;letter-spacing:-.5px;color:#0f172a}.metric small{color:var(--green);font-weight:400}.metric.warn small{color:var(--yellow)}.metric.danger small{color:var(--red)}.panel{background:#fff;border:1px solid var(--line);border-radius:20px;padding:20px;box-shadow:var(--shadow);margin-bottom:18px}.panel h2{margin:0 0 16px;font-size:20px}.panel h3{margin:14px 0 10px}.grid{display:grid;gap:18px}.grid.two{grid-template-columns:1fr 1fr}.grid.side{grid-template-columns:1.2fr .8fr}.module-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}.module-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;gap:12px;align-items:center;box-shadow:var(--shadow-sm)}.module-card i{font-style:normal;width:42px;height:42px;border-radius:13px;background:linear-gradient(135deg,#eff6ff,#eef2ff);color:var(--indigo);display:grid;place-items:center;font-size:20px}.section-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:14px}.table-wrap{overflow:auto;border:1px solid var(--line);border-radius:14px;background:#fff}table{width:100%;border-collapse:collapse;background:#fff}th,td{text-align:left;border-bottom:1px solid var(--line);padding:12px;font-size:14px;white-space:nowrap}th{color:#64748b;font-size:12px;text-transform:uppercase;background:#f8fafc;font-weight:400}tr:hover td{background:#f8fafc}.tag{display:inline-block;padding:6px 10px;border-radius:999px;font-size:12px;background:#f1f5f9;color:#475569;font-weight:400}.tag.ok{background:#dcfce7;color:#166534}.tag.info{background:#dbeafe;color:#1d4ed8}.tag.warn{background:#fef3c7;color:#92400e}.tag.danger{background:#fee2e2;color:#b91c1c}.tag.muted{background:#e2e8f0;color:#475569}.alert{background:#fef2f2;color:#b91c1c;border:1px solid #fecaca;border-radius:12px;padding:11px;margin-bottom:12px}.notice{background:#ecfdf5;color:#166534;border:1px solid #bbf7d0;border-radius:12px;padding:11px;margin-bottom:12px}.login-body{min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#eff6ff,#f8fafc 45%,#eef2ff)}.login-card{width:390px;background:#fff;color:#0f172a;border-radius:24px;padding:30px;display:grid;gap:13px;box-shadow:0 24px 80px rgba(15,23,42,.16);border:1px solid var(--line)}.login-card input{background:#fff;color:#0f172a}.login-card p,.login-card small{color:#475569}.login-card h1{margin:4px 0 0}.chart-bars{height:250px;display:flex;gap:14px;align-items:end;padding:18px 8px 6px;border-bottom:1px solid var(--line);background:linear-gradient(180deg,#fff,#f8fafc)}.bar-item{flex:1;text-align:center;height:100%;display:flex;flex-direction:column;justify-content:end;gap:8px}.bar-wrap{height:190px;display:flex;align-items:end;justify-content:center}.bar-wrap span{display:block;width:70%;border-radius:10px 10px 0 0;background:linear-gradient(180deg,#60a5fa,var(--blue));box-shadow:0 10px 24px rgba(37,99,235,.20)}.bar-item small{font-size:11px;color:var(--muted);font-weight:400}.donut-box{display:flex;gap:18px;align-items:center}.donut{width:180px;height:180px;border-radius:50%;display:grid;place-items:center;position:relative}.donut:after{content:"";position:absolute;inset:34px;background:#fff;border-radius:50%;box-shadow:inset 0 0 0 1px var(--line)}.donut strong,.donut span{position:relative;z-index:1;text-align:center}.donut strong{font-size:28px}.donut span{display:block;margin-top:32px;color:var(--muted);font-size:12px}.legend{flex:1}.legend p{display:flex;align-items:center;gap:8px;justify-content:space-between;color:#334155;font-weight:600}.legend b{width:10px;height:10px;border-radius:50%;display:inline-block;margin-right:auto}.checkgrid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:8px 0 14px}.checkgrid label{display:flex;align-items:center;gap:8px;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:9px}.checkgrid input,.perm-table input{width:auto}.perm-table{overflow:auto;border:1px solid var(--line);border-radius:12px}.actions{display:flex;gap:6px}.mobile-header,.mobile-menu-toggle,.mobile-menu-close,.mobile-menu-title,.mobile-menu-overlay{display:none}.empty{color:var(--muted);padding:12px}.filters{display:flex;gap:10px;flex-wrap:wrap}.filters select,.filters input{max-width:220px}
+@media(max-width:1100px){.cards,.module-grid{grid-template-columns:repeat(2,1fr)}.grid.two,.grid.side{grid-template-columns:1fr}.form-grid{grid-template-columns:1fr 1fr}.span-3{grid-column:1/-1}.main{padding:18px}}
+@media(max-width:768px){body{background:#f8fafc}.mobile-header{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:9999;background:#fff;border-bottom:1px solid var(--line);padding:12px 14px;box-shadow:var(--shadow-sm)}.mobile-header .brand{margin:0}.mobile-header .brand-icon{width:42px;height:42px;border-radius:12px}.mobile-header .brand strong{font-size:22px}.mobile-menu-toggle{display:grid;place-items:center;width:44px;height:44px;padding:0;background:#fff;color:#111827;border:1px solid var(--line);box-shadow:var(--shadow-sm);font-size:22px}.app{display:block}.sidebar{position:fixed;z-index:10002;left:0;top:0;height:100vh;width:84vw;max-width:330px;transform:translateX(-105%);transition:.25s ease;box-shadow:24px 0 70px rgba(15,23,42,.28);overflow:auto}.sidebar.is-open{transform:translateX(0)}.mobile-menu-overlay{display:block;position:fixed;inset:0;background:rgba(15,23,42,.45);z-index:10001;opacity:0;pointer-events:none;transition:.2s}.mobile-menu-overlay.is-open{opacity:1;pointer-events:auto}.mobile-menu-close{display:grid;place-items:center;margin-bottom:14px;background:#f8fafc;color:#0f172a;border:1px solid var(--line);box-shadow:none;width:100%}.mobile-menu-title{display:block;color:#fff;margin-bottom:8px}.main{max-width:100%;padding:14px}.topbar{display:block;padding:16px;margin-bottom:14px}.topbar h1{font-size:22px}.toolbar{margin-top:12px}.cards,.module-grid,.form-grid{grid-template-columns:1fr}.span-2,.span-3{grid-column:auto}.checkgrid{grid-template-columns:1fr}.metric strong{font-size:22px}.panel{padding:16px;border-radius:16px}.donut-box{display:block}.donut{margin:auto}.table-wrap{margin-left:-2px;margin-right:-2px}.filters select,.filters input{max-width:none}.btn,button{width:auto}body.menu-open{overflow:hidden}}
+
+
+/* =========================================================
+   LOCX V5 - CORREÇÃO RESPONSIVA GLOBAL
+   Mantém o layout claro aprovado e corrige overflow no celular.
+   ========================================================= */
+html,body{width:100%;max-width:100%;overflow-x:hidden}
+.app,.main,.topbar,.panel,.card,.metric,.module-card,.grid,.form-grid,.table-wrap,.login-card{min-width:0;max-width:100%}
+img,svg,canvas,video{max-width:100%;height:auto}
+input,select,textarea{display:block;width:100%;max-width:100%;min-width:0}
+label{min-width:0;max-width:100%}
+.form-grid>*{min-width:0}
+.table-wrap{width:100%;overflow-x:auto;-webkit-overflow-scrolling:touch}
+table{min-width:680px}
+.mobile-menu-toggle{touch-action:manipulation}
+
+@media(max-width:768px){
+  body{width:100%;max-width:100%;overflow-x:hidden;background:#f8fafc}
+  .mobile-header{display:flex!important;width:100%;max-width:100%;min-width:0}
+  .app{display:block!important;width:100%;max-width:100%;min-width:0;overflow:hidden}
+  .main{display:block!important;width:100%!important;max-width:100%!important;min-width:0!important;margin:0!important;padding:14px!important;overflow:hidden}
+  .topbar{width:100%;max-width:100%;min-width:0;display:block!important;margin:0 0 14px!important;padding:16px!important;border-radius:16px}
+  .toolbar{display:flex;flex-wrap:wrap;gap:8px;width:100%;max-width:100%}
+  .toolbar .btn,.toolbar button{width:100%;justify-content:center}
+  .panel{width:100%;max-width:100%;min-width:0;margin:0 0 14px!important;padding:16px!important;border-radius:16px;overflow:hidden}
+  .cards,.module-grid,.grid,.grid.two,.grid.side,.form-grid{display:grid!important;grid-template-columns:minmax(0,1fr)!important;width:100%;max-width:100%;min-width:0;gap:14px!important}
+  .span-2,.span-3{grid-column:1/-1!important}
+  .metric,.module-card{width:100%;max-width:100%;min-width:0}
+  label{width:100%;max-width:100%;min-width:0;display:grid;gap:7px;margin-bottom:0!important}
+  input,select,textarea{width:100%!important;max-width:100%!important;min-width:0!important}
+  textarea{min-height:92px}
+  .btn,button{max-width:100%;white-space:normal}
+  .section-head{display:block}.section-head .btn{margin-top:10px;width:100%;justify-content:center}
+  .filters{display:grid;grid-template-columns:1fr;width:100%;gap:8px}.filters select,.filters input{width:100%;max-width:100%}
+  .checkgrid{display:grid!important;grid-template-columns:1fr!important}
+  .donut-box{display:block!important}.donut{max-width:180px;max-height:180px;margin:0 auto 12px}
+  .chart-bars{min-width:520px}.panel:has(.chart-bars){overflow-x:auto;-webkit-overflow-scrolling:touch}
+  .table-wrap{overflow-x:auto;width:100%;max-width:100%}
+  th,td{font-size:12px;padding:10px}
+  .sidebar{position:fixed!important;left:0!important;top:0!important;height:100dvh!important;width:min(86vw,330px)!important;max-width:330px!important;transform:translateX(-110%)!important;transition:transform .25s ease!important;z-index:10002!important;overflow-y:auto!important;overflow-x:hidden!important}
+  .sidebar.is-open,.sidebar.open{transform:translateX(0)!important}
+  .mobile-menu-overlay{display:block!important;position:fixed!important;inset:0!important;background:rgba(15,23,42,.45)!important;z-index:10001!important;opacity:0;pointer-events:none;transition:.2s}
+  .mobile-menu-overlay.is-open{opacity:1!important;pointer-events:auto!important}
+  body.menu-open{overflow:hidden!important}
+}
+
+/* =========================================================
+   LOCX V6.2 - FORMULÁRIO EM CIMA / LISTAGEM EMBAIXO
+   Mantém os campos do formulário no layout original.
+   Apenas remove o bloco lateral direito das páginas de cadastro.
+   ========================================================= */
+.grid.side{
+  grid-template-columns:minmax(0,1fr)!important;
+  width:100%;
+}
+.grid.side > .panel{
+  width:100%;
+  max-width:100%;
+  min-width:0;
+}
+
+/* =========================================================
+   LOCX V6.3 - DASHBOARD EXECUTIVO: 4 GRÁFICOS EM 1 LINHA
+   RECEITA | STATUS | RECEBIDO | OPERAÇÃO
+   ========================================================= */
+.kpi-row{margin-bottom:18px}
+.chart-row.four{
+  display:grid;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+  gap:16px;
+  margin-bottom:18px;
+}
+.chart-card{
+  min-height:382px;
+  padding:18px;
+  overflow:hidden;
+}
+.chart-head{
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:12px;
+  margin-bottom:16px;
+}
+.chart-head span{
+  display:block;
+  color:#64748b;
+  font-size:11px;
+  line-height:1;
+  font-weight: 400
+  letter-spacing:.08em;
+  text-transform:uppercase;
+  margin-bottom:7px;
+}
+.chart-head h2{
+  margin:0;
+  font-size:17px;
+  letter-spacing:-.2px;
+  color:#0f172a;
+}
+.chart-head strong{
+  font-size:15px;
+  color:#0f172a;
+  font-weight: 400
+  white-space:nowrap;
+  background:#f8fafc;
+  border:1px solid #e2e8f0;
+  border-radius:999px;
+  padding:7px 10px;
+}
+.donut-premium{
+  display:grid;
+  grid-template-rows:auto 1fr;
+  gap:16px;
+  align-items:center;
+}
+.donut-premium-chart{
+  width:172px;
+  height:172px;
+  border-radius:50%;
+  margin:0 auto;
+  position:relative;
+  box-shadow:inset 0 0 0 1px rgba(15,23,42,.08), 0 14px 26px rgba(15,23,42,.08);
+}
+.donut-premium-chart:after{
+  content:"";
+  position:absolute;
+  inset:36px;
+  background:#fff;
+  border-radius:50%;
+  box-shadow:inset 0 0 0 1px #e2e8f0;
+}
+.donut-premium-center{
+  position:absolute;
+  inset:42px;
+  z-index:2;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+}
+.donut-premium-center strong{
+  font-size:16px;
+  line-height:1.08;
+  color:#0f172a;
+  font-weight:600;
+  letter-spacing:-.6px;
+}
+.donut-premium-center span{
+  margin-top:5px;
+  color:#64748b;
+  font-size:11px;
+  font-weight: 400
+  text-transform:uppercase;
+  letter-spacing:.04em;
+}
+.donut-premium-legend{
+  display:grid;
+  gap:8px;
+}
+.legend-line{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) auto 42px;
+  align-items:center;
+  gap:8px;
+  padding:8px 0;
+  border-bottom:1px solid #eef2f7;
+  color:#334155;
+}
+.legend-line:last-child{border-bottom:0}
+.legend-name{
+  display:flex;
+  align-items:center;
+  min-width:0;
+  gap:8px;
+  font-weight: 400
+  font-size:12px;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.legend-name i{
+  width:10px;
+  height:10px;
+  border-radius:50%;
+  display:inline-block;
+  flex:0 0 auto;
+}
+.legend-line b{
+  font-size:12px;
+  color:#0f172a;
+  font-weight: 400
+  white-space:nowrap;
+}
+.legend-line small{
+  text-align:right;
+  color:#64748b;
+  font-size:11px;
+  font-weight: 400
+}
+.mini-bars-premium{
+  min-height:260px;
+  display:flex;
+  align-items:center;
+}
+.mini-bars-list{
+  width:100%;
+  display:grid;
+  gap:18px;
+}
+.mini-bar-row{display:grid;gap:8px}
+.mini-bar-top{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+}
+.mini-bar-top span{
+  color:#334155;
+  font-size:12px;
+  font-weight:850;
+  white-space:nowrap;
+  overflow:hidden;
+  text-overflow:ellipsis;
+}
+.mini-bar-top b{
+  color:#0f172a;
+  font-size:12px;
+  font-weight:950;
+  white-space:nowrap;
+}
+.mini-bar-track{
+  height:10px;
+  background:#edf2f7;
+  border-radius:999px;
+  overflow:hidden;
+}
+.mini-bar-track i{
+  display:block;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg,#60a5fa,#2563eb);
+  box-shadow:0 8px 16px rgba(37,99,235,.16);
+}
+.chart-wide-panel{padding:18px 20px 14px}
+.chart-bars.clean{
+  height:236px;
+  border:1px solid #eef2f7;
+  border-radius:16px;
+  padding:18px 14px 10px;
+  background:linear-gradient(180deg,#ffffff,#f8fafc);
+}
+.chart-bars.clean .bar-wrap{height:174px}
+.chart-bars.clean .bar-wrap span{width:62%;background:linear-gradient(180deg,#93c5fd,#2563eb)}
+.chart-bars.clean .bar-item small{font-size:10px;color:#64748b}
+.dashboard-tables{margin-top:0}
+@media(max-width:1280px){
+  .chart-row.four{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media(max-width:768px){
+  .chart-row.four{grid-template-columns:1fr!important;gap:14px!important}
+  .chart-card{min-height:auto;padding:16px!important}
+  .chart-head{display:block}
+  .chart-head strong{display:inline-block;margin-top:10px}
+  .donut-premium-chart{width:164px;height:164px}
+  .legend-line{grid-template-columns:minmax(0,1fr) auto 38px}
+  .mini-bars-premium{min-height:auto}
+  .chart-bars.clean{min-width:560px}
+}
+
+
+/* =========================================================
+   LOCX V6.4 - RELATÓRIOS EM 2 COLUNAS + GRÁFICOS ALINHADOS
+   ========================================================= */
+.report-charts{display:grid!important;grid-template-columns:repeat(2,minmax(0,1fr))!important;gap:18px!important;align-items:stretch;width:100%}
+.report-chart-card{min-width:0;min-height:340px;display:flex;flex-direction:column}
+.report-chart-card h2{font-size:20px;line-height:1.15;margin-bottom:18px;color:#0f172a;letter-spacing:-.25px}
+.report-bars{flex:1;height:270px!important;min-width:0!important;display:flex;align-items:end;gap:18px;padding:22px 18px 12px!important;border:1px solid #eef2f7!important;border-radius:16px;background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%)!important;overflow:hidden}
+.report-bars .bar-item{min-width:0;gap:10px}
+.report-bars .bar-wrap{height:194px;display:flex;align-items:end}
+.report-bars .bar-wrap span{width:68%;max-width:76px;min-width:34px;border-radius:11px 11px 4px 4px;background:linear-gradient(180deg,#60a5fa 0%,#2563eb 100%);box-shadow:0 12px 22px rgba(37,99,235,.18)}
+.report-bars .bar-item small{font-size:11px;line-height:1.2;font-weight:750;color:#475569;white-space:normal;text-align:center;min-height:28px}
+.report-donut{flex:1;display:grid!important;grid-template-columns:240px minmax(0,1fr);gap:22px;align-items:center;padding:12px 10px 6px}
+.report-donut .donut{width:218px;height:218px;margin:0 auto;box-shadow:0 14px 28px rgba(15,23,42,.08)}
+.report-donut .donut:after{inset:44px}.report-donut .donut strong{font-size:32px;letter-spacing:-.6px}.report-donut .donut span{font-size:11px;margin-top:38px;color:#64748b;text-transform:uppercase;font-weight:850}
+.report-donut .legend{width:100%;display:grid;gap:10px;align-content:center}.report-donut .legend p{margin:0;display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:10px;align-items:center;padding:10px 12px;border:1px solid #eef2f7;border-radius:12px;background:#fbfdff;color:#334155;font-size:13px;font-weight:750}.report-donut .legend b{width:10px;height:10px;margin:0}.report-donut .legend span{font-weight: 400color:#0f172a;text-align:right}
+.menu a span{width:28px;height:28px;display:grid;place-items:center;border-radius:10px;background:#f8fafc;color:#64748b;flex:0 0 28px}.menu a span svg{width:17px;height:17px;stroke:currentColor;stroke-width:1.9;fill:none;stroke-linecap:round;stroke-linejoin:round}.menu a.active span,.menu a:hover span{background:#eef2ff;color:#4f46e5}
+@media(max-width:1100px){.report-charts{grid-template-columns:1fr!important}}
+@media(max-width:768px){.report-charts{grid-template-columns:1fr!important;gap:14px!important}.report-chart-card{min-height:auto}.report-bars{min-width:560px!important;height:245px!important}.report-donut{grid-template-columns:1fr!important;gap:14px;padding:4px 0 0}.report-donut .donut{width:190px;height:190px}.report-donut .donut:after{inset:38px}}
+
+
+/* =========================================================
+   LOCX V6.6 - CORREÇÃO DEFINITIVA DO DONUT DE RELATÓRIOS
+   Centraliza "180" e "TOTAL" exatamente no miolo branco.
+   Também garante exibição dos valores acima das barras.
+   ========================================================= */
+.report-donut .donut{
+  position:relative!important;
+  display:block!important;
+  flex:0 0 auto;
+}
+.report-donut .donut:after{
+  z-index:1!important;
+  pointer-events:none;
+}
+.report-donut .donut strong{
+  position:absolute!important;
+  top:50%!important;
+  left:50%!important;
+  transform:translate(-50%,-62%)!important;
+  z-index:3!important;
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  line-height:1!important;
+  text-align:center!important;
+  font-size:33px!important;
+  font-weight:950!important;
+  color:#0f172a!important;
+  letter-spacing:-.8px!important;
+}
+.report-donut .donut span{
+  position:absolute!important;
+  top:50%!important;
+  left:50%!important;
+  transform:translate(-50%,18px)!important;
+  z-index:3!important;
+  display:block!important;
+  margin:0!important;
+  padding:0!important;
+  line-height:1!important;
+  text-align:center!important;
+  font-size:11px!important;
+  font-weight:400!important;
+  color:#64748b!important;
+  text-transform:uppercase!important;
+  letter-spacing:.05em!important;
+}
+
+/* Garante valor em moeda acima de cada barra do faturamento por loja */
+.report-bars .bar-value{
+  display:block!important;
+  visibility:visible!important;
+  opacity:1!important;
+  min-height:18px!important;
+  margin:0 0 8px 0!important;
+  color:#0f172a!important;
+  font-size:14px!important;
+  line-height:1!important;
+  font-weight:400!important;
+  letter-spacing:-.2px!important;
+  text-align:center!important;
+  white-space:nowrap!important;
+}
+.report-bars .bar-item{
+  display:flex!important;
+  flex-direction:column!important;
+  justify-content:flex-end!important;
+  align-items:stretch!important;
+}
+
+
+/* LOGOTIPO SIDEBAR */
+.empresa-logo{
+ width:100%;
+ margin:15px 0;
+  
+ border-radius:14px;
+ background:#fff;
+ text-align:center;
+}
+.empresa-logo img{
+ max-width:180px;
+ max-height:90px;
+ width:auto;
+ height:auto;
+ object-fit:contain;
+}
+
+
+/* =========================================================
+   LOCX - CORREÇÃO DEFINITIVA DOS ÍCONES
+   Ícones outline, legíveis e sem preenchimento preto.
+   ========================================================= */
+.menu a span,
+.module-card i{
+  color:#2563eb!important;
+  background:#eef4ff!important;
+}
+.menu a span svg,
+.module-card i svg{
+  width:22px!important;
+  height:22px!important;
+  display:block!important;
+  stroke:currentColor!important;
+  fill:none!important;
+  stroke-width:2.1!important;
+  stroke-linecap:round!important;
+  stroke-linejoin:round!important;
+}
+.module-card i{
+  width:44px!important;
+  height:44px!important;
+  min-width:44px!important;
+  border-radius:14px!important;
+  display:grid!important;
+  place-items:center!important;
+  font-size:0!important;
+}
+.module-card:hover i,
+.menu a:hover span,
+.menu a.active span{
+  color:#4f46e5!important;
+  background:#e9ecff!important;
+}
+
+
+/* LOCX V8 - WhatsApp API */
+code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:#334155;word-break:break-all;max-width:100%}
+.actions form{margin:0}.actions .btn{padding:8px 10px;font-size:12px;box-shadow:none}
+.module-card[href]{cursor:pointer}

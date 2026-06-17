@@ -1,73 +1,72 @@
-A estrutura das telas já existe, mas o código usa uma versão antiga da API da Meta (v20.0) e o “teste” do PagBank atualmente não faz uma chamada real. Vou conferir a documentação oficial atual e ajustar isso com cuidado.
+# LOCX Laravel v9 - Final sem licenciamento
 
+Esta versão foi limpa para instalação local/servidor sem dependência de licença.
 
+Removido/desativado:
 
+- `license.json`
+- pasta de gerador de licença
+- `private_key.pem`
+- `public_key.pem`
+- validação de domínio/IP/banco por licença
+- qualquer bloqueio de instalação por licença
 
-Executou 4 comandos e pesquisou na webGraph API version WhatsApp Cloud API messages current | developers.facebook.com
+## Importante
 
-Graph API version 2026 | developers.facebook.com
+Extraia este ZIP em uma pasta nova. Não jogue por cima da pasta antiga, porque arquivos antigos de licenciamento podem continuar lá.
 
+Exemplo:
 
+```bash
+cd D:\
+```
 
+Extraia o ZIP e entre na pasta:
 
+```bash
+cd locx-laravel-v9-final-sem-licenca
+copy .env.example .env
+composer install
+php artisan key:generate
+php artisan migrate:fresh --seed
+php artisan serve
+```
 
+Acesse:
 
+```text
+http://127.0.0.1:8000/locx/index.php
+```
 
-Executado Get-Content bootstrap\app.php -Raw; Get-Content resources\views\locx\index.php -TotalCount 120; Get-Content app\Locx\auth.php -Raw
+Login inicial:
 
+```text
+admin@locx.com.br
+123456
+```
 
+## Se já existia banco antigo
 
+Se puder apagar tudo e recriar:
 
+```bash
+php artisan migrate:fresh --seed
+```
 
+Se não puder apagar os dados, crie outro banco vazio e configure o `.env`:
 
+```env
+DB_DATABASE=locx_laravel
+DB_USERNAME=root
+DB_PASSWORD=
+```
 
-Executado php artisan migrate:status; php artisan route:list --path=locxpor 2s
+Depois rode:
 
+```bash
+php artisan migrate --seed
+```
 
+## Observação
 
-
-
-
-
-Executado @'
-<?php
-$lines=file('.env', FILE_IGNORE_NEW_LINES);
-$key=''; $cipher='';
-foreach($lines as $line){ if(str_starts_with($line,'APP_KEY='))$key=substr($line,8); if(str_starts_with($line,'APP_CIPHER='))$cipher=substr($line,11); }
-$raw=str_starts_with($key,'base64:') ? base64_decode(substr($key,7), true) : $key;
-echo json_encode(['encoded_length'=>strlen($key),'decoded_valid'=>$raw!==false,'decoded_length'=>$raw===false?null:strlen($raw),'cipher'=>$cipher], JSON_PRETTY_PRINT), PHP_EOL;
-?>
-'@ | php
-
-
-
-
-
-
-
-Executado if (Get-Command rg -ErrorAction SilentlyContinue) { rg -n "csrf|validateCsrf|withoutMiddleware|VerifyCsrf|APP_CIPHER|APP_KEY|graph.facebook.com|CURLOPT_SSL|notification_urls|x-idempotency" -g "!vendor" -g "!storage" . }
-
-
-
-
-
-
-
-"Consultar pedido através de parâmetros" reference_id GET orders | developer.pagbank.com.br
-
-https://developer.pagbank.com.br/reference/confirmar-autenticidade-da-notificacao
-
-https://developer.pagbank.com.br/reference/criar-pedido
-
-
-
-
-
-
-
-
-
-
-
-
-Vou fazer quatro ajustes objetivos: atualizar a Meta para a versão atual configurável, transformar o teste do WhatsApp em validação real das credenciais, adicionar proteção contra webhook falso/duplicado do PagBank e usar idempotência ao criar PIX. Depois testo tudo em modo demo.
+O Laravel já possui a função global `e()` e `redirect()`. Nesta versão, os conflitos com funções antigas do LOCX foram ajustados.
