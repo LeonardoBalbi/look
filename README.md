@@ -1,4 +1,4 @@
-# LOCX Laravel v9 - Final sem licenciamento
+# LOCX Laravel
 
 Esta versão foi limpa para instalação local/servidor sem dependência de licença.
 
