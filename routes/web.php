@@ -3,7 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\LocxController;
 
-Route::get('/', fn () => redirect('/locx/index.php'));
+Route::get('/', fn () => redirect()->route('locx.index'));
 
 Route::prefix('locx')->group(function () {
     Route::any('/', [LocxController::class, 'index']);

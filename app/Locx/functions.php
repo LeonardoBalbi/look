@@ -6,6 +6,14 @@ function moeda($v){ return 'R$ '.number_format((float)$v,2,',','.'); }
 if (!function_exists('locx_redirect')) {
   function locx_redirect($url){ header('Location: '.$url); exit; }
 }
+if (!function_exists('locx_asset')) {
+  function locx_asset($path){
+    $relative = 'locx/'.ltrim((string)$path, '/');
+    $url = asset($relative);
+    $file = public_path(str_replace('/', DIRECTORY_SEPARATOR, $relative));
+    return is_file($file) ? $url.'?v='.filemtime($file) : $url;
+  }
+}
 function perfil_nome($p){
   $m=['administrador_geral'=>'Administrador Geral','diretor'=>'Diretor','financeiro'=>'Financeiro','gerente_loja'=>'Gerente de Loja','atendente'=>'Atendente','cobranca'=>'Cobrança'];
   return $m[$p] ?? $p;

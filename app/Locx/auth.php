@@ -4,7 +4,7 @@ require_once __DIR__.'/database.php';
 require_once __DIR__.'/functions.php';
 require_once __DIR__.'/pagbank.php';
 function usuario(){ return $_SESSION['usuario'] ?? null; }
-function exigir_login(){ if(!usuario()) locx_redirect('login.php'); }
+function exigir_login(){ if(!usuario()) locx_redirect(route('locx.login')); }
 function eh_admin(){
   $u=usuario();
   if(!$u) return false;

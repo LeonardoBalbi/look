@@ -38,6 +38,39 @@ Acesse:
 http://127.0.0.1:8000/locx/index.php
 ```
 
+## Publicação no servidor
+
+O domínio ou subdomínio deve apontar para a pasta `public` do projeto, não para a
+raiz onde ficam `app`, `vendor` e `.env`.
+
+No `.env` de produção, configure a URL pública exata:
+
+```env
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://seu-dominio.com
+```
+
+Se a aplicação estiver em uma subpasta, inclua essa subpasta:
+
+```env
+APP_URL=https://seu-dominio.com/sistema
+```
+
+Depois de publicar ou alterar o `.env`, limpe os caches:
+
+```bash
+php artisan optimize:clear
+php artisan config:cache
+```
+
+Garanta permissão de escrita para `storage` e `bootstrap/cache`. Para confirmar
+os arquivos visuais, abra diretamente:
+
+```text
+https://seu-dominio.com/locx/assets/css/style.css
+```
+
 Login inicial:
 
 ```text
