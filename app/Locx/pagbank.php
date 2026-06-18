@@ -28,11 +28,7 @@ function pagbank_base_url($cfg){
 function pagbank_limpar_doc($v){ return preg_replace('/\D+/', '', (string)$v); }
 function pagbank_valor_centavos($v){ return (int)round(((float)$v)*100); }
 function pagbank_webhook_padrao(){
-  $https = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
-  $host = $_SERVER['HTTP_HOST'] ?? 'seudominio.com.br';
-  $base = rtrim(dirname($_SERVER['SCRIPT_NAME'] ?? '/locx/index.php'), '/\\');
-  if(substr($base,-9)==='/webhooks') $base = dirname($base);
-  return $https.'://'.$host.$base.'/webhooks/pagbank.php';
+  return route('locx.webhook-pagbank');
 }
 function pagbank_request($pdo,$method,$path,$payload=null,$extraHeaders=[]){
   $cfg=pagbank_config($pdo);

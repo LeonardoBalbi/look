@@ -18,11 +18,6 @@ class LocxController extends Controller
         $path = resource_path('views/locx/'.$safe);
         abort_unless(is_file($path), 404);
 
-        $oldScriptName = $_SERVER['SCRIPT_NAME'] ?? null;
-        $oldPhpSelf = $_SERVER['PHP_SELF'] ?? null;
-        $_SERVER['SCRIPT_NAME'] = '/locx/'.ltrim(str_replace('\\', '/', $safe), '/');
-        $_SERVER['PHP_SELF'] = $_SERVER['SCRIPT_NAME'];
-
         ob_start();
         try {
             require $path;
@@ -31,13 +26,8 @@ class LocxController extends Controller
             if (ob_get_level() > 0) {
                 ob_end_clean();
             }
-            if ($oldScriptName !== null) { $_SERVER['SCRIPT_NAME'] = $oldScriptName; }
-            if ($oldPhpSelf !== null) { $_SERVER['PHP_SELF'] = $oldPhpSelf; }
             throw $e;
         }
-
-        if ($oldScriptName !== null) { $_SERVER['SCRIPT_NAME'] = $oldScriptName; }
-        if ($oldPhpSelf !== null) { $_SERVER['PHP_SELF'] = $oldPhpSelf; }
 
         return response($html);
     }

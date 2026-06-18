@@ -35,7 +35,7 @@ php artisan serve
 Acesse:
 
 ```text
-http://127.0.0.1:8000/locx/index.php
+http://127.0.0.1:8000/
 ```
 
 ## Publicação no servidor

@@ -13,7 +13,13 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         // O sistema original não possui token CSRF nos formulários.
         // Esta exceção mantém as telas antigas funcionando com Laravel por trás.
-        $middleware->validateCsrfTokens(except: ['locx/*']);
+        $middleware->validateCsrfTokens(except: [
+            '/',
+            'login',
+            'logout',
+            'webhooks/*',
+            'locx/*',
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
