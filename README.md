@@ -65,3 +65,11 @@ logo e manuais.
 ```bash
 php artisan test
 ```
+
+## Alternativa com n8n
+
+A branch `codex/n8n-automacoes` inclui cinco workflows opcionais para lembretes,
+PIX no vencimento, cobrança, aviso ao gerente e confirmação de pagamento.
+
+Consulte [n8n/README.md](n8n/README.md). O envio direto pelo Laravel permanece
+disponível, permitindo comparar as duas abordagens.

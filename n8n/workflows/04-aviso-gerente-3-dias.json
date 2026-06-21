@@ -1,0 +1,55 @@
+{
+  "name": "LocX 04 - Aviso ao gerente após 3 dias",
+  "nodes": [
+    {
+      "parameters": {"rule": {"interval": [{"field": "cronExpression", "expression": "15 9 * * *"}]}},
+      "id": "schedule-gerente",
+      "name": "Todos os dias 09:15",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.LOCX_API_URL}}/api/n8n/automacoes/pendentes?tipo=aviso_gerente_3_dias",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Authorization", "value": "=Bearer {{$env.LOCX_N8N_TOKEN}}"}, {"name": "Accept", "value": "application/json"}]},
+        "options": {}
+      },
+      "id": "buscar-avisos-gerente",
+      "name": "Buscar avisos pendentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {"fieldToSplitOut": "eventos", "options": {}},
+      "id": "separar-avisos",
+      "name": "Separar eventos",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.LOCX_API_URL}}/api/n8n/automacoes/{{$json.id}}/executar",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Authorization", "value": "=Bearer {{$env.LOCX_N8N_TOKEN}}"}, {"name": "Accept", "value": "application/json"}]},
+        "options": {}
+      },
+      "id": "executar-aviso-gerente",
+      "name": "Avisar gerente",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0]
+    }
+  ],
+  "connections": {
+    "Todos os dias 09:15": {"main": [[{"node": "Buscar avisos pendentes", "type": "main", "index": 0}]]},
+    "Buscar avisos pendentes": {"main": [[{"node": "Separar eventos", "type": "main", "index": 0}]]},
+    "Separar eventos": {"main": [[{"node": "Avisar gerente", "type": "main", "index": 0}]]}
+  },
+  "settings": {"timezone": "America/Sao_Paulo"},
+  "active": false
+}

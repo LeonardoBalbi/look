@@ -23,6 +23,9 @@ class WhatsAppService
                 'verify_token' => 'locx_webhook_token',
                 'template_cobranca' => 'locx_cobranca_atraso',
                 'template_lembrete' => 'locx_lembrete_vencimento',
+                'template_vencimento' => 'locx_vencimento_pix',
+                'template_pagamento' => 'locx_pagamento_confirmado',
+                'template_gerente' => 'locx_aviso_gerente',
                 'template_bloqueio' => 'locx_aviso_bloqueio',
             ]
         );
@@ -65,7 +68,6 @@ class WhatsAppService
     {
         $cobranca->loadMissing('cliente', 'contrato.motocicleta');
         $config = $this->config();
-        $telefone = $this->normalizarTelefone($cobranca->cliente->whatsapp);
         $dias = $this->calculator->diasAtrasoAteDomingo($cobranca->vencimento);
         $saldo = $this->calculator->valorAtualizado(
             $cobranca->valor_principal,
@@ -79,17 +81,59 @@ class WhatsAppService
             .($cobranca->pix_copia_cola ? "\n\nPIX copia e cola:\n{$cobranca->pix_copia_cola}" : '')
             ."\n\nRegularize o pagamento para evitar bloqueio e recolhimento da motocicleta.";
 
+        $resultado = $this->enviarTemplate(
+            telefone: $cobranca->cliente->whatsapp,
+            template: $config->template_cobranca,
+            parametros: [
+                'customer_name' => $cobranca->cliente->nome,
+                'vehicle_plate' => $placa ?: 'não informada',
+                'days_overdue' => (string) $dias,
+                'updated_balance' => Locx::moeda($saldo),
+                'pix_code' => $cobranca->pix_copia_cola ?: 'não disponível',
+            ],
+            mensagem: $mensagem,
+            tipo: 'cobranca_inadimplencia',
+            cobranca: $cobranca,
+        );
+
+        if ($resultado['ok'] ?? false) {
+            $cobranca->update(['whatsapp_status' => ! empty($resultado['demo']) ? 'demo' : 'enviado']);
+        }
+
+        return $resultado;
+    }
+
+    public function enviarTemplate(
+        ?string $telefone,
+        string $template,
+        array $parametros,
+        string $mensagem,
+        string $tipo,
+        ?Cobranca $cobranca = null,
+    ): array {
+        $config = $this->config();
+        $telefone = $this->normalizarTelefone($telefone);
+
         if (! $telefone) {
-            return $this->registrarFalha($cobranca, '', $mensagem, 'Telefone inválido');
+            $this->log($cobranca, '', $mensagem, 'erro', null, null, 'Telefone inválido', $tipo);
+
+            return ['ok' => false, 'erro' => 'Telefone inválido'];
         }
         if (! $config->ativo) {
-            return $this->registrarFalha($cobranca, $telefone, $mensagem, 'WhatsApp API inativa');
+            $this->log($cobranca, $telefone, $mensagem, 'erro', null, null, 'WhatsApp API inativa', $tipo);
+
+            return ['ok' => false, 'erro' => 'WhatsApp API inativa'];
         }
         if ($config->modo === 'demo') {
-            $this->log($cobranca, $telefone, $mensagem, 'demo', 200, 'Envio simulado');
-            $cobranca->update(['whatsapp_status' => 'demo']);
+            $this->log($cobranca, $telefone, $mensagem, 'demo', 200, 'Envio simulado', null, $tipo);
 
             return ['ok' => true, 'demo' => true];
+        }
+        if (! $config->phone_number_id || ! $config->access_token || ! $template) {
+            $erro = 'Phone Number ID, Access Token ou template não configurado.';
+            $this->log($cobranca, $telefone, $mensagem, 'erro', null, null, $erro, $tipo);
+
+            return ['ok' => false, 'erro' => $erro];
         }
 
         $payload = [
@@ -97,49 +141,39 @@ class WhatsAppService
             'to' => $telefone,
             'type' => 'template',
             'template' => [
-                'name' => $config->template_cobranca,
+                'name' => $template,
                 'language' => ['code' => 'pt_BR'],
                 'components' => [[
                     'type' => 'body',
-                    'parameters' => [
-                        [
+                    'parameters' => collect($parametros)
+                        ->map(fn ($valor, $nome) => [
                             'type' => 'text',
-                            'parameter_name' => 'customer_name',
-                            'text' => $cobranca->cliente->nome,
-                        ],
-                        [
-                            'type' => 'text',
-                            'parameter_name' => 'vehicle_plate',
-                            'text' => $placa ?: 'não informada',
-                        ],
-                        [
-                            'type' => 'text',
-                            'parameter_name' => 'days_overdue',
-                            'text' => (string) $dias,
-                        ],
-                        [
-                            'type' => 'text',
-                            'parameter_name' => 'updated_balance',
-                            'text' => Locx::moeda($saldo),
-                        ],
-                        [
-                            'type' => 'text',
-                            'parameter_name' => 'pix_code',
-                            'text' => $cobranca->pix_copia_cola ?: 'não disponível',
-                        ],
-                    ],
+                            'parameter_name' => $nome,
+                            'text' => (string) $valor,
+                        ])
+                        ->values()
+                        ->all(),
                 ]],
             ],
         ];
         $response = $this->request('POST', $config->phone_number_id.'/messages', $payload);
         $ok = $response->successful();
-        $this->log($cobranca, $telefone, $mensagem, $ok ? 'enviado' : 'erro', $response->status(), $response->body());
+        $this->log(
+            $cobranca,
+            $telefone,
+            $mensagem,
+            $ok ? 'enviado' : 'erro',
+            $response->status(),
+            $response->body(),
+            $ok ? null : $response->body(),
+            $tipo
+        );
 
-        if ($ok) {
-            $cobranca->update(['whatsapp_status' => 'enviado']);
-        }
-
-        return ['ok' => $ok, 'http_code' => $response->status(), 'erro' => $ok ? null : $response->body()];
+        return [
+            'ok' => $ok,
+            'http_code' => $response->status(),
+            'erro' => $ok ? null : $response->body(),
+        ];
     }
 
     public function registrarWebhook(string $raw): void
@@ -173,27 +207,21 @@ class WhatsAppService
         return $numero && strlen($numero) <= 11 ? '55'.$numero : $numero;
     }
 
-    private function registrarFalha(Cobranca $cobranca, string $telefone, string $mensagem, string $erro): array
-    {
-        $this->log($cobranca, $telefone, $mensagem, 'erro', null, null, $erro);
-
-        return ['ok' => false, 'erro' => $erro];
-    }
-
     private function log(
-        Cobranca $cobranca,
+        ?Cobranca $cobranca,
         string $telefone,
         string $mensagem,
         string $status,
         ?int $httpCode = null,
         ?string $resposta = null,
-        ?string $erro = null
+        ?string $erro = null,
+        string $tipo = 'cobranca_inadimplencia',
     ): void {
         WhatsappLog::create([
-            'cobranca_id' => $cobranca->id,
-            'cliente_id' => $cobranca->cliente_id,
+            'cobranca_id' => $cobranca?->id,
+            'cliente_id' => $cobranca?->cliente_id,
             'telefone' => $telefone,
-            'tipo' => 'cobranca_inadimplencia',
+            'tipo' => $tipo,
             'mensagem' => $mensagem,
             'status' => $status,
             'http_code' => $httpCode,

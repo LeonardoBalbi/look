@@ -1,0 +1,55 @@
+{
+  "name": "LocX 02 - Vencimento e PIX",
+  "nodes": [
+    {
+      "parameters": {"rule": {"interval": [{"field": "cronExpression", "expression": "5 9 * * *"}]}},
+      "id": "schedule-vencimento",
+      "name": "Todos os dias 09:05",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.LOCX_API_URL}}/api/n8n/automacoes/pendentes?tipo=vencimento_pix",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Authorization", "value": "=Bearer {{$env.LOCX_N8N_TOKEN}}"}, {"name": "Accept", "value": "application/json"}]},
+        "options": {}
+      },
+      "id": "buscar-vencimentos",
+      "name": "Buscar vencimentos pendentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {"fieldToSplitOut": "eventos", "options": {}},
+      "id": "separar-vencimentos",
+      "name": "Separar eventos",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.LOCX_API_URL}}/api/n8n/automacoes/{{$json.id}}/executar",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Authorization", "value": "=Bearer {{$env.LOCX_N8N_TOKEN}}"}, {"name": "Accept", "value": "application/json"}]},
+        "options": {}
+      },
+      "id": "executar-vencimento",
+      "name": "Gerar PIX e avisar",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0]
+    }
+  ],
+  "connections": {
+    "Todos os dias 09:05": {"main": [[{"node": "Buscar vencimentos pendentes", "type": "main", "index": 0}]]},
+    "Buscar vencimentos pendentes": {"main": [[{"node": "Separar eventos", "type": "main", "index": 0}]]},
+    "Separar eventos": {"main": [[{"node": "Gerar PIX e avisar", "type": "main", "index": 0}]]}
+  },
+  "settings": {"timezone": "America/Sao_Paulo"},
+  "active": false
+}

@@ -239,7 +239,11 @@ class LocxController extends Controller
             'verify_token' => ['required', 'string', 'max:255'],
             'template_cobranca' => ['required', 'string', 'max:120'],
             'template_lembrete' => ['required', 'string', 'max:120'],
+            'template_vencimento' => ['required', 'string', 'max:120'],
+            'template_pagamento' => ['required', 'string', 'max:120'],
+            'template_gerente' => ['required', 'string', 'max:120'],
             'template_bloqueio' => ['required', 'string', 'max:120'],
+            'gerente_whatsapp' => ['nullable', 'string', 'max:30'],
         ]);
         WhatsappConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);
 

@@ -1,0 +1,55 @@
+{
+  "name": "LocX 05 - Pagamento confirmado",
+  "nodes": [
+    {
+      "parameters": {"rule": {"interval": [{"field": "minutes", "minutesInterval": 5}]}},
+      "id": "schedule-pagamento",
+      "name": "A cada 5 minutos",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [0, 0]
+    },
+    {
+      "parameters": {
+        "url": "={{$env.LOCX_API_URL}}/api/n8n/automacoes/pendentes?tipo=pagamento_confirmado",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Authorization", "value": "=Bearer {{$env.LOCX_N8N_TOKEN}}"}, {"name": "Accept", "value": "application/json"}]},
+        "options": {}
+      },
+      "id": "buscar-pagamentos",
+      "name": "Buscar pagamentos pendentes",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [240, 0]
+    },
+    {
+      "parameters": {"fieldToSplitOut": "eventos", "options": {}},
+      "id": "separar-pagamentos",
+      "name": "Separar eventos",
+      "type": "n8n-nodes-base.splitOut",
+      "typeVersion": 1,
+      "position": [480, 0]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$env.LOCX_API_URL}}/api/n8n/automacoes/{{$json.id}}/executar",
+        "sendHeaders": true,
+        "headerParameters": {"parameters": [{"name": "Authorization", "value": "=Bearer {{$env.LOCX_N8N_TOKEN}}"}, {"name": "Accept", "value": "application/json"}]},
+        "options": {}
+      },
+      "id": "executar-pagamento",
+      "name": "Confirmar pagamento",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [720, 0]
+    }
+  ],
+  "connections": {
+    "A cada 5 minutos": {"main": [[{"node": "Buscar pagamentos pendentes", "type": "main", "index": 0}]]},
+    "Buscar pagamentos pendentes": {"main": [[{"node": "Separar eventos", "type": "main", "index": 0}]]},
+    "Separar eventos": {"main": [[{"node": "Confirmar pagamento", "type": "main", "index": 0}]]}
+  },
+  "settings": {"timezone": "America/Sao_Paulo"},
+  "active": false
+}

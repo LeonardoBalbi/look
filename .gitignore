@@ -25,3 +25,4 @@ Thumbs.db
 .DS_Store
 /.idea
 /.vscode
+/n8n/.env
