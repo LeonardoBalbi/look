@@ -3,6 +3,7 @@
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Http\Request;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -11,14 +12,19 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        // O sistema original não possui token CSRF nos formulários.
-        // Esta exceção mantém as telas antigas funcionando com Laravel por trás.
+        $middleware->trustProxies(
+            at: '*',
+            headers: Request::HEADER_X_FORWARDED_FOR
+                | Request::HEADER_X_FORWARDED_HOST
+                | Request::HEADER_X_FORWARDED_PORT
+                | Request::HEADER_X_FORWARDED_PROTO
+        );
+
+        $middleware->redirectGuestsTo(fn () => route('locx.login'));
+
         $middleware->validateCsrfTokens(except: [
-            '/',
-            'login',
-            'logout',
             'webhooks/*',
-            'locx/*',
+            'locx/webhooks/*',
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

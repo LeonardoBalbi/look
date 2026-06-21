@@ -11,10 +11,10 @@ function locxBars(id, labels, values){
   }).join('');
 }
 function locxDonut(id, items){
-  const el=document.getElementById(id); if(!el) return; const total=items.reduce((a,b)=>a+Number(b.value),0)||1; let acc=0;
+  const el=document.getElementById(id); if(!el) return; const rawTotal=items.reduce((a,b)=>a+Number(b.value),0); const total=rawTotal||1; let acc=0;
   const colors=['#22c55e','#0ea5e9','#f59e0b','#ef4444','#8b5cf6','#64748b'];
-  const stops=items.map((it,i)=>{const s=acc; acc+=it.value/total*100; return `${colors[i%colors.length]} ${s}% ${acc}%`;}).join(',');
-  el.innerHTML=`<div class="donut" style="background:conic-gradient(${stops})"><strong>${total}</strong><span>Total</span></div><div class="legend">${items.map((it,i)=>`<p><b style="background:${colors[i%colors.length]}"></b>${it.label}<span>${it.value}</span></p>`).join('')}</div>`;
+  const stops=rawTotal ? items.map((it,i)=>{const s=acc; acc+=it.value/total*100; return `${colors[i%colors.length]} ${s}% ${acc}%`;}).join(',') : '#e2e8f0 0 100%';
+  el.innerHTML=`<div class="donut" style="background:conic-gradient(${stops})"><strong>${rawTotal}</strong><span>Total</span></div><div class="legend">${items.map((it,i)=>`<p><b style="background:${colors[i%colors.length]}"></b>${it.label}<span>${it.value}</span></p>`).join('')}</div>`;
 }
 (function(){
   function getSidebar(){
@@ -70,14 +70,15 @@ function locxFormatValue(value, prefix){
 }
 function locxDonutPremium(id, items, prefix){
   const el=document.getElementById(id); if(!el) return;
-  const total=items.reduce((a,b)=>a+Number(b.value||0),0)||1;
+  const rawTotal=items.reduce((a,b)=>a+Number(b.value||0),0);
+  const total=rawTotal||1;
   let acc=0;
-  const stops=items.map(it=>{
+  const stops=rawTotal ? items.map(it=>{
     const s=acc;
     acc += (Number(it.value||0)/total)*100;
     return `${it.color || '#2563eb'} ${s}% ${acc}%`;
-  }).join(',');
-  const main = prefix === 'R$' ? locxFormatValue(total, 'R$') : locxFormatValue(total);
+  }).join(',') : '#e2e8f0 0 100%';
+  const main = prefix === 'R$' ? locxFormatValue(rawTotal, 'R$') : locxFormatValue(rawTotal);
   el.innerHTML = `
     <div class="donut-premium-chart" style="background:conic-gradient(${stops})">
       <div class="donut-premium-center"><strong>${main}</strong><span>Total</span></div>
@@ -85,7 +86,7 @@ function locxDonutPremium(id, items, prefix){
     <div class="donut-premium-legend">
       ${items.map(it=>{
         const val = locxFormatValue(it.value, prefix);
-        const pct = total ? Math.round((Number(it.value||0)/total)*100) : 0;
+        const pct = rawTotal ? Math.round((Number(it.value||0)/rawTotal)*100) : 0;
         return `<div class="legend-line"><span class="legend-name"><i style="background:${it.color || '#2563eb'}"></i>${it.label}</span><b>${val}</b><small>${pct}%</small></div>`;
       }).join('')}
     </div>`;

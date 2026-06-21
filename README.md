@@ -1,75 +1,26 @@
-# LOCX Laravel
+# LocX — Laravel 12
 
-Esta versão foi limpa para instalação local/servidor sem dependência de licença.
+Sistema de gestão financeira e operacional desenvolvido em Laravel 12.
 
-Removido/desativado:
+A interface original foi preservada, mas a aplicação agora usa rotas, controllers,
+models Eloquent, autenticação, autorização, views Blade, validação, CSRF e serviços
+Laravel. Não existem mais páginas executadas com `require`, sessões iniciadas
+manualmente, consultas PDO dentro das views ou regras de negócio em templates.
 
-- `license.json`
-- pasta de gerador de licença
-- `private_key.pem`
-- `public_key.pem`
-- validação de domínio/IP/banco por licença
-- qualquer bloqueio de instalação por licença
-
-## Importante
-
-Extraia este ZIP em uma pasta nova. Não jogue por cima da pasta antiga, porque arquivos antigos de licenciamento podem continuar lá.
-
-Exemplo:
+## Instalação
 
 ```bash
-cd D:\
-```
-
-Extraia o ZIP e entre na pasta:
-
-```bash
-cd locx-laravel-v9-final-sem-licenca
-copy .env.example .env
+cp .env.example .env
 composer install
 php artisan key:generate
-php artisan migrate:fresh --seed
+php artisan migrate --seed
+php artisan storage:link
 php artisan serve
 ```
 
-Acesse:
+No Windows PowerShell, use `Copy-Item .env.example .env`.
 
-```text
-http://127.0.0.1:8000/
-```
-
-## Publicação no servidor
-
-O domínio ou subdomínio deve apontar para a pasta `public` do projeto, não para a
-raiz onde ficam `app`, `vendor` e `.env`.
-
-No `.env` de produção, configure a URL pública exata:
-
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://seu-dominio.com
-```
-
-Se a aplicação estiver em uma subpasta, inclua essa subpasta:
-
-```env
-APP_URL=https://seu-dominio.com/sistema
-```
-
-Depois de publicar ou alterar o `.env`, limpe os caches:
-
-```bash
-php artisan optimize:clear
-php artisan config:cache
-```
-
-Garanta permissão de escrita para `storage` e `bootstrap/cache`. Para confirmar
-os arquivos visuais, abra diretamente:
-
-```text
-https://seu-dominio.com/locx/assets/css/style.css
-```
+Acesse `http://127.0.0.1:8000`.
 
 Login inicial:
 
@@ -78,28 +29,39 @@ admin@locx.com.br
 123456
 ```
 
-## Se já existia banco antigo
+Troque essa senha antes de publicar o sistema.
 
-Se puder apagar tudo e recriar:
+## Publicação
 
-```bash
-php artisan migrate:fresh --seed
-```
-
-Se não puder apagar os dados, crie outro banco vazio e configure o `.env`:
+O domínio deve apontar para a pasta `public`. Configure no `.env`:
 
 ```env
-DB_DATABASE=locx_laravel
-DB_USERNAME=root
-DB_PASSWORD=
+APP_ENV=production
+APP_DEBUG=false
+APP_URL=https://seu-dominio.com
+FILESYSTEM_DISK=public
 ```
 
-Depois rode:
+Depois execute:
 
 ```bash
-php artisan migrate --seed
+php artisan optimize:clear
+php artisan migrate --force
+php artisan storage:link
+php artisan config:cache
+php artisan route:cache
+php artisan view:cache
 ```
 
-## Observação
+Garanta permissão de escrita em `storage` e `bootstrap/cache`.
 
-O Laravel já possui a função global `e()` e `redirect()`. Nesta versão, os conflitos com funções antigas do LOCX foram ajustados.
+## Visual
+
+O estilo aprovado permanece em `public/locx/assets`, incluindo CSS, JavaScript,
+logo e manuais.
+
+## Testes
+
+```bash
+php artisan test
+```
