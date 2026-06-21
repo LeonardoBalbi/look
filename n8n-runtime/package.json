@@ -1,0 +1,12 @@
+{
+  "name": "locx-n8n-runtime",
+  "private": true,
+  "version": "1.0.0",
+  "scripts": {
+    "start": "n8n start",
+    "import": "n8n import:workflow --separate --input=../n8n/workflows"
+  },
+  "dependencies": {
+    "n8n": "2.26.8"
+  }
+}
