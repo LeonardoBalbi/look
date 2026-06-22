@@ -224,7 +224,9 @@ class LocxController extends Controller
 
         return $this->voltar(
             'inadimplencia',
-            ($resultado['ok'] ?? false) ? 'Cobrança enviada pelo WhatsApp.' : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida')
+            ($resultado['ok'] ?? false)
+                ? ($resultado['mensagem'] ?? 'Cobrança aceita pela Meta para envio.')
+                : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida')
         );
     }
 
@@ -234,13 +236,20 @@ class LocxController extends Controller
         $dados = $request->validate([
             'modo' => ['required', Rule::in(['demo', 'oficial'])],
             'ativo' => ['required', 'boolean'],
+            'waba_id' => ['nullable', 'required_if:modo,oficial', 'string', 'max:255', 'regex:/^\d+$/'],
             'phone_number_id' => ['nullable', 'string', 'max:255'],
             'access_token' => ['nullable', 'string'],
             'verify_token' => ['required', 'string', 'max:255'],
             'template_cobranca' => ['required', 'string', 'max:120'],
+            'template_language' => ['required', 'string', 'max:20', 'regex:/^[a-z]{2}_[A-Z]{2}$/'],
             'template_lembrete' => ['required', 'string', 'max:120'],
             'template_bloqueio' => ['required', 'string', 'max:120'],
         ]);
+
+        if (blank($dados['access_token'] ?? null)) {
+            unset($dados['access_token']);
+        }
+
         WhatsappConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);
 
         return $this->voltar('whatsapp', 'Configurações do WhatsApp salvas.');

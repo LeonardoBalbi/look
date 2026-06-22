@@ -14,13 +14,14 @@
   <h1>Conectar WhatsApp Cloud API</h1>
   <ol>
     <li>No Meta for Developers, crie ou abra um aplicativo e adicione o produto <strong>WhatsApp</strong>.</li>
-    <li>Copie o <strong>Phone Number ID</strong> e gere um <strong>Access Token</strong> permanente.</li>
-    <li>No LocX, abra <strong>WhatsApp API</strong>, escolha <strong>Oficial</strong>, cole os dois dados e salve.</li>
-    <li>Clique em <strong>Validar credenciais</strong>.</li>
+    <li>Copie o <strong>WABA ID</strong> (ID da conta do WhatsApp Business) e o <strong>Phone Number ID</strong>.</li>
+    <li>Crie um usuário do sistema no Business Manager e gere um <strong>Access Token permanente</strong>. Tokens temporários expiram e interrompem os envios.</li>
+    <li>No LocX, abra <strong>WhatsApp API</strong>, escolha <strong>Oficial</strong>, preencha os dados e salve.</li>
+    <li>Clique em <strong>Validar na Meta</strong>. O teste também confirma se o template e o idioma estão aprovados.</li>
     <li>Na Meta, configure a URL pública do webhook e use o mesmo <strong>Verify Token</strong> exibido no LocX.</li>
   </ol>
   <h2>Template de cobrança</h2>
-  <p>Crie e aprove na Meta o template <code>locx_cobranca_atraso</code>, em português, com cinco variáveis no corpo:</p>
+  <p>Crie e aprove na Meta o template <code>locx_cobranca_atraso</code>. Informe no LocX exatamente o mesmo nome e idioma, por exemplo <code>pt_BR</code>, com cinco variáveis nomeadas no corpo:</p>
   <ol>
     <li>Nome do cliente</li>
     <li>Placa da motocicleta</li>
@@ -28,6 +29,7 @@
     <li>Saldo atualizado</li>
     <li>PIX copia e cola</li>
   </ol>
+  <p class="alert"><strong>Importante:</strong> a aprovação da empresa na Meta não renova o Access Token e não aprova automaticamente cada idioma do template.</p>
   <h2>Webhook</h2>
   <p>Use este formato, trocando pelo seu domínio:</p>
   <p><code>https://seusite.com/webhooks/whatsapp</code></p>
