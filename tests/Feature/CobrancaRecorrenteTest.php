@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\CobrancaCriadaMail;
 use App\Models\AsaasConfig;
 use App\Models\Cliente;
 use App\Models\Cobranca;
@@ -12,6 +13,7 @@ use Database\Seeders\LocxInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class CobrancaRecorrenteTest extends TestCase
@@ -79,6 +81,21 @@ class CobrancaRecorrenteTest extends TestCase
         $this->assertStringContainsString('LOCX-ASAAS-DEMO-COBRANCA-'.$cobranca->id, $cobranca->pix_copia_cola);
         $this->assertSame('DEMO-'.$cobranca->id, $cobranca->asaas_id);
         Http::assertNothingSent();
+    }
+
+    public function test_envia_email_da_cobranca_sem_smtp_real(): void
+    {
+        Mail::fake();
+        $contrato = $this->contrato();
+
+        $code = Artisan::call('locx:gerar-cobrancas-recorrentes', [
+            '--enviar-email' => true,
+        ]);
+
+        $this->assertSame(0, $code);
+        $cobranca = Cobranca::query()->where('contrato_id', $contrato->id)->firstOrFail();
+        Mail::assertSent(CobrancaCriadaMail::class, fn (CobrancaCriadaMail $mail) => $mail->hasTo('cliente@example.com')
+            && $mail->cobranca->is($cobranca));
     }
 
     private function contrato(array $dados = []): Contrato

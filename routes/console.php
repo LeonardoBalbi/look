@@ -12,6 +12,7 @@ Artisan::command(
         {--max-por-contrato= : Limite de cobrancas criadas por contrato nesta execucao}
         {--gerar-pix : Gera PIX no gateway configurado}
         {--enviar-whatsapp : Envia WhatsApp depois de criar a cobranca}
+        {--enviar-email : Envia e-mail depois de criar a cobranca}
         {--dry-run : Simula sem gravar nada e sem chamar APIs externas}',
     function (): int {
         $diasAntecedencia = $this->option('dias-antecedencia');
@@ -24,6 +25,7 @@ Artisan::command(
             dryRun: (bool) $this->option('dry-run'),
             gerarPix: (bool) $this->option('gerar-pix'),
             enviarWhatsApp: (bool) $this->option('enviar-whatsapp'),
+            enviarEmail: (bool) $this->option('enviar-email'),
             maxPorContrato: (int) ($this->option('max-por-contrato') ?: config('locx.recorrencia.max_por_contrato', 12)),
         );
 
@@ -35,6 +37,7 @@ Artisan::command(
         $this->line('Cobrancas ja existentes: '.$resultado['existentes']);
         $this->line('PIX gerados: '.$resultado['pix_gerados']);
         $this->line('WhatsApp enviados: '.$resultado['whatsapp_enviados']);
+        $this->line('E-mails enviados: '.$resultado['emails_enviados']);
 
         if ($resultado['itens']) {
             $this->table(
@@ -62,6 +65,9 @@ if (config('locx.recorrencia.gerar_pix')) {
 }
 if (config('locx.recorrencia.enviar_whatsapp')) {
     $opcoesAgendadas[] = '--enviar-whatsapp';
+}
+if (config('locx.recorrencia.enviar_email')) {
+    $opcoesAgendadas[] = '--enviar-email';
 }
 $opcoesAgendadas[] = '--dias-antecedencia='.(int) config('locx.recorrencia.dias_antecedencia', 0);
 $opcoesAgendadas[] = '--max-por-contrato='.(int) config('locx.recorrencia.max_por_contrato', 12);

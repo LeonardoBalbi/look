@@ -13,6 +13,7 @@ class CobrancaRecorrenteService
     public function __construct(
         private readonly PixGatewayService $pixGateway,
         private readonly WhatsAppService $whatsApp,
+        private readonly EmailCobrancaService $emailCobranca,
     ) {}
 
     public function gerar(
@@ -20,6 +21,7 @@ class CobrancaRecorrenteService
         bool $dryRun = false,
         bool $gerarPix = false,
         bool $enviarWhatsApp = false,
+        bool $enviarEmail = false,
         int $maxPorContrato = 12,
     ): array {
         $ate = Carbon::parse($ate ?: today())->startOfDay();
@@ -32,6 +34,7 @@ class CobrancaRecorrenteService
             'existentes' => 0,
             'pix_gerados' => 0,
             'whatsapp_enviados' => 0,
+            'emails_enviados' => 0,
             'limitados' => 0,
             'itens' => [],
             'erros' => [],
@@ -47,12 +50,13 @@ class CobrancaRecorrenteService
                 $dryRun,
                 $gerarPix,
                 $enviarWhatsApp,
+                $enviarEmail,
                 $maxPorContrato,
                 &$resultado
             ): void {
                 foreach ($contratos as $contrato) {
                     $resultado['contratos']++;
-                    $this->processarContrato($contrato, $ate, $dryRun, $gerarPix, $enviarWhatsApp, $maxPorContrato, $resultado);
+                    $this->processarContrato($contrato, $ate, $dryRun, $gerarPix, $enviarWhatsApp, $enviarEmail, $maxPorContrato, $resultado);
                 }
             });
 
@@ -65,6 +69,7 @@ class CobrancaRecorrenteService
         bool $dryRun,
         bool $gerarPix,
         bool $enviarWhatsApp,
+        bool $enviarEmail,
         int $maxPorContrato,
         array &$resultado,
     ): void {
@@ -135,6 +140,15 @@ class CobrancaRecorrenteService
                     $resultado['whatsapp_enviados']++;
                 } else {
                     $resultado['erros'][] = "Cobranca #{$cobranca->id}: ".($whats['erro'] ?? 'WhatsApp nao enviado.');
+                }
+            }
+
+            if ($enviarEmail) {
+                $email = $this->emailCobranca->enviarCobranca($cobranca);
+                if ($email['ok'] ?? false) {
+                    $resultado['emails_enviados']++;
+                } else {
+                    $resultado['erros'][] = "Cobranca #{$cobranca->id}: ".($email['erro'] ?? 'E-mail nao enviado.');
                 }
             }
 
