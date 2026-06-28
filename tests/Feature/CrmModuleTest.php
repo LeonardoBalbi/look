@@ -3,9 +3,14 @@
 namespace Tests\Feature;
 
 use App\Models\Cliente;
+use App\Models\Cobranca;
+use App\Models\Contrato;
+use App\Models\CrmTarefa;
+use App\Models\Motocicleta;
 use App\Models\User;
 use Database\Seeders\LocxInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Artisan;
 use Tests\TestCase;
 
 class CrmModuleTest extends TestCase
@@ -60,6 +65,102 @@ class CrmModuleTest extends TestCase
             'cliente_id' => $cliente->id,
             'titulo' => 'Confirmar pagamento',
             'status' => 'aberta',
+        ]);
+    }
+
+    public function test_sincronizacao_crm_cria_tarefas_para_cobrancas_em_atraso(): void
+    {
+        $cobranca = $this->cobrancaVencida(3);
+
+        Artisan::call('locx:sincronizar-crm');
+
+        $this->assertDatabaseHas('crm_tarefas', [
+            'cliente_id' => $cobranca->cliente_id,
+            'cobranca_id' => $cobranca->id,
+            'titulo' => 'Cobrar cliente',
+            'chave' => 'cobranca_atraso_1:'.$cobranca->id,
+            'status' => 'aberta',
+        ]);
+        $this->assertDatabaseHas('crm_tarefas', [
+            'cliente_id' => $cobranca->cliente_id,
+            'cobranca_id' => $cobranca->id,
+            'titulo' => 'Avisar gerente sobre atraso',
+            'chave' => 'cobranca_atraso_3:'.$cobranca->id,
+            'status' => 'aberta',
+        ]);
+
+        Artisan::call('locx:sincronizar-crm');
+
+        $this->assertSame(2, CrmTarefa::where('cobranca_id', $cobranca->id)->count());
+        $this->assertDatabaseHas('clientes', [
+            'id' => $cobranca->cliente_id,
+            'crm_etapa' => 'recuperacao',
+        ]);
+    }
+
+    public function test_pagamento_confirmado_fecha_tarefa_de_cobranca_no_crm(): void
+    {
+        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $cobranca = $this->cobrancaVencida(1);
+
+        Artisan::call('locx:sincronizar-crm');
+
+        $this->actingAs($usuario)->post('/pagamentos', [
+            'cobranca_id' => $cobranca->id,
+            'valor' => '250.00',
+            'forma' => 'pix',
+        ])->assertRedirect('/?page=financeiro');
+
+        $this->assertDatabaseHas('cobrancas', [
+            'id' => $cobranca->id,
+            'status' => 'paga',
+        ]);
+        $this->assertDatabaseHas('crm_tarefas', [
+            'cobranca_id' => $cobranca->id,
+            'titulo' => 'Cobrar cliente',
+            'status' => 'concluida',
+        ]);
+        $this->assertDatabaseHas('clientes', [
+            'id' => $cobranca->cliente_id,
+            'crm_etapa' => 'contrato_ativo',
+        ]);
+    }
+
+    private function cobrancaVencida(int $dias): Cobranca
+    {
+        $cliente = Cliente::create([
+            'loja_id' => 1,
+            'nome' => 'Cliente Atrasado '.$dias,
+            'whatsapp' => '2198888888'.$dias,
+            'email' => 'atrasado'.$dias.'@example.com',
+            'status' => 'ativo',
+            'crm_etapa' => 'contrato_ativo',
+        ]);
+        $moto = Motocicleta::create([
+            'loja_id' => 1,
+            'modelo' => 'Start '.$dias,
+            'status_operacional' => 'alugada',
+        ]);
+        $contrato = Contrato::create([
+            'cliente_id' => $cliente->id,
+            'motocicleta_id' => $moto->id,
+            'loja_id' => 1,
+            'data_inicio' => today()->subMonth(),
+            'valor_contratado' => 250,
+            'forma_cobranca' => 'semanal',
+            'status' => 'ativo',
+        ]);
+
+        return Cobranca::create([
+            'contrato_id' => $contrato->id,
+            'cliente_id' => $cliente->id,
+            'loja_id' => 1,
+            'vencimento' => today()->subDays($dias),
+            'valor_principal' => 250,
+            'valor_atualizado' => 250,
+            'valor_pago' => 0,
+            'status' => 'aberta',
+            'whatsapp_status' => 'pendente',
         ]);
     }
 }

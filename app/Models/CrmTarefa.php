@@ -19,6 +19,11 @@ class CrmTarefa extends BaseModel
         return $this->belongsTo(Cliente::class);
     }
 
+    public function cobranca(): BelongsTo
+    {
+        return $this->belongsTo(Cobranca::class);
+    }
+
     public function usuario(): BelongsTo
     {
         return $this->belongsTo(User::class, 'usuario_id');

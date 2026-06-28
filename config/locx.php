@@ -11,4 +11,8 @@ return [
         'max_por_contrato' => (int) env('LOCX_RECORRENCIA_MAX_POR_CONTRATO', 12),
         'horario' => env('LOCX_RECORRENCIA_HORARIO', '07:00'),
     ],
+    'crm' => [
+        'automacoes_ativas' => env('LOCX_CRM_AUTOMACOES_ATIVAS', true),
+        'automacoes_horario' => env('LOCX_CRM_AUTOMACOES_HORARIO', '07:15'),
+    ],
 ];

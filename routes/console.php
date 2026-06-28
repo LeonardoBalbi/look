@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\CobrancaRecorrenteService;
+use App\Services\CrmAutomationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
@@ -59,6 +60,34 @@ Artisan::command(
     }
 )->purpose('Gera cobranças recorrentes dos contratos ativos da LocX.');
 
+Artisan::command(
+    'locx:sincronizar-crm {--dry-run : Simula sem criar tarefas}',
+    function (): int {
+        $resultado = app(CrmAutomationService::class)->sincronizarAtrasos(dryRun: (bool) $this->option('dry-run'));
+        $modo = $resultado['dry_run'] ? 'SIMULACAO' : 'EXECUCAO REAL';
+
+        $this->info("LocX CRM - {$modo}");
+        $this->line('Data: '.$resultado['data']);
+        $this->line('Cobrancas analisadas: '.$resultado['cobrancas_analisadas']);
+        $this->line('Tarefas novas: '.$resultado['tarefas_criadas']);
+        $this->line('Tarefas ja existentes: '.$resultado['tarefas_existentes']);
+
+        if ($resultado['itens']) {
+            $this->table(
+                ['Cliente', 'Cobranca', 'Tarefa', 'Dias atraso'],
+                collect($resultado['itens'])->take(20)->map(fn (array $item) => [
+                    $item['cliente'] ?: '-',
+                    $item['cobranca_id'],
+                    $item['titulo'],
+                    $item['dias_atraso'],
+                ])->all()
+            );
+        }
+
+        return 0;
+    }
+)->purpose('Cria tarefas automaticas do CRM para cobrancas em atraso.');
+
 $opcoesAgendadas = [];
 if (config('locx.recorrencia.gerar_pix')) {
     $opcoesAgendadas[] = '--gerar-pix';
@@ -76,3 +105,8 @@ Schedule::command('locx:gerar-cobrancas-recorrentes '.implode(' ', $opcoesAgenda
     ->dailyAt(config('locx.recorrencia.horario', '07:00'))
     ->withoutOverlapping()
     ->when(fn () => (bool) config('locx.recorrencia.ativa'));
+
+Schedule::command('locx:sincronizar-crm')
+    ->dailyAt(config('locx.crm.automacoes_horario', '07:15'))
+    ->withoutOverlapping()
+    ->when(fn () => (bool) config('locx.crm.automacoes_ativas', true));

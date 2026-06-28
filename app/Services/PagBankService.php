@@ -226,6 +226,10 @@ class PagBankService
                 'whatsapp_status' => $status === 'paga' ? 'conciliado' : $cobranca->whatsapp_status,
                 'atualizado_em' => now(),
             ]);
+
+            if ($status === 'paga') {
+                app(CrmAutomationService::class)->fecharTarefasDeCobranca($cobranca->fresh('cliente'));
+            }
         });
     }
 

@@ -102,7 +102,7 @@
                     </form>
                 </div>
                 <div class="panel"><h2>Clientes Cadastrados</h2><div class="table-wrap"><table><tr><th>Nome</th><th>CPF</th><th>WhatsApp</th><th>Status</th><th>Ações</th></tr>
-                    @foreach($clientes as $cliente)<tr><td>{{ $cliente->nome }}</td><td>{{ $cliente->cpf }}</td><td>{{ $cliente->whatsapp }}</td><td>{!! \App\Support\Locx::status($cliente->status) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'clientes','edit'=>$cliente->id]) }}">Editar</a></td></tr>@endforeach
+                    @foreach($clientes as $cliente)<tr><td>{{ $cliente->nome }}</td><td>{{ $cliente->cpf }}</td><td>{{ $cliente->whatsapp }}</td><td>{!! \App\Support\Locx::status($cliente->status) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'clientes','edit'=>$cliente->id]) }}">Editar</a> <a class="btn secondary" href="{{ route('locx.index',['page'=>'crm','cliente'=>$cliente->id]) }}">CRM</a></td></tr>@endforeach
                 </table></div></div>
             </div>
 

@@ -17,6 +17,7 @@ use App\Models\WhatsappConfig;
 use App\Models\WhatsappLog;
 use App\Services\AsaasService;
 use App\Services\CobrancaCalculator;
+use App\Services\CrmAutomationService;
 use App\Services\PagBankService;
 use App\Services\PixGatewayService;
 use App\Services\WhatsAppService;
@@ -37,6 +38,7 @@ class LocxController extends Controller
         private readonly AsaasService $asaas,
         private readonly PixGatewayService $pixGateway,
         private readonly WhatsAppService $whatsApp,
+        private readonly CrmAutomationService $crmAutomation,
     ) {}
 
     public function index(Request $request): View
@@ -281,6 +283,10 @@ class LocxController extends Controller
                 'whatsapp_status' => $status === 'paga' ? 'conciliado' : $cobranca->whatsapp_status,
                 'atualizado_em' => now(),
             ]);
+
+            if ($status === 'paga') {
+                $this->crmAutomation->fecharTarefasDeCobranca($cobranca->fresh('cliente'));
+            }
         });
 
         return $this->voltar('financeiro', 'Pagamento registrado.');
