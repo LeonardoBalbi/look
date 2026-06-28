@@ -13,6 +13,9 @@ class Contrato extends BaseModel
         'data_inicio' => 'date',
         'data_fim' => 'date',
         'valor_contratado' => 'decimal:2',
+        'cobranca_automatica' => 'boolean',
+        'proxima_cobranca_em' => 'date',
+        'ultima_cobranca_gerada_em' => 'datetime',
     ];
 
     public function cliente(): BelongsTo

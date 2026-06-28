@@ -144,8 +144,12 @@ class LocxController extends Controller
             'data_inicio' => ['required', 'date'],
             'valor_contratado' => ['required', 'numeric', 'min:0.01'],
             'forma_cobranca' => ['required', Rule::in(['semanal', 'quinzenal', 'mensal'])],
+            'cobranca_automatica' => ['nullable', 'boolean'],
+            'proxima_cobranca_em' => ['nullable', 'date'],
             'status' => ['required', Rule::in(['ativo', 'suspenso', 'encerrado'])],
         ]);
+        $dados['cobranca_automatica'] = $request->boolean('cobranca_automatica');
+        $dados['proxima_cobranca_em'] = $dados['proxima_cobranca_em'] ?: null;
 
         DB::transaction(function () use ($dados): void {
             Contrato::create($dados + ['historico_alteracoes' => 'Contrato criado em '.now()->format('d/m/Y H:i')]);
