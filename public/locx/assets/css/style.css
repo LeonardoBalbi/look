@@ -455,3 +455,21 @@ code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border
 .pix-copy-btn.success{background:var(--green);color:#fff;border-color:var(--green)}
 .pix-qr{width:82px;height:82px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:4px;object-fit:contain}
 .pix-code{display:block;font-size:11px;line-height:1.35;padding:6px 8px;max-width:100%;white-space:normal}
+
+/* LOCX CRM */
+.crm-layout .table-wrap table{min-width:860px}
+.crm-task-list{display:grid;gap:10px}
+.crm-task{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fbfdff}
+.crm-task strong{display:block;color:#0f172a}
+.crm-task span{display:block;color:var(--muted);font-size:12px;margin-top:4px}
+.crm-task form{margin:0}
+.crm-timeline{display:grid;gap:12px}
+.crm-event{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}
+.crm-event strong{display:block;color:#0f172a}
+.crm-event p{margin:5px 0;color:#475569;white-space:normal}
+.crm-event small{color:var(--muted)}
+.crm-detail .section-head p{margin:6px 0 0;color:var(--muted)}
+@media(max-width:768px){
+  .crm-event{grid-template-columns:1fr}
+  .crm-task{display:grid}
+}

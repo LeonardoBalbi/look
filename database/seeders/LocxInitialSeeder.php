@@ -31,7 +31,7 @@ class LocxInitialSeeder extends Seeder
         );
 
         $modulos = [
-            'dashboard', 'clientes', 'motos', 'contratos', 'financeiro', 'cobrancas',
+            'dashboard', 'crm', 'clientes', 'motos', 'contratos', 'financeiro', 'cobrancas',
             'inadimplencia', 'pix', 'pagbank', 'asaas', 'whatsapp', 'relatorios', 'lojas',
             'usuarios', 'configuracoes',
         ];

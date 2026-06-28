@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\Cliente;
 use App\Models\Cobranca;
 use App\Models\Contrato;
+use App\Models\CrmNota;
+use App\Models\CrmTarefa;
 use App\Models\Loja;
 use App\Models\Motocicleta;
 use App\Models\Pagamento;
@@ -56,6 +58,7 @@ class LocxController extends Controller
 
         return view('locx.index', array_merge($data, match ($page) {
             'dashboard' => $this->dashboard($user),
+            'crm' => $this->crm($request, $user),
             'clientes' => $this->clientes($request),
             'motos' => $this->motos($request, $user),
             'contratos' => $this->contratos($user),
@@ -157,6 +160,74 @@ class LocxController extends Controller
         });
 
         return $this->voltar('contratos', 'Contrato criado.');
+    }
+
+    public function salvarCrmCliente(Request $request, Cliente $cliente): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'crm', 'editar');
+        $this->autorizarClienteCrm($request->user(), $cliente);
+        $dados = $request->validate([
+            'crm_etapa' => ['required', Rule::in(array_keys($this->crmEtapas()))],
+        ]);
+
+        $cliente->update($dados);
+
+        return redirect()->route('locx.index', ['page' => 'crm', 'cliente' => $cliente->id])->with('success', 'Etapa do cliente atualizada.');
+    }
+
+    public function salvarCrmNota(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'crm', 'criar');
+        $dados = $request->validate([
+            'cliente_id' => ['required', 'exists:clientes,id'],
+            'tipo' => ['required', Rule::in(['nota', 'ligacao', 'whatsapp', 'email', 'visita', 'negociacao'])],
+            'texto' => ['required', 'string', 'max:3000'],
+        ]);
+        $cliente = Cliente::findOrFail($dados['cliente_id']);
+        $this->autorizarClienteCrm($request->user(), $cliente);
+
+        CrmNota::create($dados + [
+            'usuario_id' => $request->user()->id,
+            'criado_em' => now(),
+        ]);
+        $cliente->update(['crm_ultimo_contato_em' => now()]);
+
+        return redirect()->route('locx.index', ['page' => 'crm', 'cliente' => $cliente->id])->with('success', 'Nota adicionada ao CRM.');
+    }
+
+    public function salvarCrmTarefa(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'crm', 'criar');
+        $dados = $request->validate([
+            'cliente_id' => ['required', 'exists:clientes,id'],
+            'titulo' => ['required', 'string', 'max:180'],
+            'tipo' => ['required', Rule::in(['follow_up', 'ligacao', 'whatsapp', 'email', 'cobranca', 'recolhimento'])],
+            'prazo_em' => ['nullable', 'date'],
+            'observacao' => ['nullable', 'string', 'max:3000'],
+        ]);
+        $cliente = Cliente::findOrFail($dados['cliente_id']);
+        $this->autorizarClienteCrm($request->user(), $cliente);
+
+        CrmTarefa::create($dados + [
+            'usuario_id' => $request->user()->id,
+            'status' => 'aberta',
+            'criado_em' => now(),
+        ]);
+
+        return redirect()->route('locx.index', ['page' => 'crm', 'cliente' => $cliente->id])->with('success', 'Tarefa criada no CRM.');
+    }
+
+    public function concluirCrmTarefa(Request $request, CrmTarefa $tarefa): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'crm', 'editar');
+        $tarefa->loadMissing('cliente');
+        $this->autorizarClienteCrm($request->user(), $tarefa->cliente);
+        $tarefa->update([
+            'status' => 'concluida',
+            'concluido_em' => now(),
+        ]);
+
+        return redirect()->route('locx.index', ['page' => 'crm', 'cliente' => $tarefa->cliente_id])->with('success', 'Tarefa concluida.');
     }
 
     public function salvarCobranca(Request $request): RedirectResponse
@@ -440,6 +511,158 @@ class LocxController extends Controller
         ];
     }
 
+    private function crm(Request $request, User $user): array
+    {
+        $clientes = $this->scope(Cliente::with('loja'), $user)->orderBy('nome')->limit(160)->get();
+        $clienteSelecionado = null;
+        if ($request->integer('cliente')) {
+            $clienteSelecionado = $this->scope(Cliente::with('loja'), $user)->whereKey($request->integer('cliente'))->first();
+        }
+        $clienteSelecionado ??= $clientes->first();
+
+        $crmClientes = $clientes->map(function (Cliente $cliente): array {
+            $cobrancas = Cobranca::query()->where('cliente_id', $cliente->id);
+            $saldoAberto = (float) (clone $cobrancas)
+                ->where('status', '<>', 'paga')
+                ->sum(DB::raw('valor_atualizado - valor_pago'));
+            $atrasadas = (clone $cobrancas)
+                ->whereDate('vencimento', '<', today())
+                ->where('status', '<>', 'paga')
+                ->count();
+            $proximaTarefa = CrmTarefa::query()
+                ->where('cliente_id', $cliente->id)
+                ->where('status', 'aberta')
+                ->orderBy('prazo_em')
+                ->first();
+            $ultimoWhatsapp = WhatsappLog::query()->where('cliente_id', $cliente->id)->max('criado_em');
+            $ultimaNota = CrmNota::query()->where('cliente_id', $cliente->id)->max('criado_em');
+            $ultimoPagamento = DB::table('pagamentos as p')
+                ->join('cobrancas as c', 'c.id', '=', 'p.cobranca_id')
+                ->where('c.cliente_id', $cliente->id)
+                ->max('p.pago_em');
+
+            return [
+                'cliente' => $cliente,
+                'saldo_aberto' => $saldoAberto,
+                'atrasadas' => $atrasadas,
+                'proxima_tarefa' => $proximaTarefa,
+                'ultimo_contato' => collect([$cliente->crm_ultimo_contato_em, $ultimoWhatsapp, $ultimaNota, $ultimoPagamento])
+                    ->filter()
+                    ->map(fn ($data) => \Carbon\Carbon::parse($data))
+                    ->sortDesc()
+                    ->first(),
+            ];
+        });
+
+        $tarefasAbertas = CrmTarefa::with('cliente')
+            ->whereIn('cliente_id', $clientes->pluck('id'))
+            ->where('status', 'aberta')
+            ->orderBy('prazo_em')
+            ->limit(30)
+            ->get();
+
+        return [
+            'crmEtapas' => $this->crmEtapas(),
+            'crmPipeline' => collect($this->crmEtapas())->mapWithKeys(
+                fn ($label, $etapa) => [$etapa => $clientes->where('crm_etapa', $etapa)->count()]
+            ),
+            'crmClientes' => $crmClientes,
+            'crmCliente' => $clienteSelecionado,
+            'crmTimeline' => $clienteSelecionado ? $this->crmTimeline($clienteSelecionado) : collect(),
+            'crmTarefasAbertas' => $tarefasAbertas,
+        ];
+    }
+
+    private function crmTimeline(Cliente $cliente)
+    {
+        $items = collect();
+
+        CrmNota::with('usuario')
+            ->where('cliente_id', $cliente->id)
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->each(fn (CrmNota $nota) => $items->push([
+                'data' => $nota->criado_em,
+                'tipo' => 'Nota',
+                'titulo' => ucfirst($nota->tipo).' registrada',
+                'texto' => $nota->texto,
+                'status' => 'info',
+            ]));
+
+        CrmTarefa::query()
+            ->where('cliente_id', $cliente->id)
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->each(fn (CrmTarefa $tarefa) => $items->push([
+                'data' => $tarefa->concluido_em ?: $tarefa->criado_em,
+                'tipo' => 'Tarefa',
+                'titulo' => $tarefa->titulo,
+                'texto' => ($tarefa->observacao ?: 'Sem observacao').($tarefa->prazo_em ? ' | Prazo: '.$tarefa->prazo_em->format('d/m/Y H:i') : ''),
+                'status' => $tarefa->status === 'concluida' ? 'ok' : 'warn',
+            ]));
+
+        Cobranca::query()
+            ->where('cliente_id', $cliente->id)
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->each(fn (Cobranca $cobranca) => $items->push([
+                'data' => $cobranca->criado_em ?? $cobranca->vencimento,
+                'tipo' => 'Cobranca',
+                'titulo' => 'Cobranca #'.$cobranca->id.' - '.Locx::moeda($cobranca->valor_principal),
+                'texto' => 'Vencimento '.$cobranca->vencimento->format('d/m/Y').' | Status '.$cobranca->status,
+                'status' => $cobranca->status === 'paga' ? 'ok' : ($cobranca->status === 'atrasada' ? 'danger' : 'warn'),
+            ]));
+
+        WhatsappLog::query()
+            ->where('cliente_id', $cliente->id)
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->each(fn (WhatsappLog $log) => $items->push([
+                'data' => $log->criado_em,
+                'tipo' => 'WhatsApp',
+                'titulo' => $log->tipo ?: 'Mensagem',
+                'texto' => $log->erro ?: \Illuminate\Support\Str::limit((string) $log->mensagem, 140),
+                'status' => $log->status === 'enviado' || $log->status === 'demo' ? 'ok' : ($log->status === 'erro' ? 'danger' : 'warn'),
+            ]));
+
+        DB::table('pagamentos as p')
+            ->join('cobrancas as c', 'c.id', '=', 'p.cobranca_id')
+            ->where('c.cliente_id', $cliente->id)
+            ->select('p.*', 'c.id as cobranca_numero')
+            ->orderByDesc('p.id')
+            ->limit(20)
+            ->get()
+            ->each(fn ($pagamento) => $items->push([
+                'data' => \Carbon\Carbon::parse($pagamento->pago_em),
+                'tipo' => 'Pagamento',
+                'titulo' => 'Pagamento da cobranca #'.$pagamento->cobranca_numero,
+                'texto' => Locx::moeda($pagamento->valor).' via '.$pagamento->forma,
+                'status' => 'ok',
+            ]));
+
+        return $items
+            ->filter(fn ($item) => ! empty($item['data']))
+            ->sortByDesc('data')
+            ->take(40)
+            ->values();
+    }
+
+    private function crmEtapas(): array
+    {
+        return [
+            'lead' => 'Lead',
+            'cadastro' => 'Cadastro',
+            'contrato_ativo' => 'Contrato ativo',
+            'em_cobranca' => 'Em cobranca',
+            'recuperacao' => 'Recuperacao',
+            'encerrado' => 'Encerrado',
+        ];
+    }
+
     private function clientes(Request $request): array
     {
         return [
@@ -562,6 +785,15 @@ class LocxController extends Controller
     private function autorizar(User $user, string $modulo, string $acao): void
     {
         abort_unless($user->pode($modulo, $acao), 403, 'Acesso negado para esta ação.');
+    }
+
+    private function autorizarClienteCrm(User $user, Cliente $cliente): void
+    {
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        abort_unless(in_array((int) $cliente->loja_id, $user->lojaIdsPermitidas(), true), 403, 'Cliente fora da loja permitida.');
     }
 
     private function voltar(string $page, string $mensagem): RedirectResponse

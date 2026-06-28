@@ -10,6 +10,7 @@ class Locx
 {
     public const MODULOS = [
         'dashboard' => 'Dashboard',
+        'crm' => 'CRM',
         'clientes' => 'Clientes',
         'motos' => 'Motocicletas',
         'contratos' => 'Contratos',
@@ -90,6 +91,7 @@ class Locx
     {
         $paths = [
             'dashboard' => '<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+            'crm' => '<path d="M4 7h16"/><path d="M4 12h10"/><path d="M4 17h7"/><circle cx="18" cy="15" r="3"/><path d="m20.5 17.5 1.5 1.5"/>',
             'clientes' => '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.7-3.6 2.8-5.4 5.5-5.4s4.8 1.8 5.5 5.4"/><circle cx="17" cy="9" r="2.4"/><path d="M15.3 15.2c2.6.2 4.2 1.7 5.2 4.8"/>',
             'motos' => '<circle cx="6.5" cy="17" r="3"/><circle cx="17.5" cy="17" r="3"/><path d="M9.5 17h4.5l-2-5H9.2l-2.7 5"/><path d="M12 12h3.3l2.2 5"/><path d="M13.7 8h3.8"/><path d="M15.5 8l1.2 4"/>',
             'contratos' => '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M9.5 13h5"/><path d="M9.5 17h5"/>',

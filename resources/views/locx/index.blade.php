@@ -71,13 +71,16 @@
                 </table></div></div>
             </div>
             <div class="panel"><h2>Módulos do sistema</h2><div class="module-grid">
-                @foreach (['clientes' => 'Cadastro completo e documentos', 'motos' => 'Frota, status e lojas', 'contratos' => 'Locação e histórico', 'financeiro' => 'Recebimentos e pagamentos', 'cobrancas' => 'WhatsApp e PIX', 'inadimplencia' => 'Juros e bloqueios', 'relatorios' => 'Indicadores gerenciais', 'usuarios' => 'Perfis e permissões'] as $modulo => $descricao)
+                @foreach (['crm' => 'Relacionamento e follow-up', 'clientes' => 'Cadastro completo e documentos', 'motos' => 'Frota, status e lojas', 'contratos' => 'Locação e histórico', 'financeiro' => 'Recebimentos e pagamentos', 'cobrancas' => 'WhatsApp e PIX', 'inadimplencia' => 'Juros e bloqueios', 'relatorios' => 'Indicadores gerenciais', 'usuarios' => 'Perfis e permissões'] as $modulo => $descricao)
                     <a class="module-card" href="{{ route('locx.index', ['page' => $modulo]) }}"><i>{!! \App\Support\Locx::icon($modulo) !!}</i><div><strong>{{ $pages[$modulo] }}</strong><br><small>{{ $descricao }}</small></div></a>
                 @endforeach
             </div></div>
             <script>
                 window.addEventListener('load',()=>{locxDonutPremium('chartReceita',[{label:'Recebido',value:@json(round($recebidoMes)),color:'#16a34a'},{label:'A receber',value:@json(round($aReceber)),color:'#2563eb'},{label:'Em atraso',value:@json(round($atraso)),color:'#ef4444'}],'R$');locxDonutPremium('chartStatus',[{label:'Pagas',value:@json($cobrancasStatus['pagas']),color:'#16a34a'},{label:'Abertas',value:@json($cobrancasStatus['abertas']),color:'#2563eb'},{label:'Parciais',value:@json($cobrancasStatus['parciais']),color:'#f59e0b'},{label:'Atrasadas',value:@json($cobrancasStatus['atrasadas']),color:'#ef4444'}]);locxMiniBarsPremium('chartRecebidoLojas',@json($lojaLabels),@json($lojaRecebido),'R$');locxDonutPremium('chartOperacao',[{label:'Alugadas',value:@json($motosAlugadas),color:'#2563eb'},{label:'Disponíveis',value:@json($motosDisponiveis),color:'#16a34a'},{label:'Manutenção',value:@json($motosManutencao),color:'#f59e0b'},{label:'Outras',value:@json(max(0,$totalMotos-$motosAlugadas-$motosDisponiveis-$motosManutencao)),color:'#64748b'}]);locxBars('chartReceb30',@json($labels30),@json($recebidos30));});
             </script>
+
+        @elseif ($page === 'crm')
+            @include('locx.partials.crm')
 
         @elseif ($page === 'clientes')
             <div class="grid side">
