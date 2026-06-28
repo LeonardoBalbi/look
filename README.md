@@ -9,6 +9,12 @@ manualmente, consultas PDO dentro das views ou regras de negócio em templates.
 
 ## Instalação
 
+Manual completo para cliente, uso diario e instalacao em servidor:
+
+```text
+docs/MANUAL_CLIENTE_INSTALACAO.md
+```
+
 ```bash
 cp .env.example .env
 composer install
