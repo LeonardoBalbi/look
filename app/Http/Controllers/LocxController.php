@@ -13,8 +13,10 @@ use App\Models\User;
 use App\Models\UsuarioPermissao;
 use App\Models\WhatsappConfig;
 use App\Models\WhatsappLog;
+use App\Services\AsaasService;
 use App\Services\CobrancaCalculator;
 use App\Services\PagBankService;
+use App\Services\PixGatewayService;
 use App\Services\WhatsAppService;
 use App\Support\Locx;
 use Illuminate\Database\Eloquent\Builder;
@@ -30,6 +32,8 @@ class LocxController extends Controller
     public function __construct(
         private readonly CobrancaCalculator $calculator,
         private readonly PagBankService $pagBank,
+        private readonly AsaasService $asaas,
+        private readonly PixGatewayService $pixGateway,
         private readonly WhatsAppService $whatsApp,
     ) {}
 
@@ -60,7 +64,8 @@ class LocxController extends Controller
             'relatorios' => $this->relatorios($user),
             'lojas' => $this->lojas(),
             'usuarios' => $this->usuarios($request),
-            'pagbank' => ['pagbankConfig' => $this->pagBank->config()],
+            'pagbank' => ['pagbankConfig' => $this->pagBank->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
+            'asaas' => ['asaasConfig' => $this->asaas->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'whatsapp' => [
                 'whatsappConfig' => $this->whatsApp->config(),
                 'whatsappLogs' => WhatsappLog::with('cliente')->latest('id')->limit(80)->get(),
@@ -168,10 +173,10 @@ class LocxController extends Controller
             'status' => 'aberta',
             'whatsapp_status' => 'pendente',
         ]);
-        $resultado = $this->pagBank->criarPix($cobranca);
+        $resultado = $this->pixGateway->criarPix($cobranca);
         $mensagem = $resultado['ok'] ?? false
-            ? 'Cobrança criada e PIX PagBank gerado.'
-            : 'Cobrança criada. PagBank: '.($resultado['erro'] ?? 'PIX não gerado');
+            ? 'Cobrança criada e PIX '.$this->pixGateway->nomeGateway().' gerado.'
+            : 'Cobrança criada. '.$this->pixGateway->nomeGateway().': '.($resultado['erro'] ?? 'PIX não gerado');
 
         return $this->voltar('financeiro', $mensagem);
     }
@@ -209,11 +214,11 @@ class LocxController extends Controller
     public function gerarPix(Request $request, Cobranca $cobranca): RedirectResponse
     {
         $this->autorizar($request->user(), 'financeiro', 'editar');
-        $resultado = $this->pagBank->criarPix($cobranca);
+        $resultado = $this->pixGateway->criarPix($cobranca);
 
         return $this->voltar(
             $request->string('page', 'financeiro')->toString(),
-            ($resultado['ok'] ?? false) ? 'PIX PagBank gerado com sucesso.' : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida')
+            ($resultado['ok'] ?? false) ? 'PIX '.$this->pixGateway->nomeGateway().' gerado com sucesso.' : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida')
         );
     }
 
@@ -292,6 +297,52 @@ class LocxController extends Controller
         }
 
         return $this->voltar('pagbank', $mensagem);
+    }
+
+    public function salvarAsaas(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'asaas', 'editar');
+        $dados = $request->validate([
+            'modo' => ['required', Rule::in(['demo', 'api'])],
+            'ambiente' => ['required', Rule::in(['sandbox', 'producao'])],
+            'ativo' => ['required', 'boolean'],
+            'api_key' => ['nullable', 'string'],
+            'webhook_url' => ['nullable', 'url', 'max:500'],
+            'webhook_token' => ['nullable', 'string', 'max:160'],
+        ]);
+        $acao = $request->string('acao')->toString();
+        if (blank($dados['api_key'] ?? null)) {
+            unset($dados['api_key']);
+        }
+        $dados['webhook_url'] = $dados['webhook_url'] ?: route('locx.webhook-asaas');
+        $dados['webhook_token'] = $dados['webhook_token'] ?: 'locx_asaas_webhook_token';
+
+        \App\Models\AsaasConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);
+        $mensagem = 'Configurações do Asaas salvas.';
+        if ($acao === 'testar') {
+            $resultado = $this->asaas->testar();
+            $mensagem = ($resultado['ok'] ?? false)
+                ? ($resultado['mensagem'] ?? 'Conexão validada.')
+                : 'Asaas salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
+        }
+
+        return $this->voltar('asaas', $mensagem);
+    }
+
+    public function salvarGatewayPix(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'configuracoes', 'editar');
+        $dados = $request->validate([
+            'gateway' => ['required', Rule::in(['pagbank', 'asaas'])],
+            'page' => ['nullable', 'string'],
+        ]);
+
+        $this->pixGateway->salvar($dados['gateway']);
+        $page = in_array($dados['page'] ?? '', ['pagbank', 'asaas', 'pix', 'configuracoes'], true)
+            ? $dados['page']
+            : 'configuracoes';
+
+        return $this->voltar($page, 'Gateway PIX principal atualizado.');
     }
 
     public function salvarUsuario(Request $request): RedirectResponse

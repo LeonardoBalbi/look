@@ -23,11 +23,14 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/configuracoes/whatsapp', [LocxController::class, 'salvarWhatsApp'])->name('locx.whatsapp.salvar');
     Route::post('/configuracoes/whatsapp/testar', [LocxController::class, 'testarWhatsApp'])->name('locx.whatsapp.testar');
     Route::post('/configuracoes/pagbank', [LocxController::class, 'salvarPagBank'])->name('locx.pagbank.salvar');
+    Route::post('/configuracoes/asaas', [LocxController::class, 'salvarAsaas'])->name('locx.asaas.salvar');
+    Route::post('/configuracoes/gateway-pix', [LocxController::class, 'salvarGatewayPix'])->name('locx.gateway-pix.salvar');
     Route::post('/usuarios', [LocxController::class, 'salvarUsuario'])->name('locx.usuarios.salvar');
 });
 
 Route::match(['get', 'post'], '/webhooks/whatsapp', [WebhookController::class, 'whatsapp'])->name('locx.webhook-whatsapp');
 Route::post('/webhooks/pagbank', [WebhookController::class, 'pagBank'])->name('locx.webhook-pagbank');
+Route::post('/webhooks/asaas', [WebhookController::class, 'asaas'])->name('locx.webhook-asaas');
 
 Route::get('/locx', fn () => redirect()->route('locx.index', request()->query(), 301));
 Route::get('/locx/index.php', fn () => redirect()->route('locx.index', request()->query(), 301));
@@ -35,3 +38,4 @@ Route::get('/locx/login.php', fn () => redirect()->route('locx.login', status: 3
 Route::get('/locx/logout.php', fn () => redirect()->route('locx.login', status: 301));
 Route::match(['get', 'post'], '/locx/webhooks/whatsapp.php', [WebhookController::class, 'whatsapp']);
 Route::post('/locx/webhooks/pagbank.php', [WebhookController::class, 'pagBank']);
+Route::post('/locx/webhooks/asaas.php', [WebhookController::class, 'asaas']);

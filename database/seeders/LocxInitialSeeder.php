@@ -32,7 +32,7 @@ class LocxInitialSeeder extends Seeder
 
         $modulos = [
             'dashboard', 'clientes', 'motos', 'contratos', 'financeiro', 'cobrancas',
-            'inadimplencia', 'pix', 'pagbank', 'whatsapp', 'relatorios', 'lojas',
+            'inadimplencia', 'pix', 'pagbank', 'asaas', 'whatsapp', 'relatorios', 'lojas',
             'usuarios', 'configuracoes',
         ];
         $acoes = ['visualizar', 'criar', 'editar', 'excluir'];
@@ -66,6 +66,19 @@ class LocxInitialSeeder extends Seeder
             'ambiente' => 'sandbox',
             'ativo' => 1,
             'merchant_reference' => 'LOCX',
+        ]);
+
+        DB::table('asaas_config')->insertOrIgnore([
+            'id' => 1,
+            'modo' => 'demo',
+            'ambiente' => 'sandbox',
+            'ativo' => 1,
+            'webhook_token' => 'locx_asaas_webhook_token',
+        ]);
+
+        DB::table('pix_gateway_config')->insertOrIgnore([
+            'id' => 1,
+            'gateway' => 'pagbank',
         ]);
     }
 }

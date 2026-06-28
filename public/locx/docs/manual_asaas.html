@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Manual Asaas - LocX</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:850px;margin:40px auto;padding:0 20px;color:#172033;line-height:1.6}
+    h1,h2{color:#0b6b55} code{background:#eef3f6;padding:3px 6px;border-radius:5px;word-break:break-all}
+    .alert{background:#fff4d6;border-left:4px solid #e5a400;padding:12px 16px}
+  </style>
+</head>
+<body>
+  <h1>Conectar Asaas / PIX</h1>
+  <ol>
+    <li>Crie ou acesse sua conta Asaas e conclua a validacao cadastral.</li>
+    <li>No painel Asaas, gere a API Key do ambiente desejado.</li>
+    <li>No LocX, abra <strong>Asaas</strong>, escolha o ambiente e cole a API Key.</li>
+    <li>Configure a URL de webhook no painel Asaas e use o mesmo token exibido no LocX.</li>
+    <li>Em <strong>Gateway PIX principal</strong>, escolha <strong>Asaas</strong>.</li>
+    <li>Cadastre um cliente com CPF/CNPJ valido, crie uma cobranca e use <strong>Gerar PIX</strong>.</li>
+  </ol>
+  <h2>Webhook</h2>
+  <p>Use este formato, trocando pelo seu dominio:</p>
+  <p><code>https://seusite.com/webhooks/asaas</code></p>
+  <p class="alert"><strong>Importante:</strong> localhost nao recebe notificacoes do Asaas. O endereco precisa ser publico e usar HTTPS.</p>
+  <h2>Producao</h2>
+  <p>Depois que o sandbox funcionar, troque o ambiente para <strong>producao</strong> e use a API Key de producao. Faca primeiro um PIX de valor baixo.</p>
+</body>
+</html>
