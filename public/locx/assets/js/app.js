@@ -49,6 +49,34 @@ function locxDonut(id, items){
       btn.addEventListener('click', function(e){e.preventDefault();closeMenu();}, false);
     });
     document.querySelectorAll('.sidebar .menu a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=768) closeMenu(); }));
+    document.querySelectorAll('.pix-copy-btn').forEach(btn=>{
+      btn.addEventListener('click', async function(){
+        const pix=this.dataset.pix || '';
+        if(!pix) return;
+        try{
+          if(navigator.clipboard && window.isSecureContext){
+            await navigator.clipboard.writeText(pix);
+          }else{
+            const tmp=document.createElement('textarea');
+            tmp.value=pix;
+            tmp.style.position='fixed';
+            tmp.style.opacity='0';
+            document.body.appendChild(tmp);
+            tmp.focus();
+            tmp.select();
+            document.execCommand('copy');
+            document.body.removeChild(tmp);
+          }
+          const original=this.textContent;
+          this.textContent='PIX copiado';
+          this.classList.add('success');
+          setTimeout(()=>{this.textContent=original;this.classList.remove('success');},1800);
+        }catch(e){
+          this.textContent='Falha ao copiar';
+          setTimeout(()=>{this.textContent='Copiar PIX';},1800);
+        }
+      });
+    });
   });
   document.addEventListener('click', function(e){
     if(e.target.closest('.mobile-menu-toggle,.hamburger,#menuToggle,[data-menu-toggle]')){e.preventDefault();openMenu();}

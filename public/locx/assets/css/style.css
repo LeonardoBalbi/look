@@ -449,3 +449,9 @@ table{min-width:680px}
 code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border-radius:10px;padding:8px 10px;color:#334155;word-break:break-all;max-width:100%}
 .actions form{margin:0}.actions .btn{padding:8px 10px;font-size:12px;box-shadow:none}
 .module-card[href]{cursor:pointer}
+.pix-cell{display:grid;gap:8px;min-width:240px;max-width:360px;white-space:normal}
+.pix-tools{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.pix-copy-btn{padding:8px 10px;font-size:12px;box-shadow:none}
+.pix-copy-btn.success{background:var(--green);color:#fff;border-color:var(--green)}
+.pix-qr{width:82px;height:82px;border:1px solid var(--line);border-radius:10px;background:#fff;padding:4px;object-fit:contain}
+.pix-code{display:block;font-size:11px;line-height:1.35;padding:6px 8px;max-width:100%;white-space:normal}

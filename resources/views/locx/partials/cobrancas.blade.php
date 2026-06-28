@@ -1,6 +1,6 @@
 <div class="table-wrap">
     <table>
-        <thead><tr><th>ID</th><th>Cliente</th><th>Vencimento</th><th>Principal</th><th>Pago</th><th>Atualizado</th><th>PIX/WhatsApp</th><th>PagBank</th><th>Status</th></tr></thead>
+        <thead><tr><th>ID</th><th>Cliente</th><th>Vencimento</th><th>Principal</th><th>Pago</th><th>Atualizado</th><th>PIX/WhatsApp</th><th>Gateway PIX</th><th>Status</th></tr></thead>
         <tbody>
         @forelse ($cobrancas as $cobranca)
             <tr>
@@ -10,7 +10,21 @@
                 <td>{{ \App\Support\Locx::moeda($cobranca->valor_principal) }}</td>
                 <td>{{ \App\Support\Locx::moeda($cobranca->valor_pago) }}</td>
                 <td>{{ \App\Support\Locx::moeda($cobranca->valor_atualizado) }}</td>
-                <td>{{ $cobranca->pix_copia_cola ? 'PIX gerado' : 'Sem PIX' }} / {!! \App\Support\Locx::status($cobranca->whatsapp_status) !!}</td>
+                <td>
+                    <div class="pix-cell">
+                        <div>{{ $cobranca->pix_copia_cola ? 'PIX gerado' : 'Sem PIX' }} / {!! \App\Support\Locx::status($cobranca->whatsapp_status) !!}</div>
+                        @if ($cobranca->pix_copia_cola)
+                            @php($qrImagem = $cobranca->pix_qrcode && (\Illuminate\Support\Str::startsWith($cobranca->pix_qrcode, ['http://', 'https://', 'data:image/'])))
+                            <div class="pix-tools">
+                                <button type="button" class="btn secondary pix-copy-btn" data-pix="{{ e($cobranca->pix_copia_cola) }}">Copiar PIX</button>
+                                @if ($qrImagem)
+                                    <img class="pix-qr" src="{{ $cobranca->pix_qrcode }}" alt="QR Code PIX da cobrança #{{ $cobranca->id }}">
+                                @endif
+                            </div>
+                            <code class="pix-code">{{ \Illuminate\Support\Str::limit($cobranca->pix_copia_cola, 52) }}</code>
+                        @endif
+                    </div>
+                </td>
                 <td>
                     <form method="post" action="{{ route('locx.cobrancas.pix', $cobranca) }}">
                         @csrf
@@ -18,7 +32,13 @@
                         <button class="btn secondary" type="submit">Gerar PIX</button>
                     </form>
                     <br>
-                    {!! $cobranca->pagbank_status ? \App\Support\Locx::status($cobranca->pagbank_status) : '<span class="tag muted">não gerado</span>' !!}
+                    @if ($cobranca->asaas_status)
+                        <small>Asaas</small><br>{!! \App\Support\Locx::status($cobranca->asaas_status) !!}
+                    @elseif ($cobranca->pagbank_status)
+                        <small>PagBank</small><br>{!! \App\Support\Locx::status($cobranca->pagbank_status) !!}
+                    @else
+                        <span class="tag muted">não gerado</span>
+                    @endif
                 </td>
                 <td>{!! \App\Support\Locx::status($cobranca->status) !!}</td>
             </tr>

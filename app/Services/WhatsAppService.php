@@ -6,6 +6,7 @@ use App\Models\Cobranca;
 use App\Models\WhatsappConfig;
 use App\Models\WhatsappLog;
 use App\Support\Locx;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
 
@@ -22,6 +23,7 @@ class WhatsAppService
                 'ativo' => true,
                 'verify_token' => 'locx_webhook_token',
                 'template_cobranca' => 'locx_cobranca_atraso',
+                'template_language' => 'pt_BR',
                 'template_lembrete' => 'locx_lembrete_vencimento',
                 'template_vencimento' => 'locx_vencimento_pix',
                 'template_pagamento' => 'locx_pagamento_confirmado',
@@ -45,23 +47,41 @@ class WhatsAppService
             return ['ok' => false, 'erro' => 'WhatsApp API inativa.'];
         }
         if ($config->modo === 'demo') {
-            return ['ok' => true, 'demo' => true, 'mensagem' => 'Modo demo ativo. Nenhuma chamada externa foi feita.'];
-        }
-        if (! $config->phone_number_id || ! $config->access_token) {
-            return ['ok' => false, 'erro' => 'Informe o Phone Number ID e o Access Token da Meta.'];
-        }
-
-        $response = $this->request('GET', $config->phone_number_id, null, [
-            'fields' => 'id,display_phone_number,verified_name,quality_rating',
-        ]);
-        if ($response->successful()) {
             return [
                 'ok' => true,
-                'mensagem' => 'Conexão validada com '.($response->json('verified_name') ?: 'conta WhatsApp').'.',
+                'demo' => true,
+                'mensagem' => 'Modo demo ativo: nenhuma credencial ou mensagem foi validada na Meta.',
+            ];
+        }
+        if (! $config->waba_id || ! $config->phone_number_id || ! $config->access_token) {
+            return [
+                'ok' => false,
+                'erro' => 'Informe o WABA ID, o Phone Number ID e o Access Token permanente da Meta.',
             ];
         }
 
-        return ['ok' => false, 'http_code' => $response->status(), 'erro' => $response->body()];
+        try {
+            $response = $this->request('GET', $config->phone_number_id, null, [
+                'fields' => 'id,display_phone_number,verified_name,quality_rating',
+            ]);
+        } catch (ConnectionException $exception) {
+            return ['ok' => false, 'erro' => 'Não foi possível conectar à Meta: '.$exception->getMessage()];
+        }
+
+        if ($response->successful()) {
+            $template = $this->validarTemplate();
+            if (! ($template['ok'] ?? false)) {
+                return $template;
+            }
+
+            return [
+                'ok' => true,
+                'mensagem' => 'Conexão e template validados com '
+                    .($response->json('verified_name') ?: 'a conta WhatsApp').'.',
+            ];
+        }
+
+        return $this->falhaDaMeta($response);
     }
 
     public function enviarCobranca(Cobranca $cobranca): array
@@ -127,7 +147,19 @@ class WhatsAppService
         if ($config->modo === 'demo') {
             $this->log($cobranca, $telefone, $mensagem, 'demo', 200, 'Envio simulado', null, $tipo);
 
-            return ['ok' => true, 'demo' => true];
+            return [
+                'ok' => true,
+                'demo' => true,
+                'mensagem' => 'Envio simulado. Nenhuma mensagem foi enviada à Meta.',
+            ];
+        }
+        if (! $config->phone_number_id || ! $config->access_token || ! $template) {
+            return $this->registrarFalha(
+                $cobranca,
+                $telefone,
+                $mensagem,
+                'Informe o Phone Number ID, o Access Token permanente e o template de cobrança.'
+            );
         }
         if (! $config->phone_number_id || ! $config->access_token || ! $template) {
             $erro = 'Phone Number ID, Access Token ou template não configurado.';
@@ -142,7 +174,7 @@ class WhatsAppService
             'type' => 'template',
             'template' => [
                 'name' => $template,
-                'language' => ['code' => 'pt_BR'],
+                'language' => ['code' => $config->template_language ?: 'pt_BR'],
                 'components' => [[
                     'type' => 'body',
                     'parameters' => collect($parametros)
@@ -156,8 +188,19 @@ class WhatsAppService
                 ]],
             ],
         ];
-        $response = $this->request('POST', $config->phone_number_id.'/messages', $payload);
+        try {
+            $response = $this->request('POST', $config->phone_number_id.'/messages', $payload);
+        } catch (ConnectionException $exception) {
+            return $this->registrarFalha(
+                $cobranca,
+                $telefone,
+                $mensagem,
+                'Não foi possível conectar à Meta: '.$exception->getMessage()
+            );
+        }
+
         $ok = $response->successful();
+        $falha = $ok ? null : $this->falhaDaMeta($response);
         $this->log(
             $cobranca,
             $telefone,
@@ -165,15 +208,21 @@ class WhatsAppService
             $ok ? 'enviado' : 'erro',
             $response->status(),
             $response->body(),
-            $ok ? null : $response->body(),
+            $falha['erro'] ?? null,
             $tipo
         );
 
-        return [
-            'ok' => $ok,
-            'http_code' => $response->status(),
-            'erro' => $ok ? null : $response->body(),
-        ];
+        if ($ok) {
+            $cobranca?->update(['whatsapp_status' => 'enviado']);
+        }
+
+        return $ok
+            ? [
+                'ok' => true,
+                'http_code' => $response->status(),
+                'mensagem' => 'Mensagem aceita pela Meta para envio.',
+            ]
+            : $falha;
     }
 
     public function registrarWebhook(string $raw): void
@@ -185,6 +234,18 @@ class WhatsAppService
             'resposta_api' => $raw,
             'criado_em' => now(),
         ]);
+    }
+
+    private function registrarFalha(
+        ?Cobranca $cobranca,
+        string $telefone,
+        string $mensagem,
+        string $erro,
+        string $tipo = 'cobranca_inadimplencia',
+    ): array {
+        $this->log($cobranca, $telefone, $mensagem, 'erro', null, null, $erro, $tipo);
+
+        return ['ok' => false, 'erro' => $erro];
     }
 
     private function request(string $method, string $path, ?array $payload = null, array $query = []): Response
@@ -204,7 +265,74 @@ class WhatsAppService
     {
         $numero = preg_replace('/\D+/', '', (string) $telefone);
 
-        return $numero && strlen($numero) <= 11 ? '55'.$numero : $numero;
+        if (strlen($numero) === 10 || strlen($numero) === 11) {
+            $numero = '55'.$numero;
+        }
+
+        return strlen($numero) >= 12 && strlen($numero) <= 15 ? $numero : '';
+    }
+
+    private function validarTemplate(): array
+    {
+        $config = $this->config();
+
+        try {
+            $response = $this->request('GET', $config->waba_id.'/message_templates', null, [
+                'fields' => 'id,name,status,language,category',
+                'name' => $config->template_cobranca,
+                'limit' => 100,
+            ]);
+        } catch (ConnectionException $exception) {
+            return ['ok' => false, 'erro' => 'Não foi possível consultar os templates na Meta: '.$exception->getMessage()];
+        }
+
+        if (! $response->successful()) {
+            return $this->falhaDaMeta($response);
+        }
+
+        $idioma = $config->template_language ?: 'pt_BR';
+        $template = collect($response->json('data', []))->first(
+            fn (array $item) => ($item['name'] ?? null) === $config->template_cobranca
+                && ($item['language'] ?? null) === $idioma
+        );
+
+        if (! $template) {
+            return [
+                'ok' => false,
+                'erro' => "O template {$config->template_cobranca} não existe no idioma {$idioma}.",
+            ];
+        }
+
+        if (($template['status'] ?? null) !== 'APPROVED') {
+            return [
+                'ok' => false,
+                'erro' => "O template {$config->template_cobranca} está com status "
+                    .($template['status'] ?? 'desconhecido').' na Meta.',
+            ];
+        }
+
+        return ['ok' => true];
+    }
+
+    private function falhaDaMeta(Response $response): array
+    {
+        $code = (int) $response->json('error.code');
+        $details = $response->json('error.error_data.details');
+        $message = $response->json('error.message');
+
+        $erro = match ($code) {
+            190 => 'Access Token da Meta expirado ou inválido. Gere e salve um token permanente.',
+            132001 => $details
+                ?: 'O nome do template ou o idioma configurado não existe na conta da Meta.',
+            default => $details ?: $message ?: 'A Meta recusou a solicitação.',
+        };
+
+        return [
+            'ok' => false,
+            'http_code' => $response->status(),
+            'meta_code' => $code ?: null,
+            'erro' => $erro,
+        ];
     }
 
     private function log(
