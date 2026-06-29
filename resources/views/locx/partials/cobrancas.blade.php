@@ -14,11 +14,11 @@
                     <div class="pix-cell">
                         <div>{{ $cobranca->pix_copia_cola ? 'PIX gerado' : 'Sem PIX' }} / {!! \App\Support\Locx::status($cobranca->whatsapp_status) !!}</div>
                         @if ($cobranca->pix_copia_cola)
-                            @php($qrImagem = $cobranca->pix_qrcode && (\Illuminate\Support\Str::startsWith($cobranca->pix_qrcode, ['http://', 'https://', 'data:image/'])))
+                            @php($qrImagem = \App\Support\PixQrCode::dataUri($cobranca->pix_copia_cola, $cobranca->pix_qrcode))
                             <div class="pix-tools">
                                 <button type="button" class="btn secondary pix-copy-btn" data-pix="{{ e($cobranca->pix_copia_cola) }}">Copiar PIX</button>
                                 @if ($qrImagem)
-                                    <img class="pix-qr" src="{{ $cobranca->pix_qrcode }}" alt="QR Code PIX da cobrança #{{ $cobranca->id }}">
+                                    <img class="pix-qr" src="{{ $qrImagem }}" alt="QR Code PIX da cobranca #{{ $cobranca->id }}">
                                 @endif
                             </div>
                             <code class="pix-code">{{ \Illuminate\Support\Str::limit($cobranca->pix_copia_cola, 52) }}</code>

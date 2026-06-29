@@ -7,6 +7,7 @@ use App\Models\AsaasLog;
 use App\Models\Cliente;
 use App\Models\Cobranca;
 use App\Models\Pagamento;
+use App\Support\PixQrCode;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -75,7 +76,7 @@ class AsaasService
 
             $cobranca->update([
                 'pix_copia_cola' => $pix,
-                'pix_qrcode' => $pix,
+                'pix_qrcode' => PixQrCode::dataUri($pix),
                 'asaas_id' => 'DEMO-'.$cobranca->id,
                 'asaas_status' => 'DEMO',
                 'asaas_payload' => 'PIX demo gerado pelo LocX',
@@ -152,7 +153,7 @@ class AsaasService
 
         $qrJson = $qrCode->json();
         $pix = $qrJson['payload'] ?? '';
-        $imagem = isset($qrJson['encodedImage']) ? 'data:image/png;base64,'.$qrJson['encodedImage'] : $pix;
+        $imagem = PixQrCode::dataUri($pix, isset($qrJson['encodedImage']) ? 'data:image/png;base64,'.$qrJson['encodedImage'] : null);
 
         $cobranca->update([
             'pix_copia_cola' => $pix,

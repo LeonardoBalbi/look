@@ -149,7 +149,7 @@
                     <label class="span-2">Cobrança<select name="cobranca_id">@foreach($cobrancasAbertas as $cobranca)<option value="{{ $cobranca->id }}">#{{ $cobranca->id }} - {{ $cobranca->cliente?->nome }} - {{ \App\Support\Locx::moeda($cobranca->valor_atualizado-$cobranca->valor_pago) }}</option>@endforeach</select></label>
                     <label>Valor Pago<input type="number" step="0.01" name="valor" required></label><label>Forma<select name="forma"><option>pix</option><option>dinheiro</option><option>cartao</option><option>transferencia</option></select></label><div class="span-3"><button class="btn success" type="submit">Registrar Pagamento</button></div>
                 </form></div>
-                <div class="panel"><h2>{{ $page === 'pix' ? 'Conciliação PIX' : 'Cobranças' }}</h2>@include('locx.partials.cobrancas')</div>
+                <div class="panel"><h2>{{ $page === 'pix' ? 'Conciliação PIX' : 'Cobranças' }}</h2>@include('locx.partials.cobrancas_qr')</div>
             </div>
 
         @elseif ($page === 'inadimplencia')
@@ -164,7 +164,7 @@
 
         @elseif ($page === 'relatorios')
             <div class="grid report-charts"><div class="panel report-chart-card"><h2>Faturamento por loja</h2><div id="chartLojas" class="chart-bars report-bars"></div></div><div class="panel report-chart-card"><h2>Clientes por status</h2><div id="donutClientes" class="donut-box report-donut"></div></div></div>
-            <div class="panel"><h2>Relatório financeiro detalhado</h2>@include('locx.partials.cobrancas')</div>
+            <div class="panel"><h2>Relatório financeiro detalhado</h2>@include('locx.partials.cobrancas_qr')</div>
             <script>window.addEventListener('load',()=>{locxBars('chartLojas',@json($relatorioLojas->pluck('label')),@json($relatorioLojas->pluck('value')));locxDonut('donutClientes',[{label:'Ativos',value:@json($clientesStatus['ativo'])},{label:'Inadimplentes',value:@json($clientesStatus['inadimplente'])},{label:'Bloqueados',value:@json($clientesStatus['bloqueado'])},{label:'Encerrados',value:@json($clientesStatus['encerrado'])}]);});</script>
 
         @elseif ($page === 'lojas')

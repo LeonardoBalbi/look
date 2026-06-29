@@ -6,6 +6,7 @@ use App\Models\Cobranca;
 use App\Models\Pagamento;
 use App\Models\PagbankConfig;
 use App\Models\PagbankLog;
+use App\Support\PixQrCode;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -70,7 +71,7 @@ class PagBankService
 
             $cobranca->update([
                 'pix_copia_cola' => $pix,
-                'pix_qrcode' => $pix,
+                'pix_qrcode' => PixQrCode::dataUri($pix),
                 'pagbank_order_id' => 'DEMO-'.$cobranca->id,
                 'pagbank_status' => 'DEMO',
                 'pagbank_payload' => 'PIX demo gerado pelo LocX',
@@ -138,7 +139,7 @@ class PagBankService
 
         $cobranca->update([
             'pix_copia_cola' => $qr,
-            'pix_qrcode' => $qrImage['href'] ?? $qr,
+            'pix_qrcode' => PixQrCode::dataUri($qr, $qrImage['href'] ?? null),
             'pagbank_order_id' => $json['id'] ?? null,
             'pagbank_status' => $json['status'] ?? 'CREATED',
             'pagbank_payload' => $response->body(),
