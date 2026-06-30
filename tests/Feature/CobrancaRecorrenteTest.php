@@ -9,11 +9,14 @@ use App\Models\Cobranca;
 use App\Models\Contrato;
 use App\Models\Motocicleta;
 use App\Models\PixGatewayConfig;
+use App\Models\User;
+use App\Services\EmailCobrancaService;
 use Database\Seeders\LocxInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Mail;
+use RuntimeException;
 use Tests\TestCase;
 
 class CobrancaRecorrenteTest extends TestCase
@@ -96,6 +99,61 @@ class CobrancaRecorrenteTest extends TestCase
         $cobranca = Cobranca::query()->where('contrato_id', $contrato->id)->firstOrFail();
         Mail::assertSent(CobrancaCriadaMail::class, fn (CobrancaCriadaMail $mail) => $mail->hasTo('cliente@example.com')
             && $mail->cobranca->is($cobranca));
+    }
+
+    public function test_criacao_manual_envia_email_com_pix_para_cliente(): void
+    {
+        Mail::fake();
+        Http::fake();
+        PixGatewayConfig::query()->updateOrCreate(['id' => 1], ['gateway' => 'asaas']);
+        AsaasConfig::query()->updateOrCreate(['id' => 1], [
+            'modo' => 'demo',
+            'ambiente' => 'sandbox',
+            'ativo' => true,
+        ]);
+        $contrato = $this->contrato();
+        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+
+        $this->actingAs($usuario)
+            ->withSession(['_token' => 'token-teste'])
+            ->post('/cobrancas', [
+                '_token' => 'token-teste',
+                'contrato_id' => $contrato->id,
+                'vencimento' => today()->format('Y-m-d'),
+                'valor_principal' => 500,
+            ])
+            ->assertRedirect('/?page=financeiro');
+
+        $cobranca = Cobranca::query()->where('contrato_id', $contrato->id)->firstOrFail();
+        $this->assertStringContainsString('LOCX-ASAAS-DEMO-COBRANCA-'.$cobranca->id, $cobranca->pix_copia_cola);
+        Mail::assertSent(CobrancaCriadaMail::class, fn (CobrancaCriadaMail $mail) => $mail->hasTo('cliente@example.com')
+            && $mail->cobranca->is($cobranca));
+    }
+
+    public function test_falha_smtp_nao_interrompe_fluxo_da_cobranca(): void
+    {
+        $contrato = $this->contrato();
+        $cobranca = Cobranca::query()->create([
+            'contrato_id' => $contrato->id,
+            'cliente_id' => $contrato->cliente_id,
+            'loja_id' => $contrato->loja_id,
+            'vencimento' => today(),
+            'valor_principal' => 500,
+            'valor_atualizado' => 500,
+            'valor_pago' => 0,
+            'status' => 'aberta',
+            'pix_copia_cola' => 'PIX-TESTE',
+        ]);
+
+        Mail::shouldReceive('to')
+            ->once()
+            ->with('cliente@example.com')
+            ->andThrow(new RuntimeException('535 Incorrect authentication data'));
+
+        $resultado = app(EmailCobrancaService::class)->enviarCobranca($cobranca);
+
+        $this->assertFalse($resultado['ok']);
+        $this->assertStringContainsString('535 Incorrect authentication data', $resultado['erro']);
     }
 
     private function contrato(array $dados = []): Contrato

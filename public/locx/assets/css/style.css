@@ -459,12 +459,31 @@ code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border
 .pix-code{display:block;font-size:11px;line-height:1.35;padding:6px 8px;max-width:100%;white-space:normal}
 
 /* LOCX CRM */
+.crm-workspace{display:grid;gap:18px}
+.crm-quickbar{display:flex;justify-content:space-between;align-items:center;gap:16px;background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 20px;box-shadow:var(--shadow-sm)}
+.crm-quickbar span,.crm-contact-strip span{display:block;color:#64748b;font-size:11px;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
+.crm-quickbar strong{display:block;color:#0f172a;font-size:22px;line-height:1.15}
+.crm-quickbar small{display:block;color:#64748b;margin-top:5px}
+.crm-quick-actions{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+.crm-stage-cards{grid-template-columns:repeat(6,minmax(140px,1fr))}
+.crm-stage-cards .metric{padding:15px}
+.crm-stage-cards .metric strong{font-size:22px}
+.crm-subtitle{margin:4px 0 0;color:#64748b;font-size:13px}
 .crm-layout .table-wrap table{min-width:860px}
+.crm-client-table td strong{display:block}
+.crm-client-table td small{display:block;color:#64748b;margin-top:4px}
+.crm-client-table tr.is-selected td{background:#eef6ff}
+.crm-money-open{color:#b91c1c}
+.crm-money-ok{color:#166534}
 .crm-task-list{display:grid;gap:10px}
 .crm-task{display:flex;justify-content:space-between;gap:12px;align-items:center;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fbfdff}
 .crm-task strong{display:block;color:#0f172a}
 .crm-task span{display:block;color:var(--muted);font-size:12px;margin-top:4px}
 .crm-task form{margin:0}
+.crm-contact-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:12px 0 16px}
+.crm-contact-strip div{background:#f8fafc;border:1px solid var(--line);border-radius:14px;padding:12px;min-width:0}
+.crm-contact-strip strong{display:block;color:#0f172a;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crm-stage-form{grid-template-columns:minmax(0,1fr) auto;align-items:end;margin-bottom:14px}
 .crm-timeline{display:grid;gap:12px}
 .crm-event{display:grid;grid-template-columns:110px minmax(0,1fr);gap:12px;border:1px solid var(--line);border-radius:14px;padding:12px;background:#fff}
 .crm-event strong{display:block;color:#0f172a}
@@ -472,6 +491,12 @@ code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border
 .crm-event small{color:var(--muted)}
 .crm-detail .section-head p{margin:6px 0 0;color:var(--muted)}
 @media(max-width:768px){
+  .crm-quickbar{display:grid;padding:16px}
+  .crm-quick-actions{justify-content:stretch}
+  .crm-quick-actions .btn{width:100%;justify-content:center}
+  .crm-stage-cards{grid-template-columns:1fr!important}
+  .crm-contact-strip{grid-template-columns:1fr}
+  .crm-stage-form{grid-template-columns:1fr}
   .crm-event{grid-template-columns:1fr}
   .crm-task{display:grid}
 }

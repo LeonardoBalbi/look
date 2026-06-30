@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Mail\PagamentoConfirmadoMail;
 use App\Models\Cliente;
 use App\Models\Cobranca;
 use App\Models\Contrato;
@@ -11,6 +12,7 @@ use App\Models\User;
 use Database\Seeders\LocxInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class CrmModuleTest extends TestCase
@@ -41,7 +43,8 @@ class CrmModuleTest extends TestCase
             ->assertSee('Clientes no CRM')
             ->assertSee('Cliente CRM');
 
-        $this->actingAs($usuario)->post('/crm/notas', [
+        $this->actingAs($usuario)->withSession(['_token' => 'token-teste'])->post('/crm/notas', [
+            '_token' => 'token-teste',
             'cliente_id' => $cliente->id,
             'tipo' => 'ligacao',
             'texto' => 'Cliente pediu reenvio do PIX.',
@@ -53,7 +56,8 @@ class CrmModuleTest extends TestCase
             'texto' => 'Cliente pediu reenvio do PIX.',
         ]);
 
-        $this->actingAs($usuario)->post('/crm/tarefas', [
+        $this->actingAs($usuario)->withSession(['_token' => 'token-teste'])->post('/crm/tarefas', [
+            '_token' => 'token-teste',
             'cliente_id' => $cliente->id,
             'titulo' => 'Confirmar pagamento',
             'tipo' => 'cobranca',
@@ -100,12 +104,14 @@ class CrmModuleTest extends TestCase
 
     public function test_pagamento_confirmado_fecha_tarefa_de_cobranca_no_crm(): void
     {
+        Mail::fake();
         $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
         $cobranca = $this->cobrancaVencida(1);
 
         Artisan::call('locx:sincronizar-crm');
 
-        $this->actingAs($usuario)->post('/pagamentos', [
+        $this->actingAs($usuario)->withSession(['_token' => 'token-teste'])->post('/pagamentos', [
+            '_token' => 'token-teste',
             'cobranca_id' => $cobranca->id,
             'valor' => '250.00',
             'forma' => 'pix',
@@ -124,6 +130,8 @@ class CrmModuleTest extends TestCase
             'id' => $cobranca->cliente_id,
             'crm_etapa' => 'contrato_ativo',
         ]);
+        Mail::assertSent(PagamentoConfirmadoMail::class, fn (PagamentoConfirmadoMail $mail) => $mail->hasTo($cobranca->cliente->email)
+            && $mail->pagamento->cobranca_id === $cobranca->id);
     }
 
     private function cobrancaVencida(int $dias): Cobranca

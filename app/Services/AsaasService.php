@@ -209,6 +209,46 @@ class AsaasService
         return ['ok' => true, 'baixado' => false, 'status' => $status];
     }
 
+    public function conciliarCobranca(Cobranca $cobranca): array
+    {
+        $config = $this->config();
+        if (! $config->ativo || $config->modo !== 'api') {
+            return ['ok' => false, 'erro' => 'Integracao Asaas inativa ou em modo demo.'];
+        }
+
+        if (! $cobranca->asaas_id || str_starts_with((string) $cobranca->asaas_id, 'DEMO-')) {
+            return ['ok' => false, 'erro' => 'Cobranca sem ID Asaas valido.'];
+        }
+
+        $response = $this->request('GET', '/payments/'.$cobranca->asaas_id);
+        $json = $response->json();
+        $status = (string) ($json['status'] ?? '');
+        $this->log(
+            $cobranca->id,
+            'conciliar_pix',
+            $response->successful() ? ($status ?: 'recebido') : 'erro',
+            $response->status(),
+            null,
+            $response->body(),
+            $response->successful() ? null : $response->body()
+        );
+
+        if (! $response->successful()) {
+            return ['ok' => false, 'http_code' => $response->status(), 'erro' => $response->body()];
+        }
+
+        if (in_array(strtoupper($status), ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'], true)) {
+            $valor = (float) ($json['value'] ?? $json['netValue'] ?? 0);
+            $this->baixar($cobranca, $valor, 'ASAAS_'.$status);
+
+            return ['ok' => true, 'baixado' => true, 'status' => $status];
+        }
+
+        $cobranca->update(['asaas_status' => $status, 'atualizado_em' => now()]);
+
+        return ['ok' => true, 'baixado' => false, 'status' => $status];
+    }
+
     private function clienteAsaas(Cliente $cliente, string $documento): array
     {
         if ($cliente->asaas_customer_id) {
@@ -310,7 +350,9 @@ class AsaasService
 
     private function baixar(Cobranca $cobranca, float $valor, string $statusAsaas): void
     {
-        DB::transaction(function () use ($cobranca, $valor, $statusAsaas): void {
+        $pagamento = null;
+
+        DB::transaction(function () use ($cobranca, $valor, $statusAsaas, &$pagamento): void {
             if (Pagamento::where('cobranca_id', $cobranca->id)->where('comprovante', 'like', 'Asaas %')->exists()) {
                 $cobranca->update(['asaas_status' => $statusAsaas, 'atualizado_em' => now()]);
 
@@ -321,7 +363,7 @@ class AsaasService
             $novoPago = (float) $cobranca->valor_pago + $valor;
             $status = $novoPago >= (float) $cobranca->valor_principal ? 'paga' : 'parcial';
 
-            Pagamento::create([
+            $pagamento = Pagamento::create([
                 'cobranca_id' => $cobranca->id,
                 'valor' => $valor,
                 'forma' => 'pix',
@@ -340,6 +382,12 @@ class AsaasService
                 app(CrmAutomationService::class)->fecharTarefasDeCobranca($cobranca->fresh('cliente'));
             }
         });
+
+        if ($pagamento) {
+            app(EmailPagamentoService::class)->enviarConfirmacao(
+                $pagamento->fresh('cobranca.cliente', 'cobranca.contrato.motocicleta')
+            );
+        }
     }
 
     private function request(string $method, string $path, ?array $payload = null, array $query = []): Response
@@ -349,13 +397,17 @@ class AsaasService
             ? 'https://api.asaas.com/v3'
             : 'https://api-sandbox.asaas.com/v3';
 
-        return Http::acceptJson()
+        $request = Http::acceptJson()
             ->withHeaders(['access_token' => $config->api_key])
-            ->timeout(40)
-            ->send($method, $base.$path, array_filter([
-                'query' => $query ?: null,
-                'json' => $payload,
-            ]));
+            ->timeout(40);
+        if (! config('locx.gateway_verify_ssl', true)) {
+            $request = $request->withoutVerifying();
+        }
+
+        return $request->send($method, $base.$path, array_filter([
+            'query' => $query ?: null,
+            'json' => $payload,
+        ]));
     }
 
     private function log(

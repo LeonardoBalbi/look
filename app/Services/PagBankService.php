@@ -200,9 +200,51 @@ class PagBankService
         return ['ok' => true, 'baixado' => false, 'status' => $status];
     }
 
+    public function conciliarCobranca(Cobranca $cobranca): array
+    {
+        $config = $this->config();
+        if (! $config->ativo || $config->modo !== 'api') {
+            return ['ok' => false, 'erro' => 'Integracao PagBank inativa ou em modo demo.'];
+        }
+
+        if (! $cobranca->pagbank_order_id || str_starts_with((string) $cobranca->pagbank_order_id, 'DEMO-')) {
+            return ['ok' => false, 'erro' => 'Cobranca sem ID PagBank valido.'];
+        }
+
+        $response = $this->request('GET', '/orders/'.$cobranca->pagbank_order_id);
+        $json = $response->json();
+        $status = (string) (data_get($json, 'charges.0.status') ?: ($json['status'] ?? ''));
+        $this->log(
+            $cobranca->id,
+            'conciliar_pix',
+            $response->successful() ? ($status ?: 'recebido') : 'erro',
+            $response->status(),
+            null,
+            $response->body(),
+            $response->successful() ? null : $response->body()
+        );
+
+        if (! $response->successful()) {
+            return ['ok' => false, 'http_code' => $response->status(), 'erro' => $response->body()];
+        }
+
+        if (in_array(strtoupper($status), ['PAID', 'AVAILABLE', 'AUTHORIZED', 'COMPLETED', 'RECEIVED'], true)) {
+            $valor = ((float) (data_get($json, 'charges.0.amount.value') ?? data_get($json, 'qr_codes.0.amount.value') ?? 0)) / 100;
+            $this->baixar($cobranca, $valor, 'PAGBANK_'.$status);
+
+            return ['ok' => true, 'baixado' => true, 'status' => $status];
+        }
+
+        $cobranca->update(['pagbank_status' => $status, 'atualizado_em' => now()]);
+
+        return ['ok' => true, 'baixado' => false, 'status' => $status];
+    }
+
     private function baixar(Cobranca $cobranca, float $valor, string $statusPagbank): void
     {
-        DB::transaction(function () use ($cobranca, $valor, $statusPagbank): void {
+        $pagamento = null;
+
+        DB::transaction(function () use ($cobranca, $valor, $statusPagbank, &$pagamento): void {
             if (Pagamento::where('cobranca_id', $cobranca->id)->where('comprovante', 'like', 'PagBank %')->exists()) {
                 $cobranca->update(['pagbank_status' => $statusPagbank, 'atualizado_em' => now()]);
 
@@ -213,7 +255,7 @@ class PagBankService
             $novoPago = (float) $cobranca->valor_pago + $valor;
             $status = $novoPago >= (float) $cobranca->valor_principal ? 'paga' : 'parcial';
 
-            Pagamento::create([
+            $pagamento = Pagamento::create([
                 'cobranca_id' => $cobranca->id,
                 'valor' => $valor,
                 'forma' => 'pix',
@@ -232,6 +274,12 @@ class PagBankService
                 app(CrmAutomationService::class)->fecharTarefasDeCobranca($cobranca->fresh('cliente'));
             }
         });
+
+        if ($pagamento) {
+            app(EmailPagamentoService::class)->enviarConfirmacao(
+                $pagamento->fresh('cobranca.cliente', 'cobranca.contrato.motocicleta')
+            );
+        }
     }
 
     private function request(
@@ -246,6 +294,9 @@ class PagBankService
             ? 'https://api.pagseguro.com'
             : 'https://sandbox.api.pagseguro.com';
         $request = Http::acceptJson()->withToken($config->access_token)->withHeaders($headers)->timeout(40);
+        if (! config('locx.gateway_verify_ssl', true)) {
+            $request = $request->withoutVerifying();
+        }
 
         return $request->send($method, $base.$path, array_filter([
             'query' => $query ?: null,

@@ -15,4 +15,9 @@ return [
         'automacoes_ativas' => env('LOCX_CRM_AUTOMACOES_ATIVAS', true),
         'automacoes_horario' => env('LOCX_CRM_AUTOMACOES_HORARIO', '07:15'),
     ],
+    'pix' => [
+        'conciliacao_ativa' => env('LOCX_PIX_CONCILIACAO_ATIVA', true),
+        'conciliacao_limite' => (int) env('LOCX_PIX_CONCILIACAO_LIMITE', 50),
+    ],
+    'gateway_verify_ssl' => env('LOCX_GATEWAY_VERIFY_SSL', true),
 ];

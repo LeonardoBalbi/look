@@ -18,6 +18,8 @@ use App\Models\WhatsappLog;
 use App\Services\AsaasService;
 use App\Services\CobrancaCalculator;
 use App\Services\CrmAutomationService;
+use App\Services\EmailCobrancaService;
+use App\Services\EmailPagamentoService;
 use App\Services\PagBankService;
 use App\Services\PixGatewayService;
 use App\Services\WhatsAppService;
@@ -39,6 +41,8 @@ class LocxController extends Controller
         private readonly PixGatewayService $pixGateway,
         private readonly WhatsAppService $whatsApp,
         private readonly CrmAutomationService $crmAutomation,
+        private readonly EmailCobrancaService $emailCobranca,
+        private readonly EmailPagamentoService $emailPagamento,
     ) {}
 
     public function index(Request $request): View
@@ -255,6 +259,13 @@ class LocxController extends Controller
             ? 'Cobrança criada e PIX '.$this->pixGateway->nomeGateway().' gerado.'
             : 'Cobrança criada. '.$this->pixGateway->nomeGateway().': '.($resultado['erro'] ?? 'PIX não gerado');
 
+        if (($resultado['ok'] ?? false) && $cobranca->fresh()->pix_copia_cola) {
+            $email = $this->emailCobranca->enviarCobranca($cobranca->fresh(['cliente', 'contrato.motocicleta']));
+            $mensagem .= ($email['ok'] ?? false)
+                ? ' E-mail enviado para '.$email['email'].'.'
+                : ' E-mail nao enviado: '.($email['erro'] ?? 'falha desconhecida').'.';
+        }
+
         return $this->voltar('financeiro', $mensagem);
     }
 
@@ -267,9 +278,11 @@ class LocxController extends Controller
             'forma' => ['required', Rule::in(['pix', 'dinheiro', 'cartao', 'transferencia'])],
         ]);
 
-        DB::transaction(function () use ($dados): void {
+        $pagamento = null;
+
+        DB::transaction(function () use ($dados, &$pagamento): void {
             $cobranca = Cobranca::lockForUpdate()->findOrFail($dados['cobranca_id']);
-            Pagamento::create($dados + ['pago_em' => now()]);
+            $pagamento = Pagamento::create($dados + ['pago_em' => now()]);
             $pago = (float) $cobranca->valor_pago + (float) $dados['valor'];
             $status = $pago >= (float) $cobranca->valor_principal ? 'paga' : 'parcial';
             $cobranca->update([
@@ -289,7 +302,17 @@ class LocxController extends Controller
             }
         });
 
-        return $this->voltar('financeiro', 'Pagamento registrado.');
+        $mensagem = 'Pagamento registrado.';
+        if ($pagamento) {
+            $email = $this->emailPagamento->enviarConfirmacao(
+                $pagamento->fresh('cobranca.cliente', 'cobranca.contrato.motocicleta')
+            );
+            $mensagem .= ($email['ok'] ?? false)
+                ? ' E-mail de confirmacao enviado para '.$email['email'].'.'
+                : ' E-mail nao enviado: '.($email['erro'] ?? 'falha desconhecida').'.';
+        }
+
+        return $this->voltar('financeiro', $mensagem);
     }
 
     public function gerarPix(Request $request, Cobranca $cobranca): RedirectResponse
@@ -301,6 +324,26 @@ class LocxController extends Controller
             $request->string('page', 'financeiro')->toString(),
             ($resultado['ok'] ?? false) ? 'PIX '.$this->pixGateway->nomeGateway().' gerado com sucesso.' : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida')
         );
+    }
+
+    public function conciliarPix(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'financeiro', 'editar');
+
+        $resultado = $this->pixGateway->conciliarPendentes(
+            (int) config('locx.pix.conciliacao_limite', 50)
+        );
+
+        $mensagem = 'Conciliação PIX executada: '
+            .$resultado['analisadas'].' analisadas, '
+            .$resultado['baixadas'].' baixadas, '
+            .$resultado['pendentes'].' pendentes.';
+
+        if (! empty($resultado['erros'])) {
+            $mensagem .= ' Erros: '.implode(' | ', array_slice($resultado['erros'], 0, 3));
+        }
+
+        return $this->voltar($request->string('page', 'pix')->toString(), $mensagem);
     }
 
     public function enviarWhatsApp(Request $request, Cobranca $cobranca): RedirectResponse

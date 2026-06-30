@@ -149,7 +149,16 @@
                     <label class="span-2">Cobrança<select name="cobranca_id">@foreach($cobrancasAbertas as $cobranca)<option value="{{ $cobranca->id }}">#{{ $cobranca->id }} - {{ $cobranca->cliente?->nome }} - {{ \App\Support\Locx::moeda($cobranca->valor_atualizado-$cobranca->valor_pago) }}</option>@endforeach</select></label>
                     <label>Valor Pago<input type="number" step="0.01" name="valor" required></label><label>Forma<select name="forma"><option>pix</option><option>dinheiro</option><option>cartao</option><option>transferencia</option></select></label><div class="span-3"><button class="btn success" type="submit">Registrar Pagamento</button></div>
                 </form></div>
-                <div class="panel"><h2>{{ $page === 'pix' ? 'Conciliação PIX' : 'Cobranças' }}</h2>@include('locx.partials.cobrancas_qr')</div>
+                <div class="panel"><h2>{{ $page === 'pix' ? 'Conciliação PIX' : 'Cobranças' }}</h2>
+                    @if ($page === 'pix')
+                        <form method="post" action="{{ route('locx.pix.conciliar') }}" class="toolbar">
+                            @csrf
+                            <input type="hidden" name="page" value="pix">
+                            <button class="btn success" type="submit">Conciliar agora</button>
+                        </form>
+                    @endif
+                    @include('locx.partials.cobrancas_qr')
+                </div>
             </div>
 
         @elseif ($page === 'inadimplencia')

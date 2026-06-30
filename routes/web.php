@@ -22,6 +22,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/crm/tarefas/{tarefa}/concluir', [LocxController::class, 'concluirCrmTarefa'])->name('locx.crm.tarefas.concluir');
     Route::post('/cobrancas', [LocxController::class, 'salvarCobranca'])->name('locx.cobrancas.salvar');
     Route::post('/pagamentos', [LocxController::class, 'salvarPagamento'])->name('locx.pagamentos.salvar');
+    Route::post('/pix/conciliar', [LocxController::class, 'conciliarPix'])->name('locx.pix.conciliar');
     Route::post('/cobrancas/{cobranca}/pix', [LocxController::class, 'gerarPix'])->name('locx.cobrancas.pix');
     Route::post('/cobrancas/{cobranca}/whatsapp', [LocxController::class, 'enviarWhatsApp'])->name('locx.cobrancas.whatsapp');
     Route::post('/configuracoes/whatsapp', [LocxController::class, 'salvarWhatsApp'])->name('locx.whatsapp.salvar');

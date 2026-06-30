@@ -210,6 +210,99 @@ class WhatsAppService
         ]);
     }
 
+    public function enviarTemplate(
+        ?string $telefoneOriginal,
+        ?string $template,
+        array $parametros,
+        string $mensagem,
+        string $tipo,
+        Cobranca $cobranca
+    ): array {
+        $cobranca->loadMissing('cliente');
+        $config = $this->config();
+        $telefone = $this->normalizarTelefone($telefoneOriginal);
+
+        if (! $telefone) {
+            return $this->registrarFalha($cobranca, '', $mensagem, 'Telefone invÃ¡lido');
+        }
+        if (! $config->ativo) {
+            return $this->registrarFalha($cobranca, $telefone, $mensagem, 'WhatsApp API inativa');
+        }
+        if (! $template) {
+            return $this->registrarFalha($cobranca, $telefone, $mensagem, 'Template de WhatsApp nao configurado');
+        }
+        if ($config->modo === 'demo') {
+            $this->log($cobranca, $telefone, $mensagem, 'demo', 200, 'Envio simulado', null, $tipo);
+
+            return [
+                'ok' => true,
+                'demo' => true,
+                'mensagem' => 'Envio simulado. Nenhuma mensagem foi enviada Ã  Meta.',
+            ];
+        }
+        if (! $config->phone_number_id || ! $config->access_token) {
+            return $this->registrarFalha(
+                $cobranca,
+                $telefone,
+                $mensagem,
+                'Informe o Phone Number ID e o Access Token permanente.'
+            );
+        }
+
+        $payload = [
+            'messaging_product' => 'whatsapp',
+            'to' => $telefone,
+            'type' => 'template',
+            'template' => [
+                'name' => $template,
+                'language' => ['code' => $config->template_language ?: 'pt_BR'],
+                'components' => [[
+                    'type' => 'body',
+                    'parameters' => collect($parametros)
+                        ->map(fn ($valor, $nome) => [
+                            'type' => 'text',
+                            'parameter_name' => (string) $nome,
+                            'text' => (string) $valor,
+                        ])
+                        ->values()
+                        ->all(),
+                ]],
+            ],
+        ];
+
+        try {
+            $response = $this->request('POST', $config->phone_number_id.'/messages', $payload);
+        } catch (ConnectionException $exception) {
+            return $this->registrarFalha(
+                $cobranca,
+                $telefone,
+                $mensagem,
+                'NÃ£o foi possÃ­vel conectar Ã  Meta: '.$exception->getMessage()
+            );
+        }
+
+        $ok = $response->successful();
+        $falha = $ok ? null : $this->falhaDaMeta($response);
+        $this->log(
+            $cobranca,
+            $telefone,
+            $mensagem,
+            $ok ? 'enviado' : 'erro',
+            $response->status(),
+            $response->body(),
+            $falha['erro'] ?? null,
+            $tipo
+        );
+
+        return $ok
+            ? [
+                'ok' => true,
+                'http_code' => $response->status(),
+                'mensagem' => 'Mensagem aceita pela Meta para envio.',
+            ]
+            : $falha;
+    }
+
     private function request(string $method, string $path, ?array $payload = null, array $query = []): Response
     {
         $config = $this->config();
@@ -311,13 +404,14 @@ class WhatsAppService
         string $status,
         ?int $httpCode = null,
         ?string $resposta = null,
-        ?string $erro = null
+        ?string $erro = null,
+        string $tipo = 'cobranca_inadimplencia'
     ): void {
         WhatsappLog::create([
             'cobranca_id' => $cobranca->id,
             'cliente_id' => $cobranca->cliente_id,
             'telefone' => $telefone,
-            'tipo' => 'cobranca_inadimplencia',
+            'tipo' => $tipo,
             'mensagem' => $mensagem,
             'status' => $status,
             'http_code' => $httpCode,

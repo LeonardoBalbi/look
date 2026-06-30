@@ -88,6 +88,26 @@ Artisan::command(
     }
 )->purpose('Cria tarefas automaticas do CRM para cobrancas em atraso.');
 
+Artisan::command(
+    'locx:conciliar-pix {--limite= : Quantidade maxima de cobrancas consultadas}',
+    function (): int {
+        $resultado = app(\App\Services\PixGatewayService::class)->conciliarPendentes(
+            (int) ($this->option('limite') ?: config('locx.pix.conciliacao_limite', 50))
+        );
+
+        $this->info('LocX PIX - conciliacao automatica');
+        $this->line('Cobrancas analisadas: '.$resultado['analisadas']);
+        $this->line('Baixas realizadas: '.$resultado['baixadas']);
+        $this->line('Ainda pendentes: '.$resultado['pendentes']);
+
+        foreach ($resultado['erros'] as $erro) {
+            $this->warn($erro);
+        }
+
+        return empty($resultado['erros']) ? 0 : 1;
+    }
+)->purpose('Consulta PagBank/Asaas e baixa automaticamente PIX pagos quando o webhook nao chegou.');
+
 $opcoesAgendadas = [];
 if (config('locx.recorrencia.gerar_pix')) {
     $opcoesAgendadas[] = '--gerar-pix';
@@ -110,3 +130,8 @@ Schedule::command('locx:sincronizar-crm')
     ->dailyAt(config('locx.crm.automacoes_horario', '07:15'))
     ->withoutOverlapping()
     ->when(fn () => (bool) config('locx.crm.automacoes_ativas', true));
+
+Schedule::command('locx:conciliar-pix')
+    ->everyMinute()
+    ->withoutOverlapping()
+    ->when(fn () => (bool) config('locx.pix.conciliacao_ativa', true));

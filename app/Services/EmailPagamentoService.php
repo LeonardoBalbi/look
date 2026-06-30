@@ -2,29 +2,29 @@
 
 namespace App\Services;
 
-use App\Mail\CobrancaCriadaMail;
-use App\Models\Cobranca;
+use App\Mail\PagamentoConfirmadoMail;
+use App\Models\Pagamento;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
 
-class EmailCobrancaService
+class EmailPagamentoService
 {
-    public function enviarCobranca(Cobranca $cobranca): array
+    public function enviarConfirmacao(Pagamento $pagamento): array
     {
-        $cobranca->loadMissing('cliente');
-        $email = trim((string) $cobranca->cliente?->email);
+        $pagamento->loadMissing('cobranca.cliente');
+        $email = trim((string) $pagamento->cobranca?->cliente?->email);
 
         if (! filter_var($email, FILTER_VALIDATE_EMAIL)) {
             return ['ok' => false, 'erro' => 'Cliente sem e-mail valido.'];
         }
 
         try {
-            Mail::to($email)->send(new CobrancaCriadaMail($cobranca));
+            Mail::to($email)->send(new PagamentoConfirmadoMail($pagamento));
         } catch (Throwable $exception) {
-            Log::warning('Falha ao enviar e-mail de cobranca.', [
-                'cobranca_id' => $cobranca->id,
-                'cliente_id' => $cobranca->cliente_id,
+            Log::warning('Falha ao enviar e-mail de confirmacao de pagamento.', [
+                'pagamento_id' => $pagamento->id,
+                'cobranca_id' => $pagamento->cobranca_id,
                 'email' => $email,
                 'erro' => $exception->getMessage(),
             ]);
