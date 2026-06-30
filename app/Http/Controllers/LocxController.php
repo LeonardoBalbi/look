@@ -363,11 +363,14 @@ class LocxController extends Controller
     {
         $this->autorizar($request->user(), 'whatsapp', 'editar');
         $dados = $request->validate([
-            'modo' => ['required', Rule::in(['demo', 'oficial'])],
+            'modo' => ['required', Rule::in(['demo', 'oficial', 'evolution'])],
             'ativo' => ['required', 'boolean'],
             'waba_id' => ['nullable', 'required_if:modo,oficial', 'string', 'max:255', 'regex:/^\d+$/'],
             'phone_number_id' => ['nullable', 'string', 'max:255'],
             'access_token' => ['nullable', 'string'],
+            'evolution_base_url' => ['nullable', 'required_if:modo,evolution', 'url', 'max:500'],
+            'evolution_instance' => ['nullable', 'required_if:modo,evolution', 'string', 'max:120'],
+            'evolution_api_key' => ['nullable', 'string'],
             'verify_token' => ['required', 'string', 'max:255'],
             'template_cobranca' => ['required', 'string', 'max:120'],
             'template_language' => ['required', 'string', 'max:20', 'regex:/^[a-z]{2}_[A-Z]{2}$/'],
@@ -377,6 +380,9 @@ class LocxController extends Controller
 
         if (blank($dados['access_token'] ?? null)) {
             unset($dados['access_token']);
+        }
+        if (blank($dados['evolution_api_key'] ?? null)) {
+            unset($dados['evolution_api_key']);
         }
 
         WhatsappConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);

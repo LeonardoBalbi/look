@@ -50,6 +50,9 @@ class WhatsAppService
                 'mensagem' => 'Modo demo ativo: nenhuma credencial ou mensagem foi validada na Meta.',
             ];
         }
+        if ($config->modo === 'evolution') {
+            return $this->testarEvolution($config);
+        }
         if (! $config->waba_id || ! $config->phone_number_id || ! $config->access_token) {
             return [
                 'ok' => false,
@@ -114,6 +117,9 @@ class WhatsAppService
                 'demo' => true,
                 'mensagem' => 'Envio simulado. Nenhuma mensagem foi enviada à Meta.',
             ];
+        }
+        if ($config->modo === 'evolution') {
+            return $this->enviarEvolutionTexto($config, $telefone, $mensagem, 'cobranca_inadimplencia', $cobranca);
         }
         if (! $config->phone_number_id || ! $config->access_token || ! $config->template_cobranca) {
             return $this->registrarFalha(
@@ -240,6 +246,9 @@ class WhatsAppService
                 'mensagem' => 'Envio simulado. Nenhuma mensagem foi enviada Ã  Meta.',
             ];
         }
+        if ($config->modo === 'evolution') {
+            return $this->enviarEvolutionTexto($config, $telefone, $mensagem, $tipo, $cobranca);
+        }
         if (! $config->phone_number_id || ! $config->access_token) {
             return $this->registrarFalha(
                 $cobranca,
@@ -314,6 +323,84 @@ class WhatsAppService
                 'query' => $query ?: null,
                 'json' => $payload,
             ]));
+    }
+
+    private function testarEvolution(WhatsappConfig $config): array
+    {
+        if (! $config->evolution_base_url || ! $config->evolution_instance || ! $config->evolution_api_key) {
+            return ['ok' => false, 'erro' => 'Informe URL da Evolution, instancia e API Key.'];
+        }
+
+        try {
+            $response = $this->evolutionRequest($config, 'GET', '/instance/connectionState/'.$config->evolution_instance);
+        } catch (ConnectionException $exception) {
+            return ['ok' => false, 'erro' => 'Nao foi possivel conectar a Evolution: '.$exception->getMessage()];
+        }
+
+        if ($response->successful()) {
+            $state = (string) (data_get($response->json(), 'instance.state') ?: data_get($response->json(), 'state') ?: 'conectada');
+
+            return ['ok' => true, 'mensagem' => 'Evolution respondeu. Estado da instancia: '.$state.'.'];
+        }
+
+        return [
+            'ok' => false,
+            'http_code' => $response->status(),
+            'erro' => $response->body() ?: 'Evolution recusou a solicitacao.',
+        ];
+    }
+
+    private function enviarEvolutionTexto(
+        WhatsappConfig $config,
+        string $telefone,
+        string $mensagem,
+        string $tipo,
+        Cobranca $cobranca
+    ): array {
+        if (! $config->evolution_base_url || ! $config->evolution_instance || ! $config->evolution_api_key) {
+            return $this->registrarFalha($cobranca, $telefone, $mensagem, 'Informe URL da Evolution, instancia e API Key.');
+        }
+
+        try {
+            $response = $this->evolutionRequest($config, 'POST', '/message/sendText/'.$config->evolution_instance, [
+                'number' => $telefone,
+                'text' => $mensagem,
+            ]);
+        } catch (ConnectionException $exception) {
+            return $this->registrarFalha($cobranca, $telefone, $mensagem, 'Nao foi possivel conectar a Evolution: '.$exception->getMessage());
+        }
+
+        $ok = $response->successful();
+        $this->log(
+            $cobranca,
+            $telefone,
+            $mensagem,
+            $ok ? 'enviado' : 'erro',
+            $response->status(),
+            $response->body(),
+            $ok ? null : ($response->body() ?: 'Evolution recusou a solicitacao.'),
+            $tipo
+        );
+
+        if ($ok) {
+            $cobranca->update(['whatsapp_status' => 'enviado']);
+        }
+
+        return $ok
+            ? ['ok' => true, 'http_code' => $response->status(), 'mensagem' => 'Mensagem enviada pela Evolution API.']
+            : ['ok' => false, 'http_code' => $response->status(), 'erro' => $response->body() ?: 'Evolution recusou a solicitacao.'];
+    }
+
+    private function evolutionRequest(WhatsappConfig $config, string $method, string $path, ?array $payload = null): Response
+    {
+        $baseUrl = rtrim((string) $config->evolution_base_url, '/');
+        $request = Http::acceptJson()
+            ->withHeaders(['apikey' => (string) $config->evolution_api_key])
+            ->timeout(30);
+
+        return $request->send($method, $baseUrl.'/'.ltrim($path, '/'), array_filter([
+            'json' => $payload,
+        ]));
     }
 
     private function normalizarTelefone(?string $telefone): string

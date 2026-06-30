@@ -92,6 +92,30 @@ class WhatsAppServiceTest extends TestCase
             && $request['template']['name'] === 'locx_cobranca_atraso');
     }
 
+    public function test_evolution_valida_instancia_e_envia_texto(): void
+    {
+        $this->configurarEvolution();
+        Http::fake([
+            'https://evolution.example.com/instance/connectionState/locx' => Http::response([
+                'instance' => ['state' => 'open'],
+            ]),
+            'https://evolution.example.com/message/sendText/locx' => Http::response([
+                'key' => ['id' => 'msg-123'],
+            ]),
+        ]);
+
+        $teste = app(WhatsAppService::class)->testar();
+        $envio = app(WhatsAppService::class)->enviarCobranca($this->cobranca());
+
+        $this->assertTrue($teste['ok']);
+        $this->assertStringContainsString('open', $teste['mensagem']);
+        $this->assertTrue($envio['ok']);
+        Http::assertSent(fn ($request) => $request->url() === 'https://evolution.example.com/message/sendText/locx'
+            && $request->hasHeader('apikey', 'evo-key')
+            && $request['number'] === '5521999999999'
+            && str_contains($request['text'], 'PIX-TESTE'));
+    }
+
     private function configurarOficial(array $dados = []): void
     {
         WhatsappConfig::query()->findOrFail(1)->update(array_merge([
@@ -102,6 +126,17 @@ class WhatsAppServiceTest extends TestCase
             'access_token' => 'token-permanente',
             'template_cobranca' => 'locx_cobranca_atraso',
             'template_language' => 'pt_BR',
+        ], $dados));
+    }
+
+    private function configurarEvolution(array $dados = []): void
+    {
+        WhatsappConfig::query()->findOrFail(1)->update(array_merge([
+            'modo' => 'evolution',
+            'ativo' => true,
+            'evolution_base_url' => 'https://evolution.example.com',
+            'evolution_instance' => 'locx',
+            'evolution_api_key' => 'evo-key',
         ], $dados));
     }
 
