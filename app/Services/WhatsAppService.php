@@ -334,7 +334,7 @@ class WhatsAppService
         try {
             $response = $this->evolutionRequest($config, 'GET', '/instance/connectionState/'.$config->evolution_instance);
         } catch (ConnectionException $exception) {
-            return ['ok' => false, 'erro' => 'Nao foi possivel conectar a Evolution: '.$exception->getMessage()];
+            return ['ok' => false, 'erro' => $this->mensagemErroEvolution($exception)];
         }
 
         if ($response->successful()) {
@@ -365,9 +365,12 @@ class WhatsAppService
             $response = $this->evolutionRequest($config, 'POST', '/message/sendText/'.$config->evolution_instance, [
                 'number' => $telefone,
                 'text' => $mensagem,
+                'textMessage' => [
+                    'text' => $mensagem,
+                ],
             ]);
         } catch (ConnectionException $exception) {
-            return $this->registrarFalha($cobranca, $telefone, $mensagem, 'Nao foi possivel conectar a Evolution: '.$exception->getMessage());
+            return $this->registrarFalha($cobranca, $telefone, $mensagem, $this->mensagemErroEvolution($exception));
         }
 
         $ok = $response->successful();
@@ -396,11 +399,26 @@ class WhatsAppService
         $baseUrl = rtrim((string) $config->evolution_base_url, '/');
         $request = Http::acceptJson()
             ->withHeaders(['apikey' => (string) $config->evolution_api_key])
-            ->timeout(30);
+            ->timeout(max(5, (int) config('services.whatsapp.evolution_timeout', 15)));
+        if (! config('locx.gateway_verify_ssl', true)) {
+            $request = $request->withoutVerifying();
+        }
 
         return $request->send($method, $baseUrl.'/'.ltrim($path, '/'), array_filter([
             'json' => $payload,
         ]));
+    }
+
+    private function mensagemErroEvolution(ConnectionException $exception): string
+    {
+        $timeout = max(5, (int) config('services.whatsapp.evolution_timeout', 15));
+        $message = $exception->getMessage();
+
+        if (str_contains($message, 'cURL error 28') || str_contains($message, 'timed out')) {
+            return "A Evolution nao respondeu em {$timeout} segundos. Verifique se a instancia esta conectada e reinicie a Evolution se necessario.";
+        }
+
+        return 'Nao foi possivel conectar a Evolution: '.$message;
     }
 
     private function normalizarTelefone(?string $telefone): string

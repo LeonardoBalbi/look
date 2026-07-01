@@ -113,7 +113,8 @@ class WhatsAppServiceTest extends TestCase
         Http::assertSent(fn ($request) => $request->url() === 'https://evolution.example.com/message/sendText/locx'
             && $request->hasHeader('apikey', 'evo-key')
             && $request['number'] === '5521999999999'
-            && str_contains($request['text'], 'PIX-TESTE'));
+            && str_contains($request['text'], 'PIX-TESTE')
+            && str_contains($request['textMessage']['text'], 'PIX-TESTE'));
     }
 
     private function configurarOficial(array $dados = []): void
