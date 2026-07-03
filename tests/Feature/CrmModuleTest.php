@@ -72,6 +72,54 @@ class CrmModuleTest extends TestCase
         ]);
     }
 
+    public function test_tarefa_whatsapp_no_crm_dispara_quando_prazo_chega_e_nao_duplica(): void
+    {
+        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $cobranca = $this->cobrancaVencida(2);
+
+        $this->actingAs($usuario)->withSession(['_token' => 'token-teste'])->post('/crm/tarefas', [
+            '_token' => 'token-teste',
+            'cliente_id' => $cobranca->cliente_id,
+            'titulo' => 'Enviar cobranca por WhatsApp',
+            'tipo' => 'whatsapp',
+            'prazo_em' => now()->subMinute()->format('Y-m-d H:i:s'),
+            'observacao' => 'Disparo agendado pelo CRM.',
+        ])->assertRedirect('/?page=crm&cliente='.$cobranca->cliente_id)
+            ->assertSessionHas('success', fn (string $mensagem) => str_contains($mensagem, 'WhatsApp agendado'));
+
+        $this->assertDatabaseHas('crm_tarefas', [
+            'cliente_id' => $cobranca->cliente_id,
+            'cobranca_id' => $cobranca->id,
+            'titulo' => 'Enviar cobranca por WhatsApp',
+            'status' => 'aberta',
+            'disparado_em' => null,
+        ]);
+        $this->assertDatabaseCount('whatsapp_logs', 0);
+
+        $primeiraExecucao = Artisan::call('locx:disparar-crm-agendado');
+        $segundaExecucao = Artisan::call('locx:disparar-crm-agendado');
+
+        $this->assertSame(0, $primeiraExecucao);
+        $this->assertSame(0, $segundaExecucao);
+        $this->assertDatabaseHas('whatsapp_logs', [
+            'cobranca_id' => $cobranca->id,
+            'cliente_id' => $cobranca->cliente_id,
+            'status' => 'demo',
+            'tipo' => 'cobranca_inadimplencia',
+        ]);
+        $this->assertDatabaseHas('cobrancas', [
+            'id' => $cobranca->id,
+            'whatsapp_status' => 'demo',
+        ]);
+        $this->assertDatabaseHas('crm_tarefas', [
+            'cliente_id' => $cobranca->cliente_id,
+            'cobranca_id' => $cobranca->id,
+            'disparo_status' => 'demo',
+            'disparo_erro' => null,
+        ]);
+        $this->assertDatabaseCount('whatsapp_logs', 1);
+    }
+
     public function test_sincronizacao_crm_cria_tarefas_para_cobrancas_em_atraso(): void
     {
         $cobranca = $this->cobrancaVencida(3);

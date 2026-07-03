@@ -10,6 +10,7 @@ class CrmTarefa extends BaseModel
 
     protected $casts = [
         'prazo_em' => 'datetime',
+        'disparado_em' => 'datetime',
         'concluido_em' => 'datetime',
         'criado_em' => 'datetime',
     ];

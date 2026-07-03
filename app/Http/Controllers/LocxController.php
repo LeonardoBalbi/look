@@ -214,13 +214,30 @@ class LocxController extends Controller
         $cliente = Cliente::findOrFail($dados['cliente_id']);
         $this->autorizarClienteCrm($request->user(), $cliente);
 
+        $cobranca = null;
+        if (in_array($dados['tipo'], ['whatsapp', 'cobranca'], true)) {
+            $cobranca = Cobranca::with('cliente', 'contrato.motocicleta')
+                ->where('cliente_id', $cliente->id)
+                ->whereNotIn('status', ['paga', 'cancelada'])
+                ->orderBy('vencimento')
+                ->first();
+        }
+
         CrmTarefa::create($dados + [
+            'cobranca_id' => $cobranca?->id,
             'usuario_id' => $request->user()->id,
             'status' => 'aberta',
             'criado_em' => now(),
         ]);
 
-        return redirect()->route('locx.index', ['page' => 'crm', 'cliente' => $cliente->id])->with('success', 'Tarefa criada no CRM.');
+        $mensagem = 'Tarefa criada no CRM.';
+        if (in_array($dados['tipo'], ['whatsapp', 'cobranca'], true)) {
+            $mensagem .= $dados['prazo_em']
+                ? ' WhatsApp agendado para o prazo da tarefa.'
+                : ' Informe um prazo para disparar o WhatsApp automaticamente.';
+        }
+
+        return redirect()->route('locx.index', ['page' => 'crm', 'cliente' => $cliente->id])->with('success', $mensagem);
     }
 
     public function concluirCrmTarefa(Request $request, CrmTarefa $tarefa): RedirectResponse
@@ -319,10 +336,20 @@ class LocxController extends Controller
     {
         $this->autorizar($request->user(), 'financeiro', 'editar');
         $resultado = $this->pixGateway->criarPix($cobranca);
+        $mensagem = ($resultado['ok'] ?? false)
+            ? 'PIX '.$this->pixGateway->nomeGateway().' gerado com sucesso.'
+            : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida');
+
+        if (($resultado['ok'] ?? false) && $cobranca->fresh()->pix_copia_cola) {
+            $email = $this->emailCobranca->enviarCobranca($cobranca->fresh(['cliente', 'contrato.motocicleta']));
+            $mensagem .= ($email['ok'] ?? false)
+                ? ' E-mail enviado para '.$email['email'].'.'
+                : ' E-mail nao enviado: '.($email['erro'] ?? 'falha desconhecida').'.';
+        }
 
         return $this->voltar(
             $request->string('page', 'financeiro')->toString(),
-            ($resultado['ok'] ?? false) ? 'PIX '.$this->pixGateway->nomeGateway().' gerado com sucesso.' : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida')
+            $mensagem
         );
     }
 
@@ -568,6 +595,8 @@ class LocxController extends Controller
 
     private function crm(Request $request, User $user): array
     {
+        $this->crmAutomation->sincronizarAtrasos();
+
         $clientes = $this->scope(Cliente::with('loja'), $user)->orderBy('nome')->limit(160)->get();
         $clienteSelecionado = null;
         if ($request->integer('cliente')) {

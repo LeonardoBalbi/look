@@ -9,6 +9,8 @@ use Illuminate\Support\Facades\DB;
 
 class CrmAutomationService
 {
+    public function __construct(private readonly WhatsAppService $whatsApp) {}
+
     public function sincronizarAtrasos(?CarbonInterface $hoje = null, bool $dryRun = false): array
     {
         $hoje ??= today();
@@ -91,6 +93,77 @@ class CrmAutomationService
         });
     }
 
+    public function dispararTarefasAgendadas(?CarbonInterface $agora = null, bool $dryRun = false): array
+    {
+        $agora ??= now();
+        $resultado = [
+            'dry_run' => $dryRun,
+            'data_hora' => $agora->format('Y-m-d H:i:s'),
+            'tarefas_analisadas' => 0,
+            'whatsapp_enviados' => 0,
+            'sem_cobranca' => 0,
+            'erros' => [],
+        ];
+
+        CrmTarefa::query()
+            ->with('cliente', 'cobranca.cliente', 'cobranca.contrato.motocicleta')
+            ->where('status', 'aberta')
+            ->whereIn('tipo', ['whatsapp', 'cobranca'])
+            ->whereNotNull('prazo_em')
+            ->whereNull('disparado_em')
+            ->where('prazo_em', '<=', $agora)
+            ->orderBy('prazo_em')
+            ->limit(100)
+            ->get()
+            ->each(function (CrmTarefa $tarefa) use ($agora, $dryRun, &$resultado): void {
+                $resultado['tarefas_analisadas']++;
+                $cobranca = $tarefa->cobranca ?: $this->cobrancaAbertaDoCliente((int) $tarefa->cliente_id);
+
+                if (! $cobranca) {
+                    $resultado['sem_cobranca']++;
+                    if (! $dryRun) {
+                        $tarefa->update([
+                            'disparado_em' => $agora,
+                            'disparo_status' => 'sem_cobranca',
+                            'disparo_erro' => 'Cliente sem cobranca aberta.',
+                        ]);
+                    }
+
+                    return;
+                }
+
+                if ($dryRun) {
+                    return;
+                }
+
+                if (! $tarefa->cobranca_id) {
+                    $tarefa->update(['cobranca_id' => $cobranca->id]);
+                }
+
+                $envio = $this->whatsApp->enviarCobranca($cobranca);
+                if ($envio['ok'] ?? false) {
+                    $resultado['whatsapp_enviados']++;
+                    $tarefa->update([
+                        'disparado_em' => $agora,
+                        'disparo_status' => ($envio['demo'] ?? false) ? 'demo' : 'enviado',
+                        'disparo_erro' => null,
+                    ]);
+
+                    return;
+                }
+
+                $erro = $envio['erro'] ?? 'WhatsApp nao enviado.';
+                $resultado['erros'][] = "Tarefa #{$tarefa->id}: {$erro}";
+                $tarefa->update([
+                    'disparado_em' => $agora,
+                    'disparo_status' => 'erro',
+                    'disparo_erro' => $erro,
+                ]);
+            });
+
+        return $resultado;
+    }
+
     private function criarTarefaAtraso(
         Cobranca $cobranca,
         string $chave,
@@ -152,5 +225,15 @@ class CrmAutomationService
             ->whereNotIn('status', ['paga', 'cancelada'])
             ->whereDate('vencimento', '<', today()->toDateString())
             ->exists();
+    }
+
+    private function cobrancaAbertaDoCliente(int $clienteId): ?Cobranca
+    {
+        return Cobranca::query()
+            ->with('cliente', 'contrato.motocicleta')
+            ->where('cliente_id', $clienteId)
+            ->whereNotIn('status', ['paga', 'cancelada'])
+            ->orderBy('vencimento')
+            ->first();
     }
 }

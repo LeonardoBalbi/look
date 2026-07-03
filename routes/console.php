@@ -89,6 +89,26 @@ Artisan::command(
 )->purpose('Cria tarefas automaticas do CRM para cobrancas em atraso.');
 
 Artisan::command(
+    'locx:disparar-crm-agendado {--dry-run : Simula sem enviar WhatsApp}',
+    function (): int {
+        $resultado = app(CrmAutomationService::class)->dispararTarefasAgendadas(dryRun: (bool) $this->option('dry-run'));
+        $modo = $resultado['dry_run'] ? 'SIMULACAO' : 'EXECUCAO REAL';
+
+        $this->info("LocX CRM disparos - {$modo}");
+        $this->line('Data/hora: '.$resultado['data_hora']);
+        $this->line('Tarefas analisadas: '.$resultado['tarefas_analisadas']);
+        $this->line('WhatsApp enviados: '.$resultado['whatsapp_enviados']);
+        $this->line('Sem cobranca aberta: '.$resultado['sem_cobranca']);
+
+        foreach ($resultado['erros'] as $erro) {
+            $this->warn($erro);
+        }
+
+        return empty($resultado['erros']) ? 0 : 1;
+    }
+)->purpose('Dispara WhatsApp das tarefas do CRM quando o prazo agendado chegar.');
+
+Artisan::command(
     'locx:conciliar-pix {--limite= : Quantidade maxima de cobrancas consultadas}',
     function (): int {
         $resultado = app(\App\Services\PixGatewayService::class)->conciliarPendentes(
@@ -128,6 +148,11 @@ Schedule::command('locx:gerar-cobrancas-recorrentes '.implode(' ', $opcoesAgenda
 
 Schedule::command('locx:sincronizar-crm')
     ->dailyAt(config('locx.crm.automacoes_horario', '07:15'))
+    ->withoutOverlapping()
+    ->when(fn () => (bool) config('locx.crm.automacoes_ativas', true));
+
+Schedule::command('locx:disparar-crm-agendado')
+    ->everyMinute()
     ->withoutOverlapping()
     ->when(fn () => (bool) config('locx.crm.automacoes_ativas', true));
 
