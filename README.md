@@ -6,7 +6,7 @@ A interface original foi preservada, mas a aplicação agora usa rotas, controll
 models Eloquent, autenticação, autorização, views Blade, validação, CSRF e serviços
 Laravel. Não existem mais páginas executadas com `require`, sessões iniciadas
 manualmente, consultas PDO dentro das views ou regras de negócio em templates.
-
+ffffff
 ## Instalação
 
 Manual completo para cliente, uso diario e instalacao em servidor:
