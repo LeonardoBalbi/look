@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Services\AsaasService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 
@@ -73,7 +74,7 @@ class LocxInitialSeeder extends Seeder
             'modo' => 'demo',
             'ambiente' => 'sandbox',
             'ativo' => 1,
-            'webhook_token' => 'locx_asaas_webhook_token',
+            'webhook_token' => AsaasService::DEFAULT_WEBHOOK_TOKEN,
         ]);
 
         DB::table('pix_gateway_config')->insertOrIgnore([

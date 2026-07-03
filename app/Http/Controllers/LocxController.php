@@ -445,7 +445,7 @@ class LocxController extends Controller
             unset($dados['api_key']);
         }
         $dados['webhook_url'] = $dados['webhook_url'] ?: route('locx.webhook-asaas');
-        $dados['webhook_token'] = $dados['webhook_token'] ?: 'locx_asaas_webhook_token';
+        $dados['webhook_token'] = $dados['webhook_token'] ?: AsaasService::DEFAULT_WEBHOOK_TOKEN;
 
         \App\Models\AsaasConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);
         $mensagem = 'Configurações do Asaas salvas.';

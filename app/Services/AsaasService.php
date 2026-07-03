@@ -14,6 +14,8 @@ use Illuminate\Support\Facades\Http;
 
 class AsaasService
 {
+    public const DEFAULT_WEBHOOK_TOKEN = 'locx_asaas_webhook_token_2026_secure';
+
     public function __construct(private readonly CobrancaCalculator $calculator) {}
 
     public function config(): AsaasConfig
@@ -24,7 +26,7 @@ class AsaasService
                 'modo' => 'demo',
                 'ambiente' => 'sandbox',
                 'ativo' => true,
-                'webhook_token' => 'locx_asaas_webhook_token',
+                'webhook_token' => self::DEFAULT_WEBHOOK_TOKEN,
                 'webhook_url' => route('locx.webhook-asaas'),
             ]
         );
@@ -194,7 +196,7 @@ class AsaasService
 
         $this->log($cobranca?->id, 'webhook', $status ?: 'recebido', 200, $raw, 'webhook recebido');
         if (! $cobranca) {
-            return ['ok' => false, 'erro' => 'Cobranca nao localizada'];
+            return ['ok' => true, 'ignorado' => true, 'mensagem' => 'Cobranca nao localizada'];
         }
 
         if (in_array(strtoupper($status), ['RECEIVED', 'CONFIRMED', 'RECEIVED_IN_CASH'], true)) {

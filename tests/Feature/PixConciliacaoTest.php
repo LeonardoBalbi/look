@@ -122,6 +122,35 @@ class PixConciliacaoTest extends TestCase
         Mail::assertSent(PagamentoConfirmadoMail::class, 1);
     }
 
+    public function test_webhook_asaas_ignora_evento_sem_cobranca_e_retorna_sucesso(): void
+    {
+        AsaasConfig::query()->updateOrCreate(['id' => 1], [
+            'modo' => 'api',
+            'ambiente' => 'producao',
+            'ativo' => true,
+            'webhook_token' => 'locx_asaas_webhook_token_2026_secure',
+        ]);
+
+        $this->postJson('/webhooks/asaas', [
+            'event' => 'PAYMENT_RECEIVED',
+            'payment' => [
+                'id' => 'pay_inexistente',
+                'status' => 'RECEIVED',
+                'externalReference' => 'LOCX-COBRANCA-999999',
+                'value' => 50.00,
+            ],
+        ], ['asaas-access-token' => 'locx_asaas_webhook_token_2026_secure'])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('ignorado', true);
+
+        $this->assertDatabaseHas('asaas_logs', [
+            'tipo' => 'webhook',
+            'status' => 'RECEIVED',
+        ]);
+        $this->assertDatabaseCount('pagamentos', 0);
+    }
+
     private function cobranca(array $dados = []): Cobranca
     {
         $cliente = Cliente::query()->create([
