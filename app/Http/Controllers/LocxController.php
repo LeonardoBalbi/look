@@ -7,8 +7,12 @@ use App\Models\Cobranca;
 use App\Models\Contrato;
 use App\Models\CrmNota;
 use App\Models\CrmTarefa;
+use App\Models\EstoqueMovimento;
+use App\Models\EstoqueProduto;
 use App\Models\Loja;
+use App\Models\MultaTransito;
 use App\Models\Motocicleta;
+use App\Models\OrdemServico;
 use App\Models\Pagamento;
 use App\Models\PagbankConfig;
 use App\Models\User;
@@ -68,6 +72,9 @@ class LocxController extends Controller
             'clientes' => $this->clientes($request),
             'motos' => $this->motos($request, $user),
             'contratos' => $this->contratos($user),
+            'manutencao' => $this->manutencao($request, $user),
+            'estoque' => $this->estoque($request, $user),
+            'multas' => $this->multas($request, $user),
             'financeiro', 'cobrancas', 'pix' => $this->financeiro($user),
             'inadimplencia' => $this->inadimplencia($user),
             'relatorios' => $this->relatorios($user),
@@ -166,6 +173,129 @@ class LocxController extends Controller
         });
 
         return $this->voltar('contratos', 'Contrato criado.');
+    }
+
+    public function salvarOrdemServico(Request $request): RedirectResponse
+    {
+        $ordem = $request->integer('id') ? OrdemServico::findOrFail($request->integer('id')) : new OrdemServico;
+        $this->autorizar($request->user(), 'manutencao', $ordem->exists ? 'editar' : 'criar');
+        $dados = $request->validate([
+            'id' => ['nullable', 'integer'],
+            'loja_id' => ['nullable', 'exists:lojas,id'],
+            'motocicleta_id' => ['nullable', 'exists:motocicletas,id'],
+            'cliente_id' => ['nullable', 'exists:clientes,id'],
+            'tipo' => ['required', Rule::in(['preventiva', 'corretiva', 'vistoria', 'sinistro'])],
+            'titulo' => ['required', 'string', 'max:180'],
+            'descricao' => ['nullable', 'string', 'max:5000'],
+            'status' => ['required', Rule::in(['aberta', 'em_andamento', 'aguardando_peca', 'concluida', 'cancelada'])],
+            'prioridade' => ['required', Rule::in(['baixa', 'normal', 'alta', 'urgente'])],
+            'custo_previsto' => ['nullable', 'numeric', 'min:0'],
+            'custo_final' => ['nullable', 'numeric', 'min:0'],
+            'previsto_em' => ['nullable', 'date'],
+        ]);
+
+        unset($dados['id']);
+        $dados['custo_previsto'] = $dados['custo_previsto'] ?? 0;
+        $dados['custo_final'] = $dados['custo_final'] ?? 0;
+
+        DB::transaction(function () use ($ordem, $dados): void {
+            if (! $ordem->exists) {
+                $dados['aberto_em'] = now();
+            }
+            if ($dados['status'] === 'concluida' && ! $ordem->concluido_em) {
+                $dados['concluido_em'] = now();
+            }
+            if ($dados['status'] !== 'concluida') {
+                $dados['concluido_em'] = null;
+            }
+
+            $ordem->fill($dados);
+            $ordem->save();
+
+            if ($ordem->motocicleta_id && in_array($ordem->status, ['aberta', 'em_andamento', 'aguardando_peca'], true)) {
+                Motocicleta::whereKey($ordem->motocicleta_id)->update(['status_operacional' => 'manutencao']);
+            }
+
+            if ($ordem->motocicleta_id && $ordem->status === 'concluida') {
+                Motocicleta::whereKey($ordem->motocicleta_id)
+                    ->where('status_operacional', 'manutencao')
+                    ->update(['status_operacional' => 'disponivel']);
+            }
+        });
+
+        return $this->voltar('manutencao', 'Ordem de serviÃ§o salva.');
+    }
+
+    public function salvarEstoqueProduto(Request $request): RedirectResponse
+    {
+        $produto = $request->integer('id') ? EstoqueProduto::findOrFail($request->integer('id')) : new EstoqueProduto;
+        $this->autorizar($request->user(), 'estoque', $produto->exists ? 'editar' : 'criar');
+        $dados = $request->validate([
+            'id' => ['nullable', 'integer'],
+            'loja_id' => ['nullable', 'exists:lojas,id'],
+            'nome' => ['required', 'string', 'max:180'],
+            'sku' => ['nullable', 'string', 'max:80'],
+            'grupo' => ['nullable', 'string', 'max:80'],
+            'unidade' => ['required', 'string', 'max:20'],
+            'estoque_minimo' => ['nullable', 'numeric', 'min:0'],
+            'custo_unitario' => ['nullable', 'numeric', 'min:0'],
+            'status' => ['required', Rule::in(['ativo', 'inativo'])],
+        ]);
+
+        unset($dados['id']);
+        $dados['estoque_minimo'] = $dados['estoque_minimo'] ?? 0;
+        $dados['custo_unitario'] = $dados['custo_unitario'] ?? 0;
+        $produto->fill($dados);
+        $produto->save();
+
+        return $this->voltar('estoque', 'Produto salvo.');
+    }
+
+    public function salvarEstoqueMovimento(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'estoque', 'criar');
+        $dados = $request->validate([
+            'produto_id' => ['required', 'exists:estoque_produtos,id'],
+            'loja_id' => ['nullable', 'exists:lojas,id'],
+            'tipo' => ['required', Rule::in(['entrada', 'saida', 'ajuste'])],
+            'quantidade' => ['required', 'numeric', 'min:0.01'],
+            'valor_unitario' => ['nullable', 'numeric', 'min:0'],
+            'origem' => ['nullable', 'string', 'max:120'],
+            'observacao' => ['nullable', 'string', 'max:3000'],
+            'movimentado_em' => ['nullable', 'date'],
+        ]);
+
+        $dados['valor_unitario'] = $dados['valor_unitario'] ?? 0;
+        $dados['movimentado_em'] = $dados['movimentado_em'] ?? now();
+        EstoqueMovimento::create($dados);
+
+        return $this->voltar('estoque', 'Movimento de estoque registrado.');
+    }
+
+    public function salvarMulta(Request $request): RedirectResponse
+    {
+        $multa = $request->integer('id') ? MultaTransito::findOrFail($request->integer('id')) : new MultaTransito;
+        $this->autorizar($request->user(), 'multas', $multa->exists ? 'editar' : 'criar');
+        $dados = $request->validate([
+            'id' => ['nullable', 'integer'],
+            'loja_id' => ['nullable', 'exists:lojas,id'],
+            'motocicleta_id' => ['nullable', 'exists:motocicletas,id'],
+            'cliente_id' => ['nullable', 'exists:clientes,id'],
+            'contrato_id' => ['nullable', 'exists:contratos,id'],
+            'auto_infracao' => ['nullable', 'string', 'max:80'],
+            'orgao' => ['nullable', 'string', 'max:120'],
+            'descricao' => ['nullable', 'string', 'max:5000'],
+            'valor' => ['required', 'numeric', 'min:0'],
+            'vencimento' => ['nullable', 'date'],
+            'ocorrida_em' => ['nullable', 'date'],
+            'status' => ['required', Rule::in(['aberta', 'em_recurso', 'transferida', 'paga', 'cancelada'])],
+        ]);
+
+        unset($dados['id']);
+        $multa->fill($dados);
+        $multa->save();
+
+        return $this->voltar('multas', 'Multa salva.');
     }
 
     public function salvarCrmCliente(Request $request, Cliente $cliente): RedirectResponse
@@ -769,6 +899,79 @@ class LocxController extends Controller
             'clientes' => Cliente::orderBy('nome')->get(),
             'motos' => $this->scope(Motocicleta::query(), $user)->latest('id')->get(),
             'contratos' => $this->scope(Contrato::with('cliente', 'motocicleta', 'loja'), $user)->latest('id')->limit(120)->get(),
+        ];
+    }
+
+    private function manutencao(Request $request, User $user): array
+    {
+        $ordensBase = $this->scope(OrdemServico::query(), $user);
+        $ordemEdit = null;
+        if ($request->integer('edit')) {
+            $ordemEdit = (clone $ordensBase)->whereKey($request->integer('edit'))->firstOrFail();
+        }
+
+        return [
+            'ordemEdit' => $ordemEdit,
+            'motos' => $this->scope(Motocicleta::query(), $user)->orderBy('placa')->get(),
+            'clientes' => $this->scope(Cliente::query(), $user)->orderBy('nome')->get(),
+            'ordensServico' => $this->scope(OrdemServico::with('loja', 'motocicleta', 'cliente'), $user)->latest('id')->limit(140)->get(),
+            'manutencaoResumo' => [
+                'abertas' => (clone $ordensBase)->whereIn('status', ['aberta', 'em_andamento', 'aguardando_peca'])->count(),
+                'concluidasMes' => (clone $ordensBase)->where('status', 'concluida')->whereMonth('concluido_em', now()->month)->whereYear('concluido_em', now()->year)->count(),
+                'custoPrevisto' => (float) (clone $ordensBase)->whereIn('status', ['aberta', 'em_andamento', 'aguardando_peca'])->sum('custo_previsto'),
+                'custoFinalMes' => (float) (clone $ordensBase)->whereMonth('concluido_em', now()->month)->whereYear('concluido_em', now()->year)->sum('custo_final'),
+            ],
+        ];
+    }
+
+    private function estoque(Request $request, User $user): array
+    {
+        $produtos = $this->scope(EstoqueProduto::with('loja'), $user)->latest('id')->limit(150)->get();
+        $saldos = EstoqueMovimento::query()
+            ->select('produto_id')
+            ->selectRaw("COALESCE(SUM(CASE WHEN tipo = 'saida' THEN -quantidade ELSE quantidade END), 0) as saldo")
+            ->whereIn('produto_id', $produtos->pluck('id'))
+            ->groupBy('produto_id')
+            ->pluck('saldo', 'produto_id');
+
+        $produtosBaixos = $produtos->filter(
+            fn (EstoqueProduto $produto) => (float) ($saldos[$produto->id] ?? 0) <= (float) $produto->estoque_minimo
+        )->count();
+
+        return [
+            'produtoEdit' => $request->integer('edit')
+                ? $this->scope(EstoqueProduto::query(), $user)->whereKey($request->integer('edit'))->firstOrFail()
+                : null,
+            'produtosEstoque' => $produtos,
+            'estoqueSaldos' => $saldos,
+            'movimentosEstoque' => $this->scope(EstoqueMovimento::with('produto', 'loja'), $user)->latest('id')->limit(120)->get(),
+            'estoqueResumo' => [
+                'produtos' => $produtos->count(),
+                'baixos' => $produtosBaixos,
+                'entradasMes' => (float) $this->scope(EstoqueMovimento::query(), $user)->where('tipo', 'entrada')->whereMonth('movimentado_em', now()->month)->sum('quantidade'),
+                'saidasMes' => (float) $this->scope(EstoqueMovimento::query(), $user)->where('tipo', 'saida')->whereMonth('movimentado_em', now()->month)->sum('quantidade'),
+            ],
+        ];
+    }
+
+    private function multas(Request $request, User $user): array
+    {
+        $multasBase = $this->scope(MultaTransito::query(), $user);
+
+        return [
+            'multaEdit' => $request->integer('edit')
+                ? (clone $multasBase)->whereKey($request->integer('edit'))->firstOrFail()
+                : null,
+            'motos' => $this->scope(Motocicleta::query(), $user)->orderBy('placa')->get(),
+            'clientes' => $this->scope(Cliente::query(), $user)->orderBy('nome')->get(),
+            'contratos' => $this->scope(Contrato::with('cliente', 'motocicleta'), $user)->latest('id')->limit(180)->get(),
+            'multasTransito' => $this->scope(MultaTransito::with('loja', 'motocicleta', 'cliente', 'contrato'), $user)->latest('id')->limit(140)->get(),
+            'multasResumo' => [
+                'abertas' => (clone $multasBase)->whereIn('status', ['aberta', 'em_recurso'])->count(),
+                'valorAberto' => (float) (clone $multasBase)->whereIn('status', ['aberta', 'em_recurso'])->sum('valor'),
+                'pagasMes' => (clone $multasBase)->where('status', 'paga')->whereMonth('criado_em', now()->month)->whereYear('criado_em', now()->year)->count(),
+                'vencendo' => (clone $multasBase)->whereIn('status', ['aberta', 'em_recurso'])->whereBetween('vencimento', [today(), today()->addDays(7)])->count(),
+            ],
         ];
     }
 

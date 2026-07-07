@@ -71,7 +71,7 @@
                 </table></div></div>
             </div>
             <div class="panel"><h2>Módulos do sistema</h2><div class="module-grid">
-                @foreach (['crm' => 'Relacionamento e follow-up', 'clientes' => 'Cadastro completo e documentos', 'motos' => 'Frota, status e lojas', 'contratos' => 'Locação e histórico', 'financeiro' => 'Recebimentos e pagamentos', 'cobrancas' => 'WhatsApp e PIX', 'inadimplencia' => 'Juros e bloqueios', 'relatorios' => 'Indicadores gerenciais', 'usuarios' => 'Perfis e permissões'] as $modulo => $descricao)
+                @foreach (['crm' => 'Relacionamento e follow-up', 'clientes' => 'Cadastro completo e documentos', 'motos' => 'Frota, status e lojas', 'contratos' => 'Locação e histórico', 'manutencao' => 'Ordens de serviço da frota', 'estoque' => 'Peças, entradas e saídas', 'multas' => 'Infrações e repasses', 'financeiro' => 'Recebimentos e pagamentos', 'cobrancas' => 'WhatsApp e PIX', 'inadimplencia' => 'Juros e bloqueios', 'relatorios' => 'Indicadores gerenciais', 'usuarios' => 'Perfis e permissões'] as $modulo => $descricao)
                     <a class="module-card" href="{{ route('locx.index', ['page' => $modulo]) }}"><i>{!! \App\Support\Locx::icon($modulo) !!}</i><div><strong>{{ $pages[$modulo] }}</strong><br><small>{{ $descricao }}</small></div></a>
                 @endforeach
             </div></div>
@@ -138,6 +138,15 @@
                     @foreach($contratos as $contrato)<tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->cliente?->nome }}</td><td>{{ $contrato->motocicleta?->placa }}</td><td>{{ $contrato->loja?->nome }}</td><td>{{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</td><td>{{ $contrato->cobranca_automatica ? $contrato->forma_cobranca : 'manual' }}<br><small>{{ $contrato->proxima_cobranca_em ? 'Próx. '.$contrato->proxima_cobranca_em->format('d/m/Y') : 'sem data' }}</small></td><td>{!! \App\Support\Locx::status($contrato->status) !!}</td></tr>@endforeach
                 </table></div></div>
             </div>
+
+        @elseif ($page === 'manutencao')
+            @include('locx.partials.manutencao')
+
+        @elseif ($page === 'estoque')
+            @include('locx.partials.estoque')
+
+        @elseif ($page === 'multas')
+            @include('locx.partials.multas')
 
         @elseif (in_array($page, ['financeiro','cobrancas','pix'], true))
             <div class="cards"><div class="metric"><span>Total aberto</span><strong>{{ \App\Support\Locx::moeda($financeiroResumo['aberto']) }}</strong></div><div class="metric ok"><span>Pago mês</span><strong>{{ \App\Support\Locx::moeda($financeiroResumo['pagoMes']) }}</strong></div><div class="metric warn"><span>Parciais</span><strong>{{ $financeiroResumo['parciais'] }}</strong></div><div class="metric danger"><span>Atrasadas</span><strong>{{ $financeiroResumo['atrasadas'] }}</strong></div></div>

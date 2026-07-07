@@ -37,4 +37,9 @@ class Contrato extends BaseModel
     {
         return $this->hasMany(Cobranca::class);
     }
+
+    public function multasTransito(): HasMany
+    {
+        return $this->hasMany(MultaTransito::class);
+    }
 }

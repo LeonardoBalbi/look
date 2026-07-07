@@ -14,6 +14,9 @@ class Locx
         'clientes' => 'Clientes',
         'motos' => 'Motocicletas',
         'contratos' => 'Contratos',
+        'manutencao' => 'ManutenÃ§Ã£o',
+        'estoque' => 'Estoque',
+        'multas' => 'Multas',
         'financeiro' => 'Financeiro',
         'cobrancas' => 'Cobranças',
         'inadimplencia' => 'Inadimplência',
@@ -65,12 +68,14 @@ class Locx
         $status ??= '';
         $classe = [
             'ativo' => 'ok', 'ativa' => 'ok', 'disponivel' => 'ok', 'paga' => 'ok',
-            'alugada' => 'info', 'enviado' => 'info', 'conciliado' => 'ok',
-            'aberta' => 'warn', 'parcial' => 'warn', 'pendente' => 'warn',
+            'concluida' => 'ok',
+            'alugada' => 'info', 'enviado' => 'info', 'conciliado' => 'ok', 'transferida' => 'info',
+            'aberta' => 'warn', 'parcial' => 'warn', 'pendente' => 'warn', 'em_andamento' => 'warn',
+            'aguardando_peca' => 'warn', 'em_recurso' => 'warn',
             'suspenso' => 'warn', 'manutencao' => 'warn',
             'inadimplente' => 'danger', 'atrasada' => 'danger', 'bloqueado' => 'danger',
             'recuperacao' => 'danger', 'inativa' => 'danger',
-            'encerrado' => 'muted', 'encerrada' => 'muted',
+            'encerrado' => 'muted', 'encerrada' => 'muted', 'cancelada' => 'muted',
         ][$status] ?? '';
 
         return new HtmlString('<span class="tag '.$classe.'">'.e($status).'</span>');
@@ -95,6 +100,9 @@ class Locx
             'clientes' => '<circle cx="9" cy="8" r="3.2"/><path d="M3.5 20c.7-3.6 2.8-5.4 5.5-5.4s4.8 1.8 5.5 5.4"/><circle cx="17" cy="9" r="2.4"/><path d="M15.3 15.2c2.6.2 4.2 1.7 5.2 4.8"/>',
             'motos' => '<circle cx="6.5" cy="17" r="3"/><circle cx="17.5" cy="17" r="3"/><path d="M9.5 17h4.5l-2-5H9.2l-2.7 5"/><path d="M12 12h3.3l2.2 5"/><path d="M13.7 8h3.8"/><path d="M15.5 8l1.2 4"/>',
             'contratos' => '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M9.5 13h5"/><path d="M9.5 17h5"/>',
+            'manutencao' => '<path d="M14.7 6.3a4 4 0 0 0-5 5L4 17l3 3 5.7-5.7a4 4 0 0 0 5-5l-2.5 2.5-3-3z"/>',
+            'estoque' => '<path d="M4 7.5 12 3l8 4.5-8 4.5z"/><path d="M4 7.5v9L12 21l8-4.5v-9"/><path d="M12 12v9"/>',
+            'multas' => '<path d="M12 3 22 20H2z"/><path d="M12 9v5"/><path d="M12 17h.01"/><path d="M8.5 20h7"/>',
             'financeiro' => '<path d="M4 19h16"/><path d="M6 16l4-4 3 3 5-7"/><path d="M16 8h2v2"/>',
             'cobrancas' => '<rect x="3" y="6" width="18" height="12" rx="2.5"/><path d="M3 10h18"/><path d="M7 15h5"/>',
             'inadimplencia' => '<path d="M12 3 22 20H2z"/><path d="M12 9v4"/><path d="M12 17h.01"/>',

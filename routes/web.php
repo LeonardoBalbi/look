@@ -16,6 +16,10 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/clientes', [LocxController::class, 'salvarCliente'])->name('locx.clientes.salvar');
     Route::post('/motos', [LocxController::class, 'salvarMoto'])->name('locx.motos.salvar');
     Route::post('/contratos', [LocxController::class, 'salvarContrato'])->name('locx.contratos.salvar');
+    Route::post('/manutencao/ordens', [LocxController::class, 'salvarOrdemServico'])->name('locx.manutencao.ordens.salvar');
+    Route::post('/estoque/produtos', [LocxController::class, 'salvarEstoqueProduto'])->name('locx.estoque.produtos.salvar');
+    Route::post('/estoque/movimentos', [LocxController::class, 'salvarEstoqueMovimento'])->name('locx.estoque.movimentos.salvar');
+    Route::post('/multas', [LocxController::class, 'salvarMulta'])->name('locx.multas.salvar');
     Route::post('/crm/clientes/{cliente}', [LocxController::class, 'salvarCrmCliente'])->name('locx.crm.cliente');
     Route::post('/crm/notas', [LocxController::class, 'salvarCrmNota'])->name('locx.crm.notas.salvar');
     Route::post('/crm/tarefas', [LocxController::class, 'salvarCrmTarefa'])->name('locx.crm.tarefas.salvar');

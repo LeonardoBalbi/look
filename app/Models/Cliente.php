@@ -32,4 +32,14 @@ class Cliente extends BaseModel
     {
         return $this->hasMany(CrmTarefa::class);
     }
+
+    public function ordensServico(): HasMany
+    {
+        return $this->hasMany(OrdemServico::class);
+    }
+
+    public function multasTransito(): HasMany
+    {
+        return $this->hasMany(MultaTransito::class);
+    }
 }
