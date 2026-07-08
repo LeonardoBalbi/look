@@ -71,13 +71,16 @@
                 </table></div></div>
             </div>
             <div class="panel"><h2>Módulos do sistema</h2><div class="module-grid">
-                @foreach (['crm' => 'Relacionamento e follow-up', 'clientes' => 'Cadastro completo e documentos', 'motos' => 'Frota, status e lojas', 'contratos' => 'Locação e histórico', 'manutencao' => 'Ordens de serviço da frota', 'estoque' => 'Peças, entradas e saídas', 'multas' => 'Infrações e repasses', 'financeiro' => 'Recebimentos e pagamentos', 'cobrancas' => 'WhatsApp e PIX', 'inadimplencia' => 'Juros e bloqueios', 'relatorios' => 'Indicadores gerenciais', 'usuarios' => 'Perfis e permissões'] as $modulo => $descricao)
+                @foreach (['reservas' => 'Disponibilidade e pré-locação', 'crm' => 'Relacionamento e follow-up', 'clientes' => 'Cadastro completo e documentos', 'motos' => 'Frota, status e lojas', 'contratos' => 'Locação e histórico', 'manutencao' => 'Ordens de serviço da frota', 'estoque' => 'Peças, entradas e saídas', 'multas' => 'Infrações e repasses', 'financeiro' => 'Recebimentos, baixas e caixa', 'cobrancas' => 'Gerar, enviar e acompanhar', 'inadimplencia' => 'Juros, acordos e bloqueios', 'contas' => 'Bancos, despesas e conciliação', 'documentos' => 'Anexos e assinatura digital', 'relatorios' => 'Indicadores e DRE', 'lojas' => 'Resultado por unidade', 'usuarios' => 'Perfis e permissões'] as $modulo => $descricao)
                     <a class="module-card" href="{{ route('locx.index', ['page' => $modulo]) }}"><i>{!! \App\Support\Locx::icon($modulo) !!}</i><div><strong>{{ $pages[$modulo] }}</strong><br><small>{{ $descricao }}</small></div></a>
                 @endforeach
             </div></div>
             <script>
                 window.addEventListener('load',()=>{locxDonutPremium('chartReceita',[{label:'Recebido',value:@json(round($recebidoMes)),color:'#16a34a'},{label:'A receber',value:@json(round($aReceber)),color:'#2563eb'},{label:'Em atraso',value:@json(round($atraso)),color:'#ef4444'}],'R$');locxDonutPremium('chartStatus',[{label:'Pagas',value:@json($cobrancasStatus['pagas']),color:'#16a34a'},{label:'Abertas',value:@json($cobrancasStatus['abertas']),color:'#2563eb'},{label:'Parciais',value:@json($cobrancasStatus['parciais']),color:'#f59e0b'},{label:'Atrasadas',value:@json($cobrancasStatus['atrasadas']),color:'#ef4444'}]);locxMiniBarsPremium('chartRecebidoLojas',@json($lojaLabels),@json($lojaRecebido),'R$');locxDonutPremium('chartOperacao',[{label:'Alugadas',value:@json($motosAlugadas),color:'#2563eb'},{label:'Disponíveis',value:@json($motosDisponiveis),color:'#16a34a'},{label:'Manutenção',value:@json($motosManutencao),color:'#f59e0b'},{label:'Outras',value:@json(max(0,$totalMotos-$motosAlugadas-$motosDisponiveis-$motosManutencao)),color:'#64748b'}]);locxBars('chartReceb30',@json($labels30),@json($recebidos30));});
             </script>
+
+        @elseif (in_array($page, ['reservas','contas','documentos'], true))
+            @include('locx.partials.look_modulo')
 
         @elseif ($page === 'crm')
             @include('locx.partials.crm')
@@ -148,24 +151,35 @@
         @elseif ($page === 'multas')
             @include('locx.partials.multas')
 
-        @elseif (in_array($page, ['financeiro','cobrancas','pix'], true))
+        @elseif (in_array($page, ['financeiro','cobrancas'], true))
             <div class="cards"><div class="metric"><span>Total aberto</span><strong>{{ \App\Support\Locx::moeda($financeiroResumo['aberto']) }}</strong></div><div class="metric ok"><span>Pago mês</span><strong>{{ \App\Support\Locx::moeda($financeiroResumo['pagoMes']) }}</strong></div><div class="metric warn"><span>Parciais</span><strong>{{ $financeiroResumo['parciais'] }}</strong></div><div class="metric danger"><span>Atrasadas</span><strong>{{ $financeiroResumo['atrasadas'] }}</strong></div></div>
             <div class="grid side">
-                <div class="panel"><h2>Nova Cobrança</h2><form method="post" action="{{ route('locx.cobrancas.salvar') }}" class="form-grid">@csrf
-                    <label class="span-2">Contrato<select name="contrato_id">@foreach($contratos as $contrato)<option value="{{ $contrato->id }}">#{{ $contrato->id }} - {{ $contrato->cliente?->nome }} / {{ $contrato->motocicleta?->placa }} - {{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</option>@endforeach</select></label>
-                    <label>Vencimento<input type="date" name="vencimento" value="{{ today()->format('Y-m-d') }}"></label><label>Valor<input type="number" step="0.01" name="valor_principal" value="500.00"></label><div class="span-3"><button type="submit">Gerar Cobrança + PIX</button></div>
-                </form><hr><h2>Registrar Pagamento</h2><form method="post" action="{{ route('locx.pagamentos.salvar') }}" class="form-grid">@csrf
-                    <label class="span-2">Cobrança<select name="cobranca_id">@foreach($cobrancasAbertas as $cobranca)<option value="{{ $cobranca->id }}">#{{ $cobranca->id }} - {{ $cobranca->cliente?->nome }} - {{ \App\Support\Locx::moeda($cobranca->valor_atualizado-$cobranca->valor_pago) }}</option>@endforeach</select></label>
-                    <label>Valor Pago<input type="number" step="0.01" name="valor" required></label><label>Forma<select name="forma"><option>pix</option><option>dinheiro</option><option>cartao</option><option>transferencia</option></select></label><div class="span-3"><button class="btn success" type="submit">Registrar Pagamento</button></div>
-                </form></div>
-                <div class="panel"><h2>{{ $page === 'pix' ? 'Conciliação PIX' : 'Cobranças' }}</h2>
-                    @if ($page === 'pix')
+                <div class="panel">
+                    @if ($page === 'cobrancas')
+                        <h2>Nova Cobrança</h2>
+                        <form method="post" action="{{ route('locx.cobrancas.salvar') }}" class="form-grid">@csrf
+                            <label class="span-2">Contrato<select name="contrato_id">@foreach($contratos as $contrato)<option value="{{ $contrato->id }}">#{{ $contrato->id }} - {{ $contrato->cliente?->nome }} / {{ $contrato->motocicleta?->placa }} - {{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</option>@endforeach</select></label>
+                            <label>Vencimento<input type="date" name="vencimento" value="{{ today()->format('Y-m-d') }}"></label>
+                            <label>Valor<input type="number" step="0.01" name="valor_principal" value="500.00"></label>
+                            <div class="span-3"><button type="submit">Gerar cobrança + PIX</button></div>
+                        </form>
+                    @else
+                        <h2>Registrar Pagamento</h2>
+                        <form method="post" action="{{ route('locx.pagamentos.salvar') }}" class="form-grid">@csrf
+                            <label class="span-2">Cobrança<select name="cobranca_id">@foreach($cobrancasAbertas as $cobranca)<option value="{{ $cobranca->id }}">#{{ $cobranca->id }} - {{ $cobranca->cliente?->nome }} - {{ \App\Support\Locx::moeda($cobranca->valor_atualizado-$cobranca->valor_pago) }}</option>@endforeach</select></label>
+                            <label>Valor pago<input type="number" step="0.01" name="valor" required></label>
+                            <label>Forma<select name="forma"><option>pix</option><option>dinheiro</option><option>cartao</option><option>transferencia</option></select></label>
+                            <div class="span-3"><button class="btn success" type="submit">Registrar pagamento</button></div>
+                        </form>
+                        <hr>
                         <form method="post" action="{{ route('locx.pix.conciliar') }}" class="toolbar">
                             @csrf
-                            <input type="hidden" name="page" value="pix">
-                            <button class="btn success" type="submit">Conciliar agora</button>
+                            <input type="hidden" name="page" value="financeiro">
+                            <button class="btn secondary" type="submit">Conciliar PIX</button>
                         </form>
                     @endif
+                </div>
+                <div class="panel"><h2>{{ $page === 'cobrancas' ? 'Cobranças e envios' : 'Títulos e recebimentos' }}</h2>
                     @include('locx.partials.cobrancas_qr')
                 </div>
             </div>
@@ -248,11 +262,10 @@
             </div>
 
         @elseif ($page === 'configuracoes')
-            <div class="panel"><h2>Configurações e Integrações Futuras</h2><div class="module-grid">
+            <div class="panel"><h2>Configurações e integrações</h2><div class="module-grid">
                 <a class="module-card" href="{{ route('locx.index',['page'=>'pagbank']) }}"><i>{!! \App\Support\Locx::icon('pagbank') !!}</i><div><strong>PagBank</strong><br><small>PIX automático e baixa por webhook</small></div></a>
                 <a class="module-card" href="{{ route('locx.index',['page'=>'asaas']) }}"><i>{!! \App\Support\Locx::icon('asaas') !!}</i><div><strong>Asaas</strong><br><small>PIX com cobrança e webhook</small></div></a>
                 <a class="module-card" href="{{ route('locx.index',['page'=>'whatsapp']) }}"><i>{!! \App\Support\Locx::icon('whatsapp') !!}</i><div><strong>WhatsApp API</strong><br><small>Mensagens automáticas</small></div></a>
-                <div class="module-card"><i>✍</i><div><strong>Assinatura Digital</strong><br><small>Contratos eletrônicos</small></div></div><div class="module-card"><i>⌖</i><div><strong>Rastreadores</strong><br><small>Integração veicular</small></div></div>
             </div></div>
         @endif
     </main>

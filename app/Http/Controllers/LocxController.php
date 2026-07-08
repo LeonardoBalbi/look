@@ -9,6 +9,7 @@ use App\Models\CrmNota;
 use App\Models\CrmTarefa;
 use App\Models\EstoqueMovimento;
 use App\Models\EstoqueProduto;
+use App\Models\LookModuloRegistro;
 use App\Models\Loja;
 use App\Models\MultaTransito;
 use App\Models\Motocicleta;
@@ -68,6 +69,7 @@ class LocxController extends Controller
 
         return view('locx.index', array_merge($data, match ($page) {
             'dashboard' => $this->dashboard($user),
+            'reservas', 'contas', 'documentos' => $this->lookModulo($page, $user),
             'crm' => $this->crm($request, $user),
             'clientes' => $this->clientes($request),
             'motos' => $this->motos($request, $user),
@@ -75,7 +77,7 @@ class LocxController extends Controller
             'manutencao' => $this->manutencao($request, $user),
             'estoque' => $this->estoque($request, $user),
             'multas' => $this->multas($request, $user),
-            'financeiro', 'cobrancas', 'pix' => $this->financeiro($user),
+            'financeiro', 'cobrancas' => $this->financeiro($user),
             'inadimplencia' => $this->inadimplencia($user),
             'relatorios' => $this->relatorios($user),
             'lojas' => $this->lojas(),
@@ -89,6 +91,117 @@ class LocxController extends Controller
             ],
             default => [],
         }));
+    }
+
+    private function lookModulo(string $page, User $user): array
+    {
+        $motos = $this->scope(Motocicleta::query(), $user);
+        $contratos = $this->scope(Contrato::query(), $user);
+        $cobrancas = $this->scope(Cobranca::query(), $user);
+        $multas = $this->scope(MultaTransito::query(), $user);
+        $registrosBase = $this->scope(LookModuloRegistro::query(), $user)->where('modulo', $page);
+
+        $abertoFinanceiro = (float) (clone $cobrancas)
+            ->whereIn('status', ['aberta', 'parcial', 'atrasada'])
+            ->sum(DB::raw('valor_atualizado - valor_pago'));
+        $atrasoFinanceiro = (float) (clone $cobrancas)
+            ->whereDate('vencimento', '<', today())
+            ->where('status', '<>', 'paga')
+            ->sum(DB::raw('valor_atualizado - valor_pago'));
+        $pagamentosMes = DB::table('pagamentos as p')->join('cobrancas as c', 'c.id', '=', 'p.cobranca_id');
+        $this->scopeQuery($pagamentosMes, $user, 'c.loja_id');
+        $recebidoMes = (float) $pagamentosMes
+            ->whereYear('p.pago_em', now()->year)
+            ->whereMonth('p.pago_em', now()->month)
+            ->sum('p.valor');
+
+        $catalogo = [
+            'reservas' => [
+                'titulo' => 'Reservas e disponibilidade',
+                'subtitulo' => 'Organize pedidos de locacao, disponibilidade, retirada, troca e encerramento em um fluxo simples para a equipe.',
+                'indicadores' => [
+                    ['label' => 'Registros', 'valor' => (clone $registrosBase)->count(), 'tipo' => ''],
+                    ['label' => 'Contratos ativos', 'valor' => (clone $contratos)->where('status', 'ativo')->count(), 'tipo' => 'ok'],
+                    ['label' => 'Motos disponiveis', 'valor' => (clone $motos)->where('status_operacional', 'disponivel')->count(), 'tipo' => 'ok'],
+                    ['label' => 'Proximas cobrancas', 'valor' => (clone $cobrancas)->whereBetween('vencimento', [today(), today()->addDays(7)])->count(), 'tipo' => 'warn'],
+                ],
+                'rotinas' => [
+                    ['nome' => 'Consulta de disponibilidade', 'descricao' => 'Registre loja, data, hora, grupo desejado e moto sugerida antes de abrir contrato.', 'status' => 'em uso'],
+                    ['nome' => 'Reserva com checklist', 'descricao' => 'Controle cliente, documentos, caucao, origem do atendimento e prioridade.', 'status' => 'em uso'],
+                    ['nome' => 'Substituicao e encerramento', 'descricao' => 'Anote troca de moto, avarias, km, pendencias e cobrancas finais.', 'status' => 'em uso'],
+                ],
+                'form' => ['titulo' => 'Reserva ou solicitacao', 'pessoa' => 'Cliente', 'documento' => 'Moto / grupo', 'telefone' => 'Contato'],
+                'atalhos' => ['clientes', 'motos', 'contratos', 'financeiro'],
+            ],
+            'contas' => [
+                'titulo' => 'Contas e bancos',
+                'subtitulo' => 'Acompanhe plano de contas, lancamentos bancarios, transferencias e conciliacoes em uma tela de controle.',
+                'indicadores' => [
+                    ['label' => 'Registros', 'valor' => (clone $registrosBase)->count(), 'tipo' => ''],
+                    ['label' => 'A receber', 'valor' => Locx::moeda($abertoFinanceiro), 'tipo' => 'warn'],
+                    ['label' => 'Recebido no mes', 'valor' => Locx::moeda($recebidoMes), 'tipo' => 'ok'],
+                    ['label' => 'Atraso', 'valor' => Locx::moeda($atrasoFinanceiro), 'tipo' => 'danger'],
+                ],
+                'rotinas' => [
+                    ['nome' => 'Plano de contas', 'descricao' => 'Classifique receitas, despesas, centros de custo e centros de resultado.', 'status' => 'em uso'],
+                    ['nome' => 'Movimento em contas', 'descricao' => 'Registre lancamentos bancarios, transferencias e posicao financeira diaria.', 'status' => 'em uso'],
+                    ['nome' => 'Conciliacao bancaria', 'descricao' => 'Controle PIX, recebimentos, taxas, estornos e divergencias.', 'status' => 'em uso'],
+                ],
+                'form' => ['titulo' => 'Lancamento ou conciliacao', 'pessoa' => 'Conta / favorecido', 'documento' => 'Documento', 'telefone' => 'Banco / canal'],
+                'atalhos' => ['financeiro', 'cobrancas', 'relatorios'],
+            ],
+            'documentos' => [
+                'titulo' => 'Documentos e assinatura digital',
+                'subtitulo' => 'Centralize anexos, validade, contratos, recibos, comunicados e pendencias de assinatura.',
+                'indicadores' => [
+                    ['label' => 'Registros', 'valor' => (clone $registrosBase)->count(), 'tipo' => ''],
+                    ['label' => 'Clientes', 'valor' => Cliente::count(), 'tipo' => ''],
+                    ['label' => 'Contratos ativos', 'valor' => (clone $contratos)->where('status', 'ativo')->count(), 'tipo' => 'ok'],
+                    ['label' => 'Multas abertas', 'valor' => (clone $multas)->whereIn('status', ['aberta', 'em_recurso'])->count(), 'tipo' => 'warn'],
+                ],
+                'rotinas' => [
+                    ['nome' => 'Anexos digitais', 'descricao' => 'Organize CNH, comprovante, contrato, laudos, fotos e recibos por cliente/moto.', 'status' => 'em uso'],
+                    ['nome' => 'Controle de validade', 'descricao' => 'Registre vencimentos de CNH, documentos da moto, apolice e contrato.', 'status' => 'em uso'],
+                    ['nome' => 'Assinatura digital', 'descricao' => 'Acompanhe envio, assinatura, pendencia e retorno de documentos.', 'status' => 'em uso'],
+                ],
+                'form' => ['titulo' => 'Documento ou pendencia', 'pessoa' => 'Cliente / responsavel', 'documento' => 'Tipo / numero', 'telefone' => 'Contato'],
+                'atalhos' => ['clientes', 'contratos', 'multas', 'configuracoes'],
+            ],
+        ];
+
+        return [
+            'lookModulo' => $catalogo[$page],
+            'lookRegistros' => (clone $registrosBase)->with('loja', 'usuario')->latest('id')->limit(80)->get(),
+            'lookRelacionados' => collect($catalogo[$page]['atalhos'])
+                ->filter(fn (string $modulo) => array_key_exists($modulo, Locx::MODULOS) && $user->pode($modulo))
+                ->values()
+                ->all(),
+        ];
+    }
+
+    public function salvarLookModulo(Request $request): RedirectResponse
+    {
+        $modulos = ['reservas', 'contas', 'documentos'];
+        $dados = $request->validate([
+            'modulo' => ['required', Rule::in($modulos)],
+            'loja_id' => ['nullable', 'exists:lojas,id'],
+            'titulo' => ['required', 'string', 'max:180'],
+            'pessoa' => ['nullable', 'string', 'max:180'],
+            'documento' => ['nullable', 'string', 'max:120'],
+            'telefone' => ['nullable', 'string', 'max:40'],
+            'valor' => ['nullable', 'numeric', 'min:0'],
+            'vencimento' => ['nullable', 'date'],
+            'status' => ['required', Rule::in(['aberto', 'em_andamento', 'pendente', 'aprovado', 'concluido', 'cancelado'])],
+            'descricao' => ['nullable', 'string', 'max:5000'],
+        ]);
+
+        $this->autorizar($request->user(), $dados['modulo'], 'criar');
+        $dados['valor'] = $dados['valor'] ?? 0;
+        $dados['usuario_id'] = $request->user()->id;
+
+        LookModuloRegistro::create($dados);
+
+        return $this->voltar($dados['modulo'], 'Registro salvo com sucesso.');
     }
 
     public function salvarCliente(Request $request): RedirectResponse
@@ -223,7 +336,7 @@ class LocxController extends Controller
             }
         });
 
-        return $this->voltar('manutencao', 'Ordem de serviÃ§o salva.');
+        return $this->voltar('manutencao', 'Ordem de serviço salva.');
     }
 
     public function salvarEstoqueProduto(Request $request): RedirectResponse
@@ -385,7 +498,7 @@ class LocxController extends Controller
 
     public function salvarCobranca(Request $request): RedirectResponse
     {
-        $this->autorizar($request->user(), 'financeiro', 'criar');
+        $this->autorizar($request->user(), 'cobrancas', 'criar');
         $dados = $request->validate([
             'contrato_id' => ['required', 'exists:contratos,id'],
             'vencimento' => ['required', 'date'],
@@ -413,7 +526,7 @@ class LocxController extends Controller
                 : ' E-mail nao enviado: '.($email['erro'] ?? 'falha desconhecida').'.';
         }
 
-        return $this->voltar('financeiro', $mensagem);
+        return $this->voltar('cobrancas', $mensagem);
     }
 
     public function salvarPagamento(Request $request): RedirectResponse
@@ -464,7 +577,8 @@ class LocxController extends Controller
 
     public function gerarPix(Request $request, Cobranca $cobranca): RedirectResponse
     {
-        $this->autorizar($request->user(), 'financeiro', 'editar');
+        $page = $request->string('page', 'cobrancas')->toString();
+        $this->autorizar($request->user(), $page === 'cobrancas' ? 'cobrancas' : 'financeiro', 'editar');
         $resultado = $this->pixGateway->criarPix($cobranca);
         $mensagem = ($resultado['ok'] ?? false)
             ? 'PIX '.$this->pixGateway->nomeGateway().' gerado com sucesso.'
@@ -478,7 +592,7 @@ class LocxController extends Controller
         }
 
         return $this->voltar(
-            $request->string('page', 'financeiro')->toString(),
+            in_array($page, ['financeiro', 'cobrancas'], true) ? $page : 'cobrancas',
             $mensagem
         );
     }
@@ -500,7 +614,7 @@ class LocxController extends Controller
             $mensagem .= ' Erros: '.implode(' | ', array_slice($resultado['erros'], 0, 3));
         }
 
-        return $this->voltar($request->string('page', 'pix')->toString(), $mensagem);
+        return $this->voltar($request->string('page', 'financeiro')->toString(), $mensagem);
     }
 
     public function enviarWhatsApp(Request $request, Cobranca $cobranca): RedirectResponse
@@ -625,7 +739,7 @@ class LocxController extends Controller
         ]);
 
         $this->pixGateway->salvar($dados['gateway']);
-        $page = in_array($dados['page'] ?? '', ['pagbank', 'asaas', 'pix', 'configuracoes'], true)
+        $page = in_array($dados['page'] ?? '', ['pagbank', 'asaas', 'configuracoes'], true)
             ? $dados['page']
             : 'configuracoes';
 

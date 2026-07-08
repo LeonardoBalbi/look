@@ -286,7 +286,7 @@ class WhatsAppService
                 $cobranca,
                 $telefone,
                 $mensagem,
-                'NÃ£o foi possÃ­vel conectar Ã  Meta: '.$exception->getMessage()
+                'Não foi possível conectar à Meta: '.$exception->getMessage()
             );
         }
 
