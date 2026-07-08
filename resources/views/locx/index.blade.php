@@ -18,11 +18,26 @@
         <div class="brand"><div class="brand-icon">LX</div><div><strong>Loc<b>X</b></strong><span>Financeiro e Operacional</span></div></div>
         <div class="nav-title">Navegação</div>
         <nav class="menu">
-            @foreach ($pages as $key => $label)
-                @if ($user->pode($key))
-                    <a class="{{ $page === $key ? 'active' : '' }}" href="{{ route('locx.index', ['page' => $key]) }}">
-                        <span>{!! \App\Support\Locx::icon($key) !!}</span>{{ $label }}
-                    </a>
+            @foreach (\App\Support\Locx::MENU_GRUPOS as $grupo => $modulos)
+                @php
+                    $itens = collect($modulos)
+                        ->filter(fn ($key) => isset($pages[$key]) && $user->pode($key))
+                        ->values();
+                @endphp
+                @if ($itens->isNotEmpty())
+                    <details class="menu-group" {{ $itens->contains($page) ? 'open' : '' }}>
+                        <summary>
+                            <span>{{ $grupo }}</span>
+                            <small>{{ $itens->count() }}</small>
+                        </summary>
+                        <div class="menu-group-items">
+                            @foreach ($itens as $key)
+                                <a class="{{ $page === $key ? 'active' : '' }}" href="{{ route('locx.index', ['page' => $key]) }}">
+                                    <span>{!! \App\Support\Locx::icon($key) !!}</span>{{ $pages[$key] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </details>
                 @endif
             @endforeach
         </nav>

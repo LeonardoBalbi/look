@@ -32,6 +32,14 @@ class Locx
         'configuracoes' => 'Configurações',
     ];
 
+    public const MENU_GRUPOS = [
+        'Principal' => ['dashboard', 'reservas', 'crm'],
+        'Operação' => ['clientes', 'motos', 'contratos', 'manutencao', 'estoque', 'multas'],
+        'Financeiro' => ['financeiro', 'contas', 'cobrancas', 'inadimplencia', 'pagbank', 'asaas'],
+        'Canais' => ['whatsapp', 'documentos'],
+        'Gestão' => ['relatorios', 'lojas', 'usuarios', 'configuracoes'],
+    ];
+
     public const ACOES = [
         'visualizar' => 'Visualizar',
         'criar' => 'Criar',

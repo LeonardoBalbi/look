@@ -48,6 +48,14 @@ function locxDonut(id, items){
     document.querySelectorAll('.mobile-menu-close,.mobile-menu-overlay,[data-menu-close]').forEach(btn=>{
       btn.addEventListener('click', function(e){e.preventDefault();closeMenu();}, false);
     });
+    document.querySelectorAll('.sidebar .menu-group').forEach(group=>{
+      group.addEventListener('toggle', function(){
+        if(!group.open) return;
+        document.querySelectorAll('.sidebar .menu-group[open]').forEach(other=>{
+          if(other !== group) other.open = false;
+        });
+      });
+    });
     document.querySelectorAll('.sidebar .menu a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=768) closeMenu(); }));
     document.querySelectorAll('.pix-copy-btn').forEach(btn=>{
       btn.addEventListener('click', async function(){
