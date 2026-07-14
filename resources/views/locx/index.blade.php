@@ -78,7 +78,7 @@
                 <div class="metric danger"><span>Manutenção</span><strong>{{ $motosManutencao }}</strong></div>
             </div>
             <div class="grid side dashboard-tables">
-                <div class="panel"><h2>Vencimentos próximos</h2><div class="table-wrap"><table><tr><th>Cliente</th><th>Moto</th><th>Vencimento</th><th>Valor</th><th>Status</th></tr>
+                <div class="panel"><h2>Vencimentos próximos</h2><div class="table-wrap"><table><tr><th>Cliente</th><th>Moto</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>A��es</th></tr>
                     @foreach ($vencimentosProximos as $item)<tr><td>{{ $item->cliente?->nome }}</td><td>{{ $item->contrato?->motocicleta?->placa ?? '-' }}</td><td>{{ $item->vencimento->format('d/m/Y') }}</td><td>{{ \App\Support\Locx::moeda($item->valor_principal) }}</td><td>{!! \App\Support\Locx::status($item->status) !!}</td></tr>@endforeach
                 </table></div></div>
                 <div class="panel"><h2>Inadimplência - Top clientes</h2><div class="table-wrap"><table><tr><th>Cliente</th><th>Moto</th><th>Dias</th><th>Saldo</th></tr>
@@ -152,16 +152,10 @@
                     <label><input type="checkbox" name="cobranca_automatica" value="1" @checked(old('cobranca_automatica', true))> Cobrança automática</label>
                     <div class="span-3"><button type="submit">Criar Contrato</button></div>
                 </form></div>
-                <div class="panel"><h2>Contratos</h2><div class="table-wrap"><table><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Loja</th><th>Valor</th><th>Recorrência</th><th>Status</th></tr>
-                    @foreach($contratos as $contrato)<tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->cliente?->nome }}</td><td>{{ $contrato->motocicleta?->placa }}</td><td>{{ $contrato->loja?->nome }}</td><td>{{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</td><td>{{ $contrato->cobranca_automatica ? $contrato->forma_cobranca : 'manual' }}<br><small>{{ $contrato->proxima_cobranca_em ? 'Próx. '.$contrato->proxima_cobranca_em->format('d/m/Y') : 'sem data' }}</small></td><td>{!! \App\Support\Locx::status($contrato->status) !!}</td></tr>@endforeach
+                <div class="panel"><h2>Contratos</h2><div class="table-wrap"><table><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Loja</th><th>Valor</th><th>Recorrência</th><th>Status</th><th>A��es</th></tr>
+                    @foreach($contratos as $contrato)<tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->cliente?->nome }}</td><td>{{ $contrato->motocicleta?->placa }}</td><td>{{ $contrato->loja?->nome }}</td><td>{{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</td><td>{{ $contrato->cobranca_automatica ? $contrato->forma_cobranca : 'manual' }}<br><small>{{ $contrato->proxima_cobranca_em ? 'Próx. '.$contrato->proxima_cobranca_em->format('d/m/Y') : 'sem data' }}</small></td><td>{!! \App\Support\Locx::status($contrato->status) !!}</td><td><button type="button" class="btn secondary" data-contract-open="contrato-preview-{{ $contrato->id }}">Gerar contrato</button></td></tr>@endforeach
                 </table></div></div>
             </div>
-
-            <div class="panel"><h2>Contrato de Locação</h2><div class="module-grid">
-                @foreach($contratos as $contrato)
-                    <button type="button" class="module-card contract-card-button" data-contract-open="contrato-preview-{{ $contrato->id }}"><i>{!! \App\Support\Locx::icon('contratos') !!}</i><div><strong>#{{ $contrato->id }} - {{ $contrato->cliente?->nome }}</strong><br><small>{{ $contrato->motocicleta?->placa ?: 'sem placa' }} / {{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</small></div></button>
-                @endforeach
-            </div></div>
             @foreach($contratos as $contrato)
                 @php($clienteContrato = $contrato->cliente)
                 @php($motoContrato = $contrato->motocicleta)
