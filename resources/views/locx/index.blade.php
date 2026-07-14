@@ -157,6 +157,63 @@
                 </table></div></div>
             </div>
 
+            <div class="panel"><h2>Contrato de Locação</h2><div class="module-grid">
+                @foreach($contratos as $contrato)
+                    <button type="button" class="module-card contract-card-button" data-contract-open="contrato-preview-{{ $contrato->id }}"><i>{!! \App\Support\Locx::icon('contratos') !!}</i><div><strong>#{{ $contrato->id }} - {{ $contrato->cliente?->nome }}</strong><br><small>{{ $contrato->motocicleta?->placa ?: 'sem placa' }} / {{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</small></div></button>
+                @endforeach
+            </div></div>
+            @foreach($contratos as $contrato)
+                @php($clienteContrato = $contrato->cliente)
+                @php($motoContrato = $contrato->motocicleta)
+                @php($lojaContrato = $contrato->loja)
+                <div class="contract-modal" id="contrato-preview-{{ $contrato->id }}" aria-hidden="true">
+                    <div class="contract-modal-backdrop" data-contract-close></div>
+                    <div class="contract-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="contrato-title-{{ $contrato->id }}">
+                        <div class="contract-modal-head">
+                            <div><h2 id="contrato-title-{{ $contrato->id }}">Contrato de Locação</h2><p>Pré-visualização para impressão ou PDF</p></div>
+                            <button type="button" class="contract-modal-close" data-contract-close aria-label="Fechar">&times;</button>
+                        </div>
+                        <div class="contract-document" id="contrato-doc-{{ $contrato->id }}">
+                            <div class="contract-brand">LocX</div>
+                            <h1>CONTRATO DE LOCAÇÃO DE MOTOCICLETA</h1>
+                            <h3>Contrato nº #{{ $contrato->id }}</h3>
+                            <p>Pelo presente instrumento particular, as partes abaixo identificadas ajustam a locação da motocicleta descrita neste documento, conforme as condições comerciais cadastradas no sistema LocX.</p>
+                            <h2>1. CONTRATANTE</h2>
+                            <p><strong>Nome:</strong> {{ $clienteContrato?->nome ?: '-' }}</p>
+                            <p><strong>CPF:</strong> {{ $clienteContrato?->cpf ?: '-' }}</p>
+                            <p><strong>RG:</strong> {{ $clienteContrato?->rg ?: '-' }}</p>
+                            <p><strong>CNH:</strong> {{ $clienteContrato?->cnh ?: '-' }}</p>
+                            <p><strong>Telefone:</strong> {{ $clienteContrato?->telefone ?: '-' }}</p>
+                            <p><strong>WhatsApp:</strong> {{ $clienteContrato?->whatsapp ?: '-' }}</p>
+                            <p><strong>E-mail:</strong> {{ $clienteContrato?->email ?: '-' }}</p>
+                            <p><strong>Endereço:</strong> {{ $clienteContrato?->endereco ?: '-' }}</p>
+                            <h2>2. CONTRATADA</h2>
+                            <p>LOCX, unidade {{ $lojaContrato?->nome ?: 'Central' }}, responsável pela operação, gestão financeira e acompanhamento da locação.</p>
+                            <h2>3. MOTOCICLETA LOCADA</h2>
+                            <p><strong>Moto:</strong> {{ trim(($motoContrato?->marca ? $motoContrato->marca.' ' : '').($motoContrato?->modelo ?: '')) ?: '-' }}</p>
+                            <p><strong>Placa:</strong> {{ $motoContrato?->placa ?: '-' }}</p>
+                            <p><strong>Ano:</strong> {{ $motoContrato?->ano ?: '-' }}</p>
+                            <p><strong>Renavam:</strong> {{ $motoContrato?->renavam ?: '-' }}</p>
+                            <p><strong>Chassi:</strong> {{ $motoContrato?->chassi ?: '-' }}</p>
+                            <h2>4. CONDIÇÕES DA LOCAÇÃO</h2>
+                            <p><strong>Data de início:</strong> {{ $contrato->data_inicio?->format('d/m/Y') ?: '-' }}</p>
+                            <p><strong>Data de fim:</strong> {{ $contrato->data_fim?->format('d/m/Y') ?: 'Indeterminado' }}</p>
+                            <p><strong>Valor contratado:</strong> {{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</p>
+                            <p><strong>Forma de cobrança:</strong> {{ strtoupper($contrato->forma_cobranca) }}</p>
+                            <p><strong>Status:</strong> {{ strtoupper($contrato->status) }}</p>
+                            <p><strong>Loja:</strong> {{ $lojaContrato?->nome ?: '-' }}</p>
+                            <h2>5. CLÁUSULAS GERAIS</h2>
+                            <p>O contratante declara receber a motocicleta em condições de uso, obrigando-se a zelar pelo bem, cumprir os prazos de pagamento e devolver o veículo nas mesmas condições recebidas, salvo desgaste natural.</p>
+                            <p>A inadimplência poderá gerar cobrança de encargos, bloqueio operacional e demais medidas administrativas previstas nas regras internas da contratada.</p>
+                            <p>Este contrato foi gerado automaticamente pelo sistema LocX com base nos dados cadastrados no módulo de contratos.</p>
+                            <p class="contract-date">{{ $lojaContrato?->nome ?: 'LocX' }}, {{ ($contrato->data_inicio ?: today())->translatedFormat('d \d\e F \d\e Y') }}.</p>
+                            <div class="contract-signatures"><div><span></span><strong>CONTRATANTE</strong></div><div><span></span><strong>LOCX</strong></div></div>
+                        </div>
+                        <div class="contract-modal-actions"><button type="button" class="btn secondary" data-contract-close>Fechar</button><button type="button" class="btn success" data-contract-print="contrato-doc-{{ $contrato->id }}">Imprimir / PDF</button></div>
+                    </div>
+                </div>
+            @endforeach
+
         @elseif ($page === 'manutencao')
             @include('locx.partials.manutencao')
 

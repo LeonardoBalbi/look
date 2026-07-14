@@ -604,3 +604,112 @@ code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border
   .look-routine{display:grid}
   .look-steps{grid-template-columns:1fr}
 }
+
+/* CONTRATO DE LOCACAO */
+.contract-card-button{
+  width:100%;
+  border:1px solid var(--line);
+  text-align:left;
+  cursor:pointer;
+  font:inherit;
+}
+.contract-modal{
+  position:fixed;
+  inset:0;
+  z-index:80;
+  display:none;
+}
+.contract-modal.is-open{display:block}
+.contract-modal-backdrop{
+  position:absolute;
+  inset:0;
+  background:rgba(15,23,42,.58);
+}
+.contract-modal-dialog{
+  position:relative;
+  width:min(920px,calc(100vw - 32px));
+  max-height:calc(100vh - 32px);
+  margin:16px auto;
+  background:#fff;
+  border-radius:16px;
+  box-shadow:0 24px 70px rgba(15,23,42,.28);
+  overflow:auto;
+}
+.contract-modal-head{
+  position:sticky;
+  top:0;
+  z-index:1;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:16px;
+  padding:18px 22px;
+  background:#fff;
+  border-bottom:1px solid var(--line);
+}
+.contract-modal-head h2{margin:0;color:#0f172a}
+.contract-modal-head p{margin:4px 0 0;color:#64748b}
+.contract-modal-close{
+  border:0;
+  background:#f1f5f9;
+  color:#0f172a;
+  width:34px;
+  height:34px;
+  border-radius:8px;
+  font-size:24px;
+  line-height:1;
+  cursor:pointer;
+}
+.contract-document{
+  color:#111827;
+  padding:34px 42px;
+  font-family:Arial,Helvetica,sans-serif;
+  line-height:1.5;
+}
+.contract-document .contract-brand{
+  font-size:22px;
+  font-weight:800;
+  margin-bottom:18px;
+}
+.contract-document h1{
+  margin:0 0 8px;
+  font-size:22px;
+  text-align:center;
+  letter-spacing:0;
+}
+.contract-document h2{
+  margin:24px 0 12px;
+  font-size:16px;
+  color:#111827;
+}
+.contract-document h3{
+  margin:0 0 24px;
+  text-align:center;
+  font-size:15px;
+}
+.contract-document p{margin:0 0 10px}
+.contract-date{margin-top:28px!important}
+.contract-signatures{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:48px;
+  margin-top:64px;
+  text-align:center;
+}
+.contract-signatures span{
+  display:block;
+  border-top:1px solid #111827;
+  margin-bottom:8px;
+}
+.contract-modal-actions{
+  display:flex;
+  justify-content:flex-end;
+  gap:10px;
+  padding:16px 22px 22px;
+  border-top:1px solid var(--line);
+}
+@media(max-width:768px){
+  .contract-document{padding:24px 20px}
+  .contract-signatures{grid-template-columns:1fr;gap:42px}
+  .contract-modal-actions{display:grid}
+}

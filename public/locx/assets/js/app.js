@@ -85,12 +85,60 @@ function locxDonut(id, items){
         }
       });
     });
+    document.querySelectorAll('[data-contract-open]').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        const modal=document.getElementById(this.dataset.contractOpen);
+        if(!modal) return;
+        modal.classList.add('is-open');
+        modal.setAttribute('aria-hidden','false');
+        document.body.classList.add('contract-open');
+      });
+    });
+    document.querySelectorAll('[data-contract-close]').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        const modal=this.closest('.contract-modal');
+        if(!modal) return;
+        modal.classList.remove('is-open');
+        modal.setAttribute('aria-hidden','true');
+        document.body.classList.remove('contract-open');
+      });
+    });
+    document.querySelectorAll('[data-contract-print]').forEach(btn=>{
+      btn.addEventListener('click', function(){
+        const doc=document.getElementById(this.dataset.contractPrint);
+        if(!doc) return;
+        const win=window.open('', '_blank', 'width=900,height=900');
+        if(!win) return;
+        win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Contrato de Locação</title><style>
+          body{font-family:Arial,Helvetica,sans-serif;color:#111827;margin:0;padding:32px;line-height:1.5}
+          .contract-brand{font-size:22px;font-weight:800;margin-bottom:18px}
+          h1{margin:0 0 8px;font-size:22px;text-align:center;letter-spacing:0}
+          h2{margin:24px 0 12px;font-size:16px;color:#111827}
+          h3{margin:0 0 24px;text-align:center;font-size:15px}
+          p{margin:0 0 10px}.contract-date{margin-top:28px!important}
+          .contract-signatures{display:grid;grid-template-columns:1fr 1fr;gap:48px;margin-top:64px;text-align:center}
+          .contract-signatures span{display:block;border-top:1px solid #111827;margin-bottom:8px}
+          @page{margin:18mm}
+        </style></head><body>${doc.innerHTML}</body></html>`);
+        win.document.close();
+        win.focus();
+        setTimeout(()=>win.print(),250);
+      });
+    });
   });
   document.addEventListener('click', function(e){
     if(e.target.closest('.mobile-menu-toggle,.hamburger,#menuToggle,[data-menu-toggle]')){e.preventDefault();openMenu();}
     if(e.target.closest('.mobile-menu-close,.mobile-menu-overlay,[data-menu-close]')){e.preventDefault();closeMenu();}
   }, true);
   document.addEventListener('keydown', e=>{ if(e.key==='Escape') closeMenu(); });
+  document.addEventListener('keydown', e=>{
+    if(e.key!=='Escape') return;
+    document.querySelectorAll('.contract-modal.is-open').forEach(modal=>{
+      modal.classList.remove('is-open');
+      modal.setAttribute('aria-hidden','true');
+    });
+    document.body.classList.remove('contract-open');
+  });
 })();
 
 /* =========================================================
