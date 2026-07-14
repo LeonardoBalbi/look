@@ -27,6 +27,7 @@ use App\Services\EmailCobrancaService;
 use App\Services\EmailPagamentoService;
 use App\Services\PagBankService;
 use App\Services\PixGatewayService;
+use App\Services\SicoobService;
 use App\Services\WhatsAppService;
 use App\Support\Locx;
 use Illuminate\Database\Eloquent\Builder;
@@ -43,6 +44,7 @@ class LocxController extends Controller
         private readonly CobrancaCalculator $calculator,
         private readonly PagBankService $pagBank,
         private readonly AsaasService $asaas,
+        private readonly SicoobService $sicoob,
         private readonly PixGatewayService $pixGateway,
         private readonly WhatsAppService $whatsApp,
         private readonly CrmAutomationService $crmAutomation,
@@ -82,8 +84,18 @@ class LocxController extends Controller
             'relatorios' => $this->relatorios($user),
             'lojas' => $this->lojas(),
             'usuarios' => $this->usuarios($request),
+            'bancos' => [
+                'pagbankConfig' => $this->pagBank->config(),
+                'asaasConfig' => $this->asaas->config(),
+                'sicoobConfig' => $this->sicoob->config(),
+                'pixGatewayConfig' => $this->pixGateway->config(),
+                'bancoSelecionado' => in_array($request->query('banco'), ['pagbank', 'asaas', 'sicoob'], true)
+                    ? $request->query('banco')
+                    : $this->pixGateway->config()->gateway,
+            ],
             'pagbank' => ['pagbankConfig' => $this->pagBank->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'asaas' => ['asaasConfig' => $this->asaas->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
+            'sicoob' => ['sicoobConfig' => $this->sicoob->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'whatsapp' => [
                 'whatsappConfig' => $this->whatsApp->config(),
                 'whatsappLogs' => WhatsappLog::with('cliente')->latest('id')->limit(80)->get(),
@@ -697,6 +709,10 @@ class LocxController extends Controller
                 : 'PagBank salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
         }
 
+        if ($request->input('page') === 'bancos') {
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'pagbank'])->with('success', $mensagem);
+        }
+
         return $this->voltar('pagbank', $mensagem);
     }
 
@@ -727,19 +743,68 @@ class LocxController extends Controller
                 : 'Asaas salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
         }
 
+        if ($request->input('page') === 'bancos') {
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'asaas'])->with('success', $mensagem);
+        }
+
         return $this->voltar('asaas', $mensagem);
+    }
+
+    public function salvarSicoob(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'sicoob', 'editar');
+        $dados = $request->validate([
+            'modo' => ['required', Rule::in(['demo', 'api'])],
+            'ambiente' => ['required', Rule::in(['sandbox', 'producao'])],
+            'ativo' => ['required', 'boolean'],
+            'client_id' => ['nullable', 'string', 'max:255'],
+            'client_secret' => ['nullable', 'string'],
+            'chave_pix' => ['nullable', 'string', 'max:180'],
+            'api_base_url' => ['nullable', 'url', 'max:500'],
+            'token_url' => ['nullable', 'url', 'max:500'],
+            'cert_path' => ['nullable', 'string', 'max:500'],
+            'key_path' => ['nullable', 'string', 'max:500'],
+            'webhook_url' => ['nullable', 'url', 'max:500'],
+            'webhook_token' => ['nullable', 'string', 'max:160'],
+            'acao' => ['nullable', Rule::in(['salvar', 'testar'])],
+            'page' => ['nullable', 'string'],
+        ]);
+
+        $dados['api_base_url'] = $dados['api_base_url'] ?: SicoobService::DEFAULT_API_BASE_URL;
+        $dados['token_url'] = $dados['token_url'] ?: SicoobService::DEFAULT_TOKEN_URL;
+        $dados['webhook_token'] = $dados['webhook_token'] ?: SicoobService::DEFAULT_WEBHOOK_TOKEN;
+        $dados['webhook_url'] = $dados['webhook_url'] ?: route('locx.webhook-sicoob', ['token' => $dados['webhook_token']]);
+        unset($dados['acao'], $dados['page']);
+        \App\Models\SicoobConfig::query()->updateOrCreate(
+            ['id' => 1],
+            $dados + ['access_token' => null, 'token_expires_at' => null, 'atualizado_em' => now()]
+        );
+
+        $mensagem = 'Configurações do Sicoob salvas.';
+        if ($request->input('acao') === 'testar') {
+            $resultado = $this->sicoob->testar();
+            $mensagem = ($resultado['ok'] ?? false)
+                ? 'Sicoob salvo e conexão validada: '.($resultado['mensagem'] ?? 'ok')
+                : 'Sicoob salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
+        }
+
+        if ($request->input('page') === 'bancos') {
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'sicoob'])->with('success', $mensagem);
+        }
+
+        return $this->voltar('sicoob', $mensagem);
     }
 
     public function salvarGatewayPix(Request $request): RedirectResponse
     {
         $this->autorizar($request->user(), 'configuracoes', 'editar');
         $dados = $request->validate([
-            'gateway' => ['required', Rule::in(['pagbank', 'asaas'])],
+            'gateway' => ['required', Rule::in(['pagbank', 'asaas', 'sicoob'])],
             'page' => ['nullable', 'string'],
         ]);
 
         $this->pixGateway->salvar($dados['gateway']);
-        $page = in_array($dados['page'] ?? '', ['pagbank', 'asaas', 'configuracoes'], true)
+        $page = in_array($dados['page'] ?? '', ['bancos', 'pagbank', 'asaas', 'sicoob', 'configuracoes'], true)
             ? $dados['page']
             : 'configuracoes';
 

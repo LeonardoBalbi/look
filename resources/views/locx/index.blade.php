@@ -237,6 +237,59 @@
                 </table></div></div>
             </div>
 
+        @elseif ($page === 'bancos')
+            @php($bancoSelecionado = $bancoSelecionado ?? 'pagbank')
+            <div class="panel">
+                <h2>Bancos PIX</h2>
+                <form method="get" action="{{ route('locx.index') }}" class="form-grid">
+                    <input type="hidden" name="page" value="bancos">
+                    <label>Selecionar banco<select name="banco" onchange="this.form.submit()"><option value="pagbank" @selected($bancoSelecionado==='pagbank')>PagBank</option><option value="asaas" @selected($bancoSelecionado==='asaas')>Asaas</option><option value="sicoob" @selected($bancoSelecionado==='sicoob')>Sicoob</option></select></label>
+                    <div><button class="btn secondary" type="submit">Abrir banco</button></div>
+                </form>
+            </div>
+
+            @if ($bancoSelecionado === 'pagbank')
+                <div class="grid side">
+                    <div class="panel"><h2>Configuração PagBank / PIX</h2><form method="post" action="{{ route('locx.pagbank.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos">
+                        <label>Modo<select name="modo"><option value="demo" @selected($pagbankConfig->modo==='demo')>demo</option><option value="api" @selected($pagbankConfig->modo==='api')>api oficial</option></select></label>
+                        <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($pagbankConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($pagbankConfig->ambiente==='producao')>produção</option></select></label>
+                        <label>Ativo<select name="ativo"><option value="1" @selected($pagbankConfig->ativo)>sim</option><option value="0" @selected(!$pagbankConfig->ativo)>não</option></select></label>
+                        <label>Client ID<input name="client_id" value="{{ $pagbankConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $pagbankConfig->client_secret }}"></label>
+                        <label class="span-3">Access Token PagBank<input type="password" name="access_token" value="{{ $pagbankConfig->access_token }}"></label><label class="span-2">URL Webhook<input name="webhook_url" value="{{ $pagbankConfig->webhook_url ?: route('locx.webhook-pagbank') }}"></label><label>Referência<input name="merchant_reference" value="{{ $pagbankConfig->merchant_reference ?: 'LOCX' }}"></label>
+                        <div class="span-3"><button name="acao" value="salvar">Salvar PagBank</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                    </form></div>
+                    <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $pagbankConfig->webhook_url ?: route('locx.webhook-pagbank') }}</code></p><p><strong>Ambiente:</strong> {{ $pagbankConfig->ambiente }} · <strong>Modo:</strong> {{ $pagbankConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('locx.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>Use <strong>demo</strong> para testar sem credenciais.</p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_pagbank.html') }}" target="_blank">Abrir manual PagBank</a></p></div>
+                </div>
+            @elseif ($bancoSelecionado === 'asaas')
+                <div class="grid side">
+                    <div class="panel"><h2>Configuração Asaas / PIX</h2><form method="post" action="{{ route('locx.asaas.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos">
+                        <label>Modo<select name="modo"><option value="demo" @selected($asaasConfig->modo==='demo')>demo</option><option value="api" @selected($asaasConfig->modo==='api')>api oficial</option></select></label>
+                        <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($asaasConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($asaasConfig->ambiente==='producao')>produção</option></select></label>
+                        <label>Ativo<select name="ativo"><option value="1" @selected($asaasConfig->ativo)>sim</option><option value="0" @selected(!$asaasConfig->ativo)>não</option></select></label>
+                        <label class="span-3">API Key Asaas<input type="password" name="api_key" value="" placeholder="{{ $asaasConfig->api_key ? 'Chave salva - deixe vazio para manter' : 'Cole a API Key do Asaas' }}"></label>
+                        <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $asaasConfig->webhook_url ?: route('locx.webhook-asaas') }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $asaasConfig->webhook_token ?: 'locx_asaas_webhook_token' }}"></label>
+                        <div class="span-3"><button name="acao" value="salvar">Salvar Asaas</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                    </form></div>
+                    <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $asaasConfig->webhook_url ?: route('locx.webhook-asaas') }}</code></p><p><strong>Ambiente:</strong> {{ $asaasConfig->ambiente }} · <strong>Modo:</strong> {{ $asaasConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('locx.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>Cadastre a API Key, configure o webhook no painel Asaas e gere uma cobrança de teste.</p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_asaas.html') }}" target="_blank">Abrir manual Asaas</a></p></div>
+                </div>
+            @else
+                <div class="grid side">
+                    <div class="panel"><h2>Configuração Sicoob / PIX</h2><form method="post" action="{{ route('locx.sicoob.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos">
+                        <label>Modo<select name="modo"><option value="demo" @selected($sicoobConfig->modo==='demo')>demo</option><option value="api" @selected($sicoobConfig->modo==='api')>api oficial</option></select></label>
+                        <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($sicoobConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($sicoobConfig->ambiente==='producao')>produção</option></select></label>
+                        <label>Ativo<select name="ativo"><option value="1" @selected($sicoobConfig->ativo)>sim</option><option value="0" @selected(!$sicoobConfig->ativo)>não</option></select></label>
+                        <label class="span-2">Client ID<input name="client_id" value="{{ $sicoobConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $sicoobConfig->client_secret }}"></label>
+                        <label class="span-3">Chave PIX<input name="chave_pix" value="{{ $sicoobConfig->chave_pix }}" placeholder="CPF/CNPJ, e-mail, telefone ou chave aleatória"></label>
+                        <label class="span-3">URL Token OAuth<input name="token_url" value="{{ $sicoobConfig->token_url ?: \App\Services\SicoobService::DEFAULT_TOKEN_URL }}"></label>
+                        <label class="span-3">URL Base API PIX<input name="api_base_url" value="{{ $sicoobConfig->api_base_url ?: \App\Services\SicoobService::DEFAULT_API_BASE_URL }}"></label>
+                        <label class="span-2">Certificado PEM<input name="cert_path" value="{{ $sicoobConfig->cert_path }}" placeholder="C:\certificados\sicoob-cert.pem"></label><label>Chave PEM<input name="key_path" value="{{ $sicoobConfig->key_path }}" placeholder="C:\certificados\sicoob-key.pem"></label>
+                        <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $sicoobConfig->webhook_url ?: route('locx.webhook-sicoob', ['token' => $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN]) }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN }}"></label>
+                        <div class="span-3"><button name="acao" value="salvar">Salvar Sicoob</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                    </form></div>
+                    <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $sicoobConfig->webhook_url ?: route('locx.webhook-sicoob', ['token' => $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN]) }}</code></p><p><strong>Ambiente:</strong> {{ $sicoobConfig->ambiente }} · <strong>Modo:</strong> {{ $sicoobConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('locx.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p><a class="btn secondary" href="https://developers.sicoob.com.br/portal/apis" target="_blank" rel="noopener">Abrir portal Sicoob</a></p></div>
+                </div>
+            @endif
+
         @elseif ($page === 'pagbank')
             <div class="grid side">
                 <div class="panel"><h2>Configuração PagBank / PIX</h2><form method="post" action="{{ route('locx.pagbank.salvar') }}" class="form-grid">@csrf
@@ -263,6 +316,23 @@
                 <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $asaasConfig->webhook_url ?: route('locx.webhook-asaas') }}</code></p><p><strong>Ambiente:</strong> {{ $asaasConfig->ambiente }} · <strong>Modo:</strong> {{ $asaasConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ $pixGatewayConfig->gateway === 'asaas' ? 'Asaas' : 'PagBank' }}</p><form method="post" action="{{ route('locx.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="asaas"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>Cadastre a API Key, configure o webhook no painel Asaas e gere uma cobrança de teste.</p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_asaas.html') }}" target="_blank">Abrir manual Asaas</a></p></div>
             </div>
 
+        @elseif ($page === 'sicoob')
+            <div class="grid side">
+                <div class="panel"><h2>Configuração Sicoob / PIX</h2><form method="post" action="{{ route('locx.sicoob.salvar') }}" class="form-grid">@csrf
+                    <label>Modo<select name="modo"><option value="demo" @selected($sicoobConfig->modo==='demo')>demo</option><option value="api" @selected($sicoobConfig->modo==='api')>api oficial</option></select></label>
+                    <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($sicoobConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($sicoobConfig->ambiente==='producao')>produção</option></select></label>
+                    <label>Ativo<select name="ativo"><option value="1" @selected($sicoobConfig->ativo)>sim</option><option value="0" @selected(!$sicoobConfig->ativo)>não</option></select></label>
+                    <label class="span-2">Client ID<input name="client_id" value="{{ $sicoobConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $sicoobConfig->client_secret }}"></label>
+                    <label class="span-3">Chave PIX<input name="chave_pix" value="{{ $sicoobConfig->chave_pix }}"></label>
+                    <label class="span-3">URL Token OAuth<input name="token_url" value="{{ $sicoobConfig->token_url ?: \App\Services\SicoobService::DEFAULT_TOKEN_URL }}"></label>
+                    <label class="span-3">URL Base API PIX<input name="api_base_url" value="{{ $sicoobConfig->api_base_url ?: \App\Services\SicoobService::DEFAULT_API_BASE_URL }}"></label>
+                    <label class="span-2">Certificado PEM<input name="cert_path" value="{{ $sicoobConfig->cert_path }}"></label><label>Chave PEM<input name="key_path" value="{{ $sicoobConfig->key_path }}"></label>
+                    <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $sicoobConfig->webhook_url ?: route('locx.webhook-sicoob', ['token' => $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN]) }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN }}"></label>
+                    <div class="span-3"><button name="acao" value="salvar">Salvar Sicoob</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                </form></div>
+                <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $sicoobConfig->webhook_url ?: route('locx.webhook-sicoob', ['token' => $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN]) }}</code></p><p><strong>Ambiente:</strong> {{ $sicoobConfig->ambiente }} · <strong>Modo:</strong> {{ $sicoobConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('locx.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="sicoob"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p><a class="btn secondary" href="https://developers.sicoob.com.br/portal/apis" target="_blank" rel="noopener">Abrir portal Sicoob</a></p></div>
+            </div>
+
         @elseif ($page === 'whatsapp')
             <div class="panel"><h2>WhatsApp Business API</h2><p>Configure a integração oficial da Meta. No modo <strong>demo</strong>, o sistema apenas registra uma simulação e nenhuma mensagem é enviada. Versão da Graph API: <strong>{{ $graphVersion }}</strong>.</p>
                 <form method="post" action="{{ route('locx.whatsapp.salvar') }}" class="form-grid">@csrf
@@ -278,8 +348,7 @@
 
         @elseif ($page === 'configuracoes')
             <div class="panel"><h2>Configurações e integrações</h2><div class="module-grid">
-                <a class="module-card" href="{{ route('locx.index',['page'=>'pagbank']) }}"><i>{!! \App\Support\Locx::icon('pagbank') !!}</i><div><strong>PagBank</strong><br><small>PIX automático e baixa por webhook</small></div></a>
-                <a class="module-card" href="{{ route('locx.index',['page'=>'asaas']) }}"><i>{!! \App\Support\Locx::icon('asaas') !!}</i><div><strong>Asaas</strong><br><small>PIX com cobrança e webhook</small></div></a>
+                <a class="module-card" href="{{ route('locx.index',['page'=>'bancos']) }}"><i>{!! \App\Support\Locx::icon('bancos') !!}</i><div><strong>Bancos PIX</strong><br><small>PagBank, Asaas e Sicoob em uma tela</small></div></a>
                 <a class="module-card" href="{{ route('locx.index',['page'=>'whatsapp']) }}"><i>{!! \App\Support\Locx::icon('whatsapp') !!}</i><div><strong>WhatsApp API</strong><br><small>Mensagens automáticas</small></div></a>
             </div></div>
         @endif

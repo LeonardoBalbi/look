@@ -34,6 +34,8 @@
                     <br>
                     @if ($cobranca->asaas_status)
                         <small>Asaas</small><br>{!! \App\Support\Locx::status($cobranca->asaas_status) !!}
+                    @elseif ($cobranca->sicoob_status)
+                        <small>Sicoob</small><br>{!! \App\Support\Locx::status($cobranca->sicoob_status) !!}
                     @elseif ($cobranca->pagbank_status)
                         <small>PagBank</small><br>{!! \App\Support\Locx::status($cobranca->pagbank_status) !!}
                     @else

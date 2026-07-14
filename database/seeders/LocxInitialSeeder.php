@@ -3,8 +3,10 @@
 namespace Database\Seeders;
 
 use App\Services\AsaasService;
+use App\Services\SicoobService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 
 class LocxInitialSeeder extends Seeder
 {
@@ -33,7 +35,7 @@ class LocxInitialSeeder extends Seeder
 
         $modulos = [
             'dashboard', 'crm', 'clientes', 'motos', 'contratos', 'financeiro', 'cobrancas',
-            'manutencao', 'estoque', 'multas', 'inadimplencia', 'pix', 'pagbank', 'asaas', 'whatsapp', 'relatorios', 'lojas',
+            'manutencao', 'estoque', 'multas', 'inadimplencia', 'pix', 'bancos', 'pagbank', 'asaas', 'sicoob', 'whatsapp', 'relatorios', 'lojas',
             'usuarios', 'configuracoes',
         ];
         $acoes = ['visualizar', 'criar', 'editar', 'excluir'];
@@ -76,6 +78,18 @@ class LocxInitialSeeder extends Seeder
             'ativo' => 1,
             'webhook_token' => AsaasService::DEFAULT_WEBHOOK_TOKEN,
         ]);
+
+        if (Schema::hasTable('sicoob_config')) {
+            DB::table('sicoob_config')->insertOrIgnore([
+                'id' => 1,
+                'modo' => 'demo',
+                'ambiente' => 'sandbox',
+                'ativo' => 1,
+                'api_base_url' => SicoobService::DEFAULT_API_BASE_URL,
+                'token_url' => SicoobService::DEFAULT_TOKEN_URL,
+                'webhook_token' => SicoobService::DEFAULT_WEBHOOK_TOKEN,
+            ]);
+        }
 
         DB::table('pix_gateway_config')->insertOrIgnore([
             'id' => 1,
