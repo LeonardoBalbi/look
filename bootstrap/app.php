@@ -21,7 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_PROTO
         );
 
-        $middleware->redirectGuestsTo(fn () => route('locx.login'));
+        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('portal*')
+            ? route('cliente.login')
+            : route('locx.login'));
 
         $middleware->validateCsrfTokens(except: [
             'webhooks/*',

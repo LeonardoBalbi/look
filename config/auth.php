@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Cliente;
 use App\Models\User;
 
 return [
@@ -13,12 +14,20 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'cliente' => [
+            'driver' => 'session',
+            'provider' => 'clientes',
+        ],
     ],
 
     'providers' => [
         'users' => [
             'driver' => 'eloquent',
             'model' => User::class,
+        ],
+        'clientes' => [
+            'driver' => 'eloquent',
+            'model' => Cliente::class,
         ],
     ],
 

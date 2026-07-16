@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\ClienteAuthController;
+use App\Http\Controllers\ClientePortalController;
 use App\Http\Controllers\LocxController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -8,6 +10,16 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'create'])->name('locx.login');
     Route::post('/login', [AuthController::class, 'store'])->name('locx.login.store');
+});
+
+Route::middleware('guest:cliente')->group(function (): void {
+    Route::get('/portal/login', [ClienteAuthController::class, 'create'])->name('cliente.login');
+    Route::post('/portal/login', [ClienteAuthController::class, 'store'])->name('cliente.login.store');
+});
+
+Route::middleware('auth:cliente')->group(function (): void {
+    Route::get('/portal', [ClientePortalController::class, 'index'])->name('cliente.portal');
+    Route::post('/portal/logout', [ClienteAuthController::class, 'destroy'])->name('cliente.logout');
 });
 
 Route::middleware('auth')->group(function (): void {

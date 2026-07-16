@@ -111,7 +111,7 @@ function locxDonut(id, items){
         if(!win) return;
         win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Contrato de Locação</title><style>
           body{font-family:Arial,Helvetica,sans-serif;color:#111827;margin:0;padding:32px;line-height:1.5}
-          .contract-brand{font-size:22px;font-weight:800;margin-bottom:18px}
+          .contract-brand{margin-bottom:18px}.contract-brand img{width:210px;height:auto}
           h1{margin:0 0 8px;font-size:22px;text-align:center;letter-spacing:0}
           h2{margin:24px 0 12px;font-size:16px;color:#111827}
           h3{margin:0 0 24px;text-align:center;font-size:15px}

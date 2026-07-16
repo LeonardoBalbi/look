@@ -231,12 +231,20 @@ class LocxController extends Controller
             'telefone' => ['nullable', 'string', 'max:30'],
             'whatsapp' => ['nullable', 'string', 'max:30'],
             'email' => ['nullable', 'email', 'max:160'],
+            'portal_ativo' => ['nullable', 'boolean'],
+            'senha_portal' => [$cliente->exists ? 'nullable' : 'nullable', 'string', 'min:6', 'max:120'],
             'status' => ['required', Rule::in(['ativo', 'inadimplente', 'bloqueado', 'encerrado'])],
             'foto_cliente' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'foto_documento' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
             'comprovante_residencia' => ['nullable', 'file', 'mimes:jpg,jpeg,png,pdf', 'max:5120'],
         ]);
         unset($dados['id']);
+        $senhaPortal = $dados['senha_portal'] ?? null;
+        unset($dados['senha_portal']);
+        $dados['portal_ativo'] = $request->boolean('portal_ativo');
+        if ($senhaPortal) {
+            $dados['senha'] = Hash::make($senhaPortal);
+        }
         foreach (['foto_cliente', 'foto_documento', 'comprovante_residencia'] as $campo) {
             if ($request->hasFile($campo)) {
                 $dados[$campo] = $request->file($campo)->store('clientes', 'public');
@@ -538,7 +546,12 @@ class LocxController extends Controller
                 : ' E-mail nao enviado: '.($email['erro'] ?? 'falha desconhecida').'.';
         }
 
-        return $this->voltar('cobrancas', $mensagem);
+        return $this->voltar(
+            in_array($request->string('page')->toString(), ['financeiro', 'cobrancas'], true)
+                ? $request->string('page')->toString()
+                : 'financeiro',
+            $mensagem
+        );
     }
 
     public function salvarPagamento(Request $request): RedirectResponse

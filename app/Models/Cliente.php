@@ -4,14 +4,28 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Foundation\Auth\User as Authenticatable;
 
-class Cliente extends BaseModel
+class Cliente extends Authenticatable
 {
     protected $table = 'clientes';
 
+    public $timestamps = false;
+
+    protected $guarded = [];
+
+    protected $hidden = ['senha'];
+
     protected $casts = [
         'crm_ultimo_contato_em' => 'datetime',
+        'portal_ativo' => 'boolean',
+        'ultimo_login_em' => 'datetime',
     ];
+
+    public function getAuthPassword(): string
+    {
+        return (string) $this->senha;
+    }
 
     public function loja(): BelongsTo
     {
@@ -21,6 +35,11 @@ class Cliente extends BaseModel
     public function contratos(): HasMany
     {
         return $this->hasMany(Contrato::class);
+    }
+
+    public function cobrancas(): HasMany
+    {
+        return $this->hasMany(Cobranca::class);
     }
 
     public function crmNotas(): HasMany

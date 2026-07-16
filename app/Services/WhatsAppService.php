@@ -229,7 +229,7 @@ class WhatsAppService
         $telefone = $this->normalizarTelefone($telefoneOriginal);
 
         if (! $telefone) {
-            return $this->registrarFalha($cobranca, '', $mensagem, 'Telefone invÃ¡lido');
+            return $this->registrarFalha($cobranca, '', $mensagem, 'Telefone inválido');
         }
         if (! $config->ativo) {
             return $this->registrarFalha($cobranca, $telefone, $mensagem, 'WhatsApp API inativa');
@@ -243,7 +243,7 @@ class WhatsAppService
             return [
                 'ok' => true,
                 'demo' => true,
-                'mensagem' => 'Envio simulado. Nenhuma mensagem foi enviada Ã  Meta.',
+                'mensagem' => 'Envio simulado. Nenhuma mensagem foi enviada à Meta.',
             ];
         }
         if ($config->modo === 'evolution') {
