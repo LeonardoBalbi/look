@@ -16,6 +16,8 @@ use App\Models\Motocicleta;
 use App\Models\OrdemServico;
 use App\Models\Pagamento;
 use App\Models\PagbankConfig;
+use App\Models\PortalAtendimento;
+use App\Models\PortalAtendimentoMensagem;
 use App\Models\User;
 use App\Models\UsuarioPermissao;
 use App\Models\WhatsappConfig;
@@ -31,10 +33,12 @@ use App\Services\SicoobService;
 use App\Services\WhatsAppService;
 use App\Support\Locx;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -516,6 +520,221 @@ class LocxController extends Controller
         return redirect()->route('locx.index', ['page' => 'crm', 'cliente' => $tarefa->cliente_id])->with('success', 'Tarefa concluida.');
     }
 
+    public function syncPortalAtendimento(Request $request, PortalAtendimento $atendimento): JsonResponse
+    {
+        $this->autorizarResponderPortal($request->user());
+        $atendimento->loadMissing('cliente', 'atendente');
+        $this->autorizarClienteCrm($request->user(), $atendimento->cliente);
+
+        $mensagens = $atendimento->mensagens()
+            ->where('id', '>', $request->integer('after_id'))
+            ->get()
+            ->map(fn (PortalAtendimentoMensagem $mensagem) => $this->formatarMensagemPortal($mensagem))
+            ->values();
+
+        return response()->json([
+            'ok' => true,
+            'atendimento_id' => $atendimento->id,
+            'status' => $atendimento->status,
+            'status_label' => $this->statusAtendimentoLabel($atendimento->status),
+            'atendente_nome' => $atendimento->atendente?->nome,
+            'nao_lido' => $this->portalAtendimentoNaoLido($atendimento),
+            'mensagens' => $mensagens,
+        ]);
+    }
+
+    public function syncPortalAtendimentosCliente(Request $request, Cliente $cliente): JsonResponse
+    {
+        $this->autorizarResponderPortal($request->user());
+        $this->autorizarClienteCrm($request->user(), $cliente);
+
+        $atendimentos = PortalAtendimento::query()
+            ->where('cliente_id', $cliente->id)
+            ->latest('id')
+            ->limit(5)
+            ->get()
+            ->map(fn (PortalAtendimento $atendimento) => [
+                'id' => $atendimento->id,
+                'status' => $atendimento->status,
+                'ultima_mensagem_id' => (int) $atendimento->mensagens()->max('id'),
+            ])
+            ->values();
+
+        return response()->json([
+            'ok' => true,
+            'atendimentos' => $atendimentos,
+        ]);
+    }
+
+    public function syncPortalInbox(Request $request): JsonResponse
+    {
+        $this->autorizarResponderPortal($request->user());
+        $inbox = $this->portalInbox($request->user());
+
+        return response()->json([
+            'ok' => true,
+            'assinatura' => $this->portalInboxSignature($request->user(), $inbox),
+            'metricas' => $this->portalInboxMetrics($request->user(), $inbox),
+            'atendimentos' => $inbox
+                ->map(fn (PortalAtendimento $atendimento) => $this->formatarAtendimentoInbox($atendimento))
+                ->values(),
+        ]);
+    }
+
+    public function responderPortalAtendimento(Request $request, PortalAtendimento $atendimento): RedirectResponse|JsonResponse
+    {
+        $this->autorizarResponderPortal($request->user());
+        $atendimento->loadMissing('cliente');
+        $this->autorizarClienteCrm($request->user(), $atendimento->cliente);
+
+        $dados = $request->validate([
+            'mensagem' => ['required', 'string', 'min:3', 'max:2000'],
+        ], [
+            'mensagem.required' => 'Digite a resposta para o cliente.',
+            'mensagem.min' => 'A resposta precisa ter pelo menos 3 caracteres.',
+            'mensagem.max' => 'A resposta deve ter no maximo 2000 caracteres.',
+        ]);
+
+        $mensagem = PortalAtendimentoMensagem::create([
+            'portal_atendimento_id' => $atendimento->id,
+            'remetente' => 'humano',
+            'usuario_id' => $request->user()->id,
+            'remetente_nome' => $request->user()->nome,
+            'mensagem' => $dados['mensagem'],
+        ]);
+
+        $agora = now();
+        $atendimento->update([
+            'status' => 'respondido',
+            'resposta' => $dados['mensagem'],
+            'lido_em' => $agora,
+            'atendente_id' => $atendimento->atendente_id ?: $request->user()->id,
+            'assumido_em' => $atendimento->assumido_em ?: $agora,
+            'ultima_mensagem_em' => $agora,
+            'atualizado_em' => $agora,
+            'encerrado_em' => null,
+        ]);
+
+        $atendimento->cliente->update(['crm_ultimo_contato_em' => $agora]);
+        $atendimento->load('atendente');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'atendimento_id' => $atendimento->id,
+                'status' => $atendimento->status,
+                'status_label' => $this->statusAtendimentoLabel($atendimento->status),
+                'atendente_nome' => $atendimento->atendente?->nome,
+                'mensagens' => [$this->formatarMensagemPortal($mensagem)],
+            ]);
+        }
+
+        return redirect()
+            ->route('locx.index', ['page' => 'crm', 'cliente' => $atendimento->cliente_id])
+            ->with('success', 'Resposta enviada para o portal do cliente.');
+    }
+
+    public function acaoPortalAtendimento(Request $request, PortalAtendimento $atendimento): RedirectResponse|JsonResponse
+    {
+        $this->autorizarResponderPortal($request->user());
+        $atendimento->loadMissing('cliente');
+        $this->autorizarClienteCrm($request->user(), $atendimento->cliente);
+
+        $dados = $request->validate([
+            'acao' => ['required', Rule::in(['assumir', 'aguardar_cliente', 'resolver', 'reabrir'])],
+        ]);
+
+        if ($dados['acao'] === 'reabrir') {
+            $outroAtivo = PortalAtendimento::query()
+                ->where('cliente_id', $atendimento->cliente_id)
+                ->where('id', '<>', $atendimento->id)
+                ->whereIn('status', ['novo', 'em_atendimento', 'aguardando_humano', 'respondido'])
+                ->orderByDesc('id')
+                ->first();
+
+            if ($outroAtivo) {
+                $texto = 'Este cliente ja possui o atendimento #'.$outroAtivo->id.' em andamento. Conclua o atendimento atual antes de reabrir este historico.';
+
+                if ($request->expectsJson()) {
+                    return response()->json(['ok' => false, 'message' => $texto], 422);
+                }
+
+                return redirect()
+                    ->route('locx.index', ['page' => 'crm', 'atendimento' => $outroAtivo->id])
+                    ->withErrors(['atendimento' => $texto]);
+            }
+        }
+
+        $agora = now();
+        $alteracoes = ['atualizado_em' => $agora];
+        $mensagem = 'Atendimento atualizado.';
+
+        if ($dados['acao'] === 'assumir') {
+            $alteracoes += [
+                'status' => 'em_atendimento',
+                'atendente_id' => $request->user()->id,
+                'assumido_em' => $atendimento->assumido_em ?: $agora,
+                'lido_em' => $agora,
+                'encerrado_em' => null,
+            ];
+            $mensagem = 'Atendimento assumido por '.$request->user()->nome.'.';
+        } elseif ($dados['acao'] === 'aguardar_cliente') {
+            $alteracoes += [
+                'status' => 'respondido',
+                'atendente_id' => $atendimento->atendente_id ?: $request->user()->id,
+                'assumido_em' => $atendimento->assumido_em ?: $agora,
+                'lido_em' => $agora,
+                'encerrado_em' => null,
+            ];
+            $mensagem = 'Atendimento marcado como aguardando o cliente.';
+        } elseif ($dados['acao'] === 'resolver') {
+            $alteracoes += [
+                'status' => 'fechado',
+                'atendente_id' => $atendimento->atendente_id ?: $request->user()->id,
+                'lido_em' => $agora,
+                'encerrado_em' => $agora,
+            ];
+            $mensagem = 'Atendimento concluido.';
+        } else {
+            $alteracoes += [
+                'status' => 'em_atendimento',
+                'atendente_id' => $atendimento->atendente_id ?: $request->user()->id,
+                'assumido_em' => $atendimento->assumido_em ?: $agora,
+                'lido_em' => $agora,
+                'encerrado_em' => null,
+            ];
+            $mensagem = 'Atendimento reaberto.';
+        }
+
+        $atendimento->update($alteracoes);
+        $atendimento->load('atendente');
+
+        if ($request->expectsJson()) {
+            return response()->json([
+                'ok' => true,
+                'mensagem' => $mensagem,
+                'status' => $atendimento->status,
+                'status_label' => $this->statusAtendimentoLabel($atendimento->status),
+                'atendente_nome' => $atendimento->atendente?->nome,
+            ]);
+        }
+
+        return redirect()
+            ->route('locx.index', ['page' => 'crm', 'atendimento' => $atendimento->id])
+            ->with('success', $mensagem);
+    }
+
+    public function marcarPortalAtendimentoLido(Request $request, PortalAtendimento $atendimento): JsonResponse
+    {
+        $this->autorizarResponderPortal($request->user());
+        $atendimento->loadMissing('cliente');
+        $this->autorizarClienteCrm($request->user(), $atendimento->cliente);
+
+        $atendimento->update(['lido_em' => now()]);
+
+        return response()->json(['ok' => true]);
+    }
+
     public function salvarCobranca(Request $request): RedirectResponse
     {
         $this->autorizar($request->user(), 'cobrancas', 'criar');
@@ -920,11 +1139,38 @@ class LocxController extends Controller
         $this->crmAutomation->sincronizarAtrasos();
 
         $clientes = $this->scope(Cliente::with('loja'), $user)->orderBy('nome')->limit(160)->get();
-        $clienteSelecionado = null;
-        if ($request->integer('cliente')) {
-            $clienteSelecionado = $this->scope(Cliente::with('loja'), $user)->whereKey($request->integer('cliente'))->first();
+        $inbox = $this->portalInbox($user);
+
+        $atendimentoSelecionado = null;
+        if ($request->integer('atendimento')) {
+            $atendimentoSelecionado = $this->scope(
+                PortalAtendimento::with(['cliente.loja', 'mensagens', 'atendente']),
+                $user
+            )->whereKey($request->integer('atendimento'))->first();
         }
-        $clienteSelecionado ??= $clientes->first();
+
+        $clienteSelecionado = null;
+        if ($atendimentoSelecionado) {
+            $clienteSelecionado = $atendimentoSelecionado->cliente;
+        } elseif ($request->integer('cliente')) {
+            $clienteSelecionado = $this->scope(Cliente::with('loja'), $user)
+                ->whereKey($request->integer('cliente'))
+                ->first();
+
+            if ($clienteSelecionado) {
+                $atendimentoSelecionado = $this->portalAtendimentoPrincipalDoCliente($user, $clienteSelecionado->id);
+                $atendimentoSelecionado?->loadMissing('cliente.loja', 'mensagens', 'atendente');
+            }
+        }
+
+        $atendimentoSelecionado ??= $inbox->firstWhere('status', 'aguardando_humano')
+            ?: $inbox->firstWhere('status', 'novo')
+            ?: $inbox->first();
+        $clienteSelecionado ??= $atendimentoSelecionado?->cliente ?: $clientes->first();
+
+        if ($atendimentoSelecionado && ! $atendimentoSelecionado->relationLoaded('mensagens')) {
+            $atendimentoSelecionado->load('mensagens', 'atendente', 'cliente.loja');
+        }
 
         $crmClientes = $clientes->map(function (Cliente $cliente): array {
             $cobrancas = Cobranca::query()->where('cliente_id', $cliente->id);
@@ -967,6 +1213,13 @@ class LocxController extends Controller
             ->limit(30)
             ->get();
 
+        $clienteResumo = $clienteSelecionado
+            ? $crmClientes->first(fn (array $linha) => $linha['cliente']->id === $clienteSelecionado->id)
+            : null;
+        $atendimentosCliente = $clienteSelecionado
+            ? $this->portalAtendimentosDoCliente($user, $clienteSelecionado->id)
+            : collect();
+
         return [
             'crmEtapas' => $this->crmEtapas(),
             'crmPipeline' => collect($this->crmEtapas())->mapWithKeys(
@@ -974,9 +1227,207 @@ class LocxController extends Controller
             ),
             'crmClientes' => $crmClientes,
             'crmCliente' => $clienteSelecionado,
+            'crmClienteResumo' => $clienteResumo,
             'crmTimeline' => $clienteSelecionado ? $this->crmTimeline($clienteSelecionado) : collect(),
             'crmTarefasAbertas' => $tarefasAbertas,
+            'crmTarefasVencidas' => $tarefasAbertas->filter(fn (CrmTarefa $tarefa) => $tarefa->prazo_em && $tarefa->prazo_em->isPast())->count(),
+            'crmPortalInbox' => $inbox,
+            'crmPortalInboxSignature' => $this->portalInboxSignature($user, $inbox),
+            'crmPortalMetricas' => $this->portalInboxMetrics($user, $inbox),
+            'crmAtendimentoSelecionado' => $atendimentoSelecionado,
+            'crmAtendimentosCliente' => $atendimentosCliente,
+            'crmRespostasRapidas' => [
+                'Ola! Vou verificar isso para voce agora.',
+                'Pode me informar o numero do contrato ou da cobranca?',
+                'Recebi sua mensagem. Vou validar os dados e retorno em seguida.',
+                'Seu comprovante foi recebido e esta em analise.',
+                'O atendimento foi encaminhado para a equipe responsavel.',
+                'Consegui ajudar ou ficou alguma duvida?',
+            ],
         ];
+    }
+
+    private function portalInbox(User $user)
+    {
+        $atendimentos = $this->scope(
+            PortalAtendimento::with(['cliente', 'ultimaMensagem', 'ultimaMensagemCliente', 'atendente']),
+            $user
+        )
+            ->where('status', '<>', 'cancelado')
+            ->orderByDesc('id')
+            ->limit(300)
+            ->get();
+
+        return $atendimentos
+            ->groupBy('cliente_id')
+            ->map(function ($grupo): PortalAtendimento {
+                /** @var PortalAtendimento $principal */
+                $principal = $this->ordenarAtendimentosPortal($grupo)->first();
+                $abertos = $grupo->whereIn('status', ['novo', 'em_atendimento', 'aguardando_humano', 'respondido']);
+                $naoLidos = $grupo->filter(fn (PortalAtendimento $atendimento) => $this->portalAtendimentoNaoLido($atendimento))->count();
+
+                $principal->setAttribute('cliente_total_atendimentos', $grupo->count());
+                $principal->setAttribute('cliente_atendimentos_abertos', $abertos->count());
+                $principal->setAttribute('cliente_nao_lidos', $naoLidos);
+                $principal->setAttribute(
+                    'cliente_assuntos_busca',
+                    $grupo->pluck('assunto')->filter()->unique()->implode(' ')
+                );
+
+                return $principal;
+            })
+            ->sort(function (PortalAtendimento $a, PortalAtendimento $b): int {
+                return $this->compararAtendimentosPortal($a, $b);
+            })
+            ->take(60)
+            ->values();
+    }
+
+    private function portalAtendimentosDoCliente(User $user, int $clienteId)
+    {
+        return $this->scope(
+            PortalAtendimento::with(['ultimaMensagem', 'ultimaMensagemCliente', 'atendente']),
+            $user
+        )
+            ->where('cliente_id', $clienteId)
+            ->where('status', '<>', 'cancelado')
+            ->orderByRaw('COALESCE(atualizado_em, ultima_mensagem_em, criado_em) DESC')
+            ->orderByDesc('id')
+            ->limit(30)
+            ->get();
+    }
+
+    private function portalAtendimentoPrincipalDoCliente(User $user, int $clienteId): ?PortalAtendimento
+    {
+        $atendimentos = $this->portalAtendimentosDoCliente($user, $clienteId);
+
+        return $this->ordenarAtendimentosPortal($atendimentos)->first();
+    }
+
+    private function ordenarAtendimentosPortal($atendimentos)
+    {
+        return $atendimentos->sort(function (PortalAtendimento $a, PortalAtendimento $b): int {
+            return $this->compararAtendimentosPortal($a, $b);
+        })->values();
+    }
+
+    private function compararAtendimentosPortal(PortalAtendimento $a, PortalAtendimento $b): int
+    {
+        $prioridades = [
+            'aguardando_humano' => 0,
+            'novo' => 1,
+            'em_atendimento' => 2,
+            'respondido' => 3,
+            'fechado' => 4,
+            'cancelado' => 5,
+        ];
+        $prioridadeA = $prioridades[$a->status] ?? 9;
+        $prioridadeB = $prioridades[$b->status] ?? 9;
+
+        if ($prioridadeA !== $prioridadeB) {
+            return $prioridadeA <=> $prioridadeB;
+        }
+
+        $dataA = ($a->atualizado_em ?: $a->ultima_mensagem_em ?: $a->criado_em)?->timestamp ?? 0;
+        $dataB = ($b->atualizado_em ?: $b->ultima_mensagem_em ?: $b->criado_em)?->timestamp ?? 0;
+
+        if ($dataA !== $dataB) {
+            return $dataB <=> $dataA;
+        }
+
+        return $b->id <=> $a->id;
+    }
+
+    private function portalInboxSignature(User $user, $inbox = null): string
+    {
+        $inbox ??= $this->portalInbox($user);
+
+        return $inbox
+            ->map(fn (PortalAtendimento $atendimento) => implode(':', [
+                $atendimento->cliente_id,
+                $atendimento->id,
+                $atendimento->status,
+                (int) $atendimento->ultimaMensagem?->id,
+                $atendimento->atendente_id ?: 0,
+                (int) ($atendimento->cliente_nao_lidos ?? 0),
+                (int) ($atendimento->cliente_total_atendimentos ?? 1),
+                (int) ($atendimento->cliente_atendimentos_abertos ?? 0),
+            ]))
+            ->implode('|');
+    }
+
+    private function portalInboxMetrics(User $user, $inbox = null): array
+    {
+        $inbox ??= $this->portalInbox($user);
+        $ativos = $inbox->whereIn('status', ['novo', 'em_atendimento', 'aguardando_humano', 'respondido']);
+        $base = $this->scope(PortalAtendimento::query(), $user);
+
+        return [
+            'abertos' => $ativos->count(),
+            'aguardando_humano' => $inbox->where('status', 'aguardando_humano')->count(),
+            'em_atendimento' => $inbox->where('status', 'em_atendimento')->count(),
+            'aguardando_cliente' => $inbox->where('status', 'respondido')->count(),
+            'resolvidos_hoje' => (clone $base)
+                ->where('status', 'fechado')
+                ->whereDate('encerrado_em', today())
+                ->distinct()
+                ->count('cliente_id'),
+        ];
+    }
+
+    private function formatarAtendimentoInbox(PortalAtendimento $atendimento): array
+    {
+        $ultimaMensagem = $atendimento->ultimaMensagem;
+        $nome = $atendimento->cliente?->nome ?: 'Cliente';
+        $iniciais = collect(preg_split('/\s+/', trim($nome)))
+            ->filter()
+            ->take(2)
+            ->map(fn (string $parte) => strtoupper(substr($parte, 0, 1)))
+            ->implode('');
+        $naoLidos = (int) ($atendimento->cliente_nao_lidos ?? ($this->portalAtendimentoNaoLido($atendimento) ? 1 : 0));
+
+        return [
+            'id' => $atendimento->id,
+            'cliente_id' => $atendimento->cliente_id,
+            'cliente_nome' => $nome,
+            'iniciais' => $iniciais ?: 'CL',
+            'assunto' => $atendimento->assunto,
+            'assunto_label' => ucfirst(str_replace('_', ' ', $atendimento->assunto)),
+            'assuntos_busca' => (string) ($atendimento->cliente_assuntos_busca ?? $atendimento->assunto),
+            'status' => $atendimento->status,
+            'status_label' => $this->statusAtendimentoLabel($atendimento->status),
+            'prioridade' => $atendimento->prioridade,
+            'ultima_mensagem' => $ultimaMensagem?->mensagem ?: $atendimento->mensagem,
+            'ultima_hora' => ($ultimaMensagem?->criado_em ?: $atendimento->criado_em)?->format('H:i'),
+            'nao_lido' => $naoLidos > 0,
+            'nao_lidos' => $naoLidos,
+            'total_atendimentos' => (int) ($atendimento->cliente_total_atendimentos ?? 1),
+            'atendimentos_abertos' => (int) ($atendimento->cliente_atendimentos_abertos ?? 0),
+            'atendente_nome' => $atendimento->atendente?->nome,
+            'url' => route('locx.index', ['page' => 'crm', 'atendimento' => $atendimento->id]),
+        ];
+    }
+
+    private function portalAtendimentoNaoLido(PortalAtendimento $atendimento): bool
+    {
+        $ultimaCliente = $atendimento->relationLoaded('ultimaMensagemCliente')
+            ? $atendimento->ultimaMensagemCliente
+            : $atendimento->mensagens()->where('remetente', 'cliente')->latest('id')->first();
+
+        return (bool) ($ultimaCliente && (! $atendimento->lido_em || $ultimaCliente->criado_em?->gt($atendimento->lido_em)));
+    }
+
+    private function statusAtendimentoLabel(string $status): string
+    {
+        return match ($status) {
+            'novo' => 'Novo',
+            'aguardando_humano' => 'Aguardando equipe',
+            'em_atendimento' => 'Em atendimento',
+            'respondido' => 'Aguardando cliente',
+            'fechado' => 'Resolvido',
+            'cancelado' => 'Cancelado',
+            default => ucfirst(str_replace('_', ' ', $status)),
+        };
     }
 
     private function crmTimeline(Cliente $cliente)
@@ -1007,6 +1458,19 @@ class LocxController extends Controller
                 'titulo' => $tarefa->titulo,
                 'texto' => ($tarefa->observacao ?: 'Sem observacao').($tarefa->prazo_em ? ' | Prazo: '.$tarefa->prazo_em->format('d/m/Y H:i') : ''),
                 'status' => $tarefa->status === 'concluida' ? 'ok' : 'warn',
+            ]));
+
+        PortalAtendimento::query()
+            ->where('cliente_id', $cliente->id)
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->each(fn (PortalAtendimento $atendimento) => $items->push([
+                'data' => $atendimento->criado_em,
+                'tipo' => 'Portal',
+                'titulo' => 'Lau - '.str_replace('_', ' ', $atendimento->assunto),
+                'texto' => $atendimento->mensagem,
+                'status' => $atendimento->status === 'respondido' ? 'ok' : ($atendimento->prioridade === 'alta' ? 'danger' : 'warn'),
             ]));
 
         Cobranca::query()
@@ -1264,6 +1728,57 @@ class LocxController extends Controller
     private function autorizar(User $user, string $modulo, string $acao): void
     {
         abort_unless($user->pode($modulo, $acao), 403, 'Acesso negado para esta ação.');
+    }
+
+    private function autorizarResponderPortal(User $user): void
+    {
+        abort_unless(
+            $user->pode('crm', 'editar') || $user->pode('crm', 'criar'),
+            403,
+            'Acesso negado para esta ação.'
+        );
+    }
+
+    private function formatarMensagemPortal(PortalAtendimentoMensagem $mensagem): array
+    {
+        $remetente = $this->normalizarRemetentePortal($mensagem->remetente);
+        $texto = $mensagem->mensagem;
+
+        if ($remetente === 'cliente' && in_array($texto, [
+            'Debito/fatura',
+            'PIX/comprovante',
+            'Contrato',
+            'Moto/manutencao',
+            'Documentos',
+            'Multa',
+            'Falar com a loja',
+        ], true)) {
+            $texto = 'Escolheu o assunto: '.$texto;
+        }
+
+        return [
+            'id' => $mensagem->id,
+            'remetente' => $remetente,
+            'remetente_nome' => $mensagem->remetente_nome,
+            'mensagem' => $texto,
+            'hora' => $mensagem->criado_em?->format('H:i') ?? now()->format('H:i'),
+            'criado_em' => $mensagem->criado_em?->toIso8601String() ?? now()->toIso8601String(),
+        ];
+    }
+
+    private function normalizarRemetentePortal(?string $remetente): string
+    {
+        $remetente = Str::lower(trim((string) $remetente));
+
+        if (in_array($remetente, ['cliente', 'client', 'usuario', 'user', 'portal_cliente'], true)) {
+            return 'cliente';
+        }
+
+        if (in_array($remetente, ['humano', 'atendente', 'admin', 'administrador', 'equipe', 'operador'], true)) {
+            return 'humano';
+        }
+
+        return 'bot';
     }
 
     private function autorizarClienteCrm(User $user, Cliente $cliente): void

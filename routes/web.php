@@ -19,6 +19,9 @@ Route::middleware('guest:cliente')->group(function (): void {
 
 Route::middleware('auth:cliente')->group(function (): void {
     Route::get('/portal', [ClientePortalController::class, 'index'])->name('cliente.portal');
+    Route::get('/portal/chat/sync', [ClientePortalController::class, 'syncChat'])->name('cliente.chat.sync');
+    Route::post('/portal/chat', [ClientePortalController::class, 'storeChat'])->name('cliente.chat.store');
+    Route::post('/portal/chat/encerrar', [ClientePortalController::class, 'closeChat'])->name('cliente.chat.close');
     Route::post('/portal/logout', [ClienteAuthController::class, 'destroy'])->name('cliente.logout');
 });
 
@@ -36,6 +39,12 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/crm/notas', [LocxController::class, 'salvarCrmNota'])->name('locx.crm.notas.salvar');
     Route::post('/crm/tarefas', [LocxController::class, 'salvarCrmTarefa'])->name('locx.crm.tarefas.salvar');
     Route::post('/crm/tarefas/{tarefa}/concluir', [LocxController::class, 'concluirCrmTarefa'])->name('locx.crm.tarefas.concluir');
+    Route::get('/crm/portal-atendimentos/inbox/sync', [LocxController::class, 'syncPortalInbox'])->name('locx.crm.portal-atendimentos.inbox-sync');
+    Route::get('/crm/clientes/{cliente}/portal-atendimentos/sync', [LocxController::class, 'syncPortalAtendimentosCliente'])->name('locx.crm.portal-atendimentos.cliente-sync');
+    Route::get('/crm/portal-atendimentos/{atendimento}/sync', [LocxController::class, 'syncPortalAtendimento'])->name('locx.crm.portal-atendimentos.sync');
+    Route::post('/crm/portal-atendimentos/{atendimento}/responder', [LocxController::class, 'responderPortalAtendimento'])->name('locx.crm.portal-atendimentos.responder');
+    Route::post('/crm/portal-atendimentos/{atendimento}/acao', [LocxController::class, 'acaoPortalAtendimento'])->name('locx.crm.portal-atendimentos.acao');
+    Route::post('/crm/portal-atendimentos/{atendimento}/lido', [LocxController::class, 'marcarPortalAtendimentoLido'])->name('locx.crm.portal-atendimentos.lido');
     Route::post('/cobrancas', [LocxController::class, 'salvarCobranca'])->name('locx.cobrancas.salvar');
     Route::post('/pagamentos', [LocxController::class, 'salvarPagamento'])->name('locx.pagamentos.salvar');
     Route::post('/pix/conciliar', [LocxController::class, 'conciliarPix'])->name('locx.pix.conciliar');

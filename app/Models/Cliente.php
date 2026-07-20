@@ -42,6 +42,11 @@ class Cliente extends Authenticatable
         return $this->hasMany(Cobranca::class);
     }
 
+    public function portalAtendimentos(): HasMany
+    {
+        return $this->hasMany(PortalAtendimento::class);
+    }
+
     public function crmNotas(): HasMany
     {
         return $this->hasMany(CrmNota::class);

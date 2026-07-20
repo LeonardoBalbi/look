@@ -125,6 +125,97 @@
             </div>
         </section>
     </main>
+    <div class="client-chat-widget" id="chat">
+        <button type="button" class="chat-fab" data-chat-toggle aria-expanded="{{ session('chat_success') || $errors->has('assunto') || $errors->has('mensagem') ? 'true' : 'false' }}" aria-controls="clientChatPopup">
+            <span class="chat-avatar image"><img src="{{ \App\Support\Locx::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></span>
+            <span><strong>Lau</strong><small>Atendimento</small></span>
+        </button>
+        @php($chatAtivo = $chatAtendimento && in_array($chatAtendimento->status, ['novo', 'em_atendimento', 'aguardando_humano', 'respondido'], true))
+        @php($chatComLoja = $chatAtivo && (in_array($chatAtendimento->status, ['aguardando_humano', 'respondido'], true) || ($chatAtendimento->atendente_id && $chatAtendimento->status === 'em_atendimento') || $chatAtendimento->mensagens->contains('remetente', 'humano')))
+        @php($mostrarRetomadaChat = ! $chatAtivo && $ultimoAtendimentoEncerrado)
+        @php($mostrarOpcoesChat = ! $mostrarRetomadaChat && (! $chatAtivo || (! $chatComLoja && ($chatAtendimento?->status === 'novo' || $chatAtendimento?->assunto === 'outro'))))
+        <section class="client-chat-popup {{ session('chat_success') || $errors->has('assunto') || $errors->has('mensagem') ? 'is-open' : '' }}" id="clientChatPopup" role="dialog" aria-modal="false" aria-labelledby="clientChatTitle" aria-label="Chat do Lau" data-chat-greeting="Ola, {{ \Illuminate\Support\Str::before($cliente->nome, ' ') }}. Como posso ajudar?" data-chat-sync-url="{{ route('cliente.chat.sync') }}" data-chat-close-url="{{ route('cliente.chat.close') }}" data-chat-human="{{ $chatComLoja ? '1' : '0' }}" data-chat-show-options="{{ $mostrarOpcoesChat ? '1' : '0' }}">
+            <div class="chat-head">
+                <div class="chat-avatar image"><img src="{{ \App\Support\Locx::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></div>
+                <div>
+                    <h2 id="clientChatTitle">Lau</h2>
+                    <p data-chat-status>{{ $chatComLoja ? 'Aguardando a loja' : 'Online' }}</p>
+                </div>
+                <button type="button" class="chat-close" data-chat-close aria-label="Fechar chat">&times;</button>
+            </div>
+            <div class="chat-thread" data-chat-thread role="log" aria-live="polite" aria-relevant="additions text" aria-label="Mensagens do atendimento">
+                @if ($chatMensagens->isEmpty())
+                    <article class="chat-row bot" role="article" aria-label="Lau disse" data-chat-message-id="0">
+                        <span class="chat-mini-avatar"><img src="{{ \App\Support\Locx::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></span>
+                        <div class="chat-bubble"><span class="chat-sender">Lau</span>Ola, {{ \Illuminate\Support\Str::before($cliente->nome, ' ') }}. Como posso ajudar?</div>
+                    </article>
+                @else
+                    @foreach ($chatMensagens as $mensagem)
+                        @php($nomeRemetente = $mensagem->remetente === 'cliente' ? 'Voce' : ($mensagem->remetente === 'humano' ? ($mensagem->remetente_nome ?: 'Equipe LOCX') : 'Lau'))
+                        <article class="chat-row {{ $mensagem->remetente }}" role="article" aria-label="{{ $nomeRemetente }} disse as {{ $mensagem->criado_em?->format('H:i') }}" data-chat-message-id="{{ $mensagem->id }}" data-chat-client-token="{{ $mensagem->client_token ?: '' }}">
+                            @if ($mensagem->remetente !== 'cliente')
+                                <span class="chat-mini-avatar"><img src="{{ \App\Support\Locx::asset('assets/img/atendente-lauro.png') }}" alt="{{ $nomeRemetente }}"></span>
+                            @endif
+                            <div class="chat-bubble">
+                                @if ($mensagem->remetente !== 'cliente')
+                                    <span class="chat-sender">{{ $nomeRemetente }}</span>
+                                @else
+                                    <span class="chat-sender">{{ $nomeRemetente }}</span>
+                                @endif
+                                {{ $mensagem->mensagem }}
+                                <time datetime="{{ $mensagem->criado_em?->toIso8601String() }}">{{ $mensagem->criado_em?->format('H:i') }}</time>
+                            </div>
+                        </article>
+                    @endforeach
+                @endif
+                <div class="chat-typing" data-chat-typing aria-label="Lau esta digitando"><span></span><span></span><span></span></div>
+                @if($mostrarRetomadaChat)
+                    <section class="chat-resume-card" data-chat-resume-card>
+                        <span>Último atendimento</span>
+                        <strong>#{{ $ultimoAtendimentoEncerrado->id }} · {{ ucfirst(str_replace('_', ' ', $ultimoAtendimentoEncerrado->assunto)) }}</strong>
+                        <p>Encerrado em {{ ($ultimoAtendimentoEncerrado->encerrado_em ?: $ultimoAtendimentoEncerrado->atualizado_em ?: $ultimoAtendimentoEncerrado->criado_em)?->format('d/m/Y H:i') }}.</p>
+                        <div>
+                            <button type="button" data-chat-resume-action="continuar" data-atendimento-id="{{ $ultimoAtendimentoEncerrado->id }}">Continuar atendimento</button>
+                            <button type="button" class="secondary" data-chat-resume-action="novo">Novo assunto</button>
+                        </div>
+                    </section>
+                @endif
+                <div class="chat-options is-waiting {{ $mostrarOpcoesChat ? '' : 'is-hidden' }}" data-chat-options role="group" aria-label="Opcoes de atendimento">
+                    <span>Escolha uma opcao:</span>
+                    @foreach ($chatAssuntos as $valor => $label)
+                        <button type="button" class="quick-reply {{ old('assunto') === $valor ? 'is-selected' : '' }}" data-chat-subject="{{ $valor }}">{{ $label }}</button>
+                    @endforeach
+                </div>
+                @if($atendimentosPortal->isNotEmpty())
+                    <details class="chat-history-compact">
+                        <summary>Ver atendimentos anteriores ({{ $atendimentosPortal->count() }})</summary>
+                        <div>
+                            @foreach($atendimentosPortal->take(6) as $historico)
+                                <article>
+                                    <span>#{{ $historico->id }} · {{ ucfirst(str_replace('_', ' ', $historico->assunto)) }}</span>
+                                    <small>{{ ucfirst(str_replace('_', ' ', $historico->status)) }} · {{ ($historico->ultima_mensagem_em ?: $historico->criado_em)?->format('d/m/Y H:i') }}</small>
+                                </article>
+                            @endforeach
+                        </div>
+                    </details>
+                @endif
+            </div>
+            @if (session('chat_success'))<div class="notice"><strong>{{ session('chat_success') }}</strong></div>@endif
+            @if ($errors->has('assunto') || $errors->has('mensagem'))<div class="alert"><strong>{{ $errors->first('assunto') ?: $errors->first('mensagem') }}</strong></div>@endif
+            <form method="post" action="{{ route('cliente.chat.store') }}" class="chat-form" data-chat-form>
+                @csrf
+                <input type="hidden" name="atendimento_id" value="{{ old('atendimento_id', $chatAtivo ? $chatAtendimento?->id : null) }}" data-chat-atendimento>
+                <input type="hidden" name="modo" value="" data-chat-mode>
+                <input type="hidden" name="assunto" id="chatSubject" value="{{ old('assunto') }}">
+                <div class="chat-compose">
+                    <label class="sr-only" for="chatMessage">Mensagem para o atendimento</label>
+                    <textarea id="chatMessage" name="mensagem" rows="2" placeholder="Digite sua mensagem...">{{ old('mensagem') }}</textarea>
+                    <button type="submit">Enviar</button>
+                </div>
+                <button type="button" class="chat-end-btn" data-chat-end>Encerrar chat</button>
+            </form>
+        </section>
+    </div>
 </div>
 <script src="{{ \App\Support\Locx::asset('assets/js/app.js') }}"></script>
 </body>
