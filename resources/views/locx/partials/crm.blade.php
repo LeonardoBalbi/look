@@ -1,4 +1,4 @@
-@php
+﻿@php
     $statusLabels = [
         'novo' => 'Novo',
         'aguardando_humano' => 'Aguardando equipe',
@@ -26,8 +26,8 @@
     <section class="crm-desk-hero">
         <div>
             <span class="crm-eyebrow">CENTRAL DE RELACIONAMENTO</span>
-            <h2>Atendimento organizado, humano e com contexto</h2>
-            <p>Converse com o cliente, acompanhe o histórico e resolva pendências sem sair do CRM.</p>
+            <h2>Atendimentos da loja em um só lugar</h2>
+            <p>Veja as conversas dos clientes, responda com agilidade e acompanhe cada pendência pelo CRM.</p>
         </div>
         <div class="crm-live-indicator"><i></i> Atualização automática ativa</div>
     </section>
@@ -110,7 +110,7 @@
                 @empty
                     <div class="crm-empty-state compact">
                         <strong>Nenhuma conversa</strong>
-                        <p>Cada cliente aparecerá uma única vez; os chats antigos ficam no histórico.</p>
+                        <p>Cada cliente aparece uma única vez; os chats antigos ficam no histórico.</p>
                     </div>
                 @endforelse
             </div>
@@ -199,7 +199,7 @@
                                 <div class="crm-composer-footer">
                                     <small><kbd>Enter</kbd> envia · <kbd>Shift + Enter</kbd> quebra linha</small>
                                     <span data-crm-char-count>0/2000</span>
-                                    <button type="submit"><span>Enviar resposta</span> <b>➜</b></button>
+                                    <button type="submit"><span>Enviar resposta</span> <b>→</b></button>
                                 </div>
                             </form>
                         </section>
