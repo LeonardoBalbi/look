@@ -371,7 +371,7 @@ class TelegramService
 
             $this->enviarTexto(
                 $chatId,
-                '✅ Telegram vinculado com sucesso ao cadastro de '.$cliente->nome.'. Você poderá receber cobranças e falar com a equipe por aqui.',
+                '✅ Telegram vinculado com sucesso ao cadastro de '.$cliente->nome.'. Você poderá receber cobranças, PIX e lembretes por este bot.',
                 null,
                 $cliente,
                 'vinculacao'
