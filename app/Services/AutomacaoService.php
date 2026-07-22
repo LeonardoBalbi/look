@@ -33,6 +33,7 @@ class AutomacaoService
         private readonly CobrancaCalculator $calculator,
         private readonly PagBankService $pagBank,
         private readonly WhatsAppService $whatsApp,
+        private readonly TelegramService $telegram,
     ) {}
 
     public function pendentes(?string $tipo = null): Collection
@@ -71,7 +72,7 @@ class AutomacaoService
                 self::COBRANCA_1_DIA => $this->enviarCobranca($evento),
                 self::AVISO_GERENTE_3_DIAS => $this->avisarGerente($evento),
                 self::PAGAMENTO_CONFIRMADO => $this->confirmarPagamento($evento),
-                default => ['ok' => false, 'erro' => 'Tipo de automação desconhecido.'],
+                default => ['ok' => false, 'erro' => 'Tipo de automacao desconhecido.'],
             };
         } catch (Throwable $exception) {
             $resultado = ['ok' => false, 'erro' => $exception->getMessage()];
@@ -155,20 +156,27 @@ class AutomacaoService
         $cobranca = $this->cobranca($evento);
         $config = $this->whatsApp->config();
         $dados = $this->dadosCobranca($cobranca);
+        $parametros = [
+            'customer_name' => $dados['cliente'],
+            'vehicle_plate' => $dados['placa'],
+            'due_date' => $dados['vencimento'],
+            'amount' => $dados['saldo'],
+            'pix_code' => $dados['pix'],
+        ];
 
-        return $this->whatsApp->enviarTemplate(
-            $cobranca->cliente->whatsapp,
-            $config->template_lembrete,
-            [
-                'customer_name' => $dados['cliente'],
-                'vehicle_plate' => $dados['placa'],
-                'due_date' => $dados['vencimento'],
-                'amount' => $dados['saldo'],
-                'pix_code' => $dados['pix'],
-            ],
-            "Lembrete: a cobrança de {$dados['cliente']} vence em {$dados['vencimento']}.",
-            self::LEMBRETE_3_DIAS,
+        return $this->enviarClienteMulticanal(
             $cobranca,
+            fn () => $this->whatsApp->enviarTemplate(
+                $cobranca->cliente->whatsapp,
+                $config->template_lembrete,
+                $parametros,
+                "Lembrete: a cobranca de {$dados['cliente']} vence em {$dados['vencimento']}.",
+                self::LEMBRETE_3_DIAS,
+                $cobranca,
+            ),
+            'template_lembrete',
+            $this->dadosTelegram($cobranca, $dados),
+            self::LEMBRETE_3_DIAS,
         );
     }
 
@@ -185,26 +193,38 @@ class AutomacaoService
 
         $config = $this->whatsApp->config();
         $dados = $this->dadosCobranca($cobranca);
+        $parametros = [
+            'customer_name' => $dados['cliente'],
+            'vehicle_plate' => $dados['placa'],
+            'amount' => $dados['saldo'],
+            'due_date' => $dados['vencimento'],
+            'pix_code' => $dados['pix'],
+        ];
 
-        return $this->whatsApp->enviarTemplate(
-            $cobranca->cliente->whatsapp,
-            $config->template_vencimento,
-            [
-                'customer_name' => $dados['cliente'],
-                'vehicle_plate' => $dados['placa'],
-                'amount' => $dados['saldo'],
-                'due_date' => $dados['vencimento'],
-                'pix_code' => $dados['pix'],
-            ],
-            "Cobrança de {$dados['cliente']} vence hoje. PIX: {$dados['pix']}",
-            self::VENCIMENTO_PIX,
+        return $this->enviarClienteMulticanal(
             $cobranca,
+            fn () => $this->whatsApp->enviarTemplate(
+                $cobranca->cliente->whatsapp,
+                $config->template_vencimento,
+                $parametros,
+                "Cobranca de {$dados['cliente']} vence hoje. PIX: {$dados['pix']}",
+                self::VENCIMENTO_PIX,
+                $cobranca,
+            ),
+            'template_vencimento',
+            $this->dadosTelegram($cobranca, $dados),
+            self::VENCIMENTO_PIX,
         );
     }
 
     private function enviarCobranca(AutomacaoLog $evento): array
     {
-        return $this->whatsApp->enviarCobranca($this->cobranca($evento));
+        $cobranca = $this->cobranca($evento);
+
+        return $this->resultadoMulticanal(array_filter([
+            'whatsapp' => $this->whatsApp->enviarCobranca($cobranca),
+            'telegram' => $this->enviarTelegramCobranca($cobranca),
+        ]));
     }
 
     private function avisarGerente(AutomacaoLog $evento): array
@@ -212,21 +232,25 @@ class AutomacaoService
         $cobranca = $this->cobranca($evento);
         $config = $this->whatsApp->config();
         $dados = $this->dadosCobranca($cobranca);
+        $parametros = [
+            'customer_name' => $dados['cliente'],
+            'vehicle_plate' => $dados['placa'],
+            'days_overdue' => '3',
+            'updated_balance' => $dados['saldo'],
+            'customer_phone' => $cobranca->cliente->whatsapp ?: 'nao informado',
+        ];
 
-        return $this->whatsApp->enviarTemplate(
-            $config->gerente_whatsapp,
-            $config->template_gerente,
-            [
-                'customer_name' => $dados['cliente'],
-                'vehicle_plate' => $dados['placa'],
-                'days_overdue' => '3',
-                'updated_balance' => $dados['saldo'],
-                'customer_phone' => $cobranca->cliente->whatsapp ?: 'não informado',
-            ],
-            "Gerente: {$dados['cliente']} está há 3 dias em atraso, saldo {$dados['saldo']}.",
-            self::AVISO_GERENTE_3_DIAS,
-            $cobranca,
-        );
+        return $this->resultadoMulticanal(array_filter([
+            'whatsapp' => $this->whatsApp->enviarTemplate(
+                $config->gerente_whatsapp,
+                $config->template_gerente,
+                $parametros,
+                "Gerente: {$dados['cliente']} esta ha 3 dias em atraso, saldo {$dados['saldo']}.",
+                self::AVISO_GERENTE_3_DIAS,
+                $cobranca,
+            ),
+            'telegram' => $this->enviarTelegramGerente($cobranca, $dados),
+        ]));
     }
 
     private function confirmarPagamento(AutomacaoLog $evento): array
@@ -234,20 +258,33 @@ class AutomacaoService
         $pagamento = Pagamento::with('cobranca.cliente')->findOrFail($evento->pagamento_id);
         $cobranca = $pagamento->cobranca;
         $config = $this->whatsApp->config();
+        $parametros = [
+            'customer_name' => $cobranca->cliente->nome,
+            'amount_paid' => Locx::moeda($pagamento->valor),
+            'payment_method' => $pagamento->forma,
+            'payment_date' => $pagamento->pago_em->format('d/m/Y H:i'),
+            'charge_id' => (string) $cobranca->id,
+        ];
 
-        return $this->whatsApp->enviarTemplate(
-            $cobranca->cliente->whatsapp,
-            $config->template_pagamento,
-            [
-                'customer_name' => $cobranca->cliente->nome,
-                'amount_paid' => Locx::moeda($pagamento->valor),
-                'payment_method' => $pagamento->forma,
-                'payment_date' => $pagamento->pago_em->format('d/m/Y H:i'),
-                'charge_id' => (string) $cobranca->id,
-            ],
-            "Pagamento confirmado para {$cobranca->cliente->nome}: ".Locx::moeda($pagamento->valor).'.',
-            self::PAGAMENTO_CONFIRMADO,
+        return $this->enviarClienteMulticanal(
             $cobranca,
+            fn () => $this->whatsApp->enviarTemplate(
+                $cobranca->cliente->whatsapp,
+                $config->template_pagamento,
+                $parametros,
+                "Pagamento confirmado para {$cobranca->cliente->nome}: ".Locx::moeda($pagamento->valor).'.',
+                self::PAGAMENTO_CONFIRMADO,
+                $cobranca,
+            ),
+            'template_pagamento',
+            [
+                'cliente' => $cobranca->cliente->nome,
+                'valor_pago' => Locx::moeda($pagamento->valor),
+                'forma_pagamento' => $pagamento->forma,
+                'data_pagamento' => $pagamento->pago_em->format('d/m/Y H:i'),
+                'cobranca_id' => (string) $cobranca->id,
+            ],
+            self::PAGAMENTO_CONFIRMADO,
         );
     }
 
@@ -266,10 +303,128 @@ class AutomacaoService
 
         return [
             'cliente' => $cobranca->cliente->nome,
-            'placa' => $cobranca->contrato?->motocicleta?->placa ?: 'não informada',
+            'placa' => $cobranca->contrato?->motocicleta?->placa ?: 'nao informada',
             'vencimento' => $cobranca->vencimento->format('d/m/Y'),
             'saldo' => Locx::moeda($saldo),
-            'pix' => $cobranca->pix_copia_cola ?: 'não disponível',
+            'pix' => $cobranca->pix_copia_cola ?: 'nao disponivel',
+        ];
+    }
+
+    private function dadosTelegram(Cobranca $cobranca, array $dados): array
+    {
+        return [
+            'cliente' => $dados['cliente'],
+            'placa' => $dados['placa'],
+            'vencimento' => $dados['vencimento'],
+            'saldo' => $dados['saldo'],
+            'valor' => Locx::moeda($cobranca->valor_principal),
+            'pix' => $cobranca->pix_copia_cola ? "PIX copia e cola:\n".$cobranca->pix_copia_cola : 'PIX ainda nao disponivel.',
+            'cobranca_id' => (string) $cobranca->id,
+            'link_portal' => route('cliente.login'),
+        ];
+    }
+
+    private function enviarClienteMulticanal(
+        Cobranca $cobranca,
+        callable $enviarWhatsApp,
+        string $templateTelegram,
+        array $dadosTelegram,
+        string $tipo
+    ): array {
+        return $this->resultadoMulticanal(array_filter([
+            'whatsapp' => $enviarWhatsApp(),
+            'telegram' => $this->enviarTelegramTextoCliente($cobranca, $templateTelegram, $dadosTelegram, $tipo),
+        ]));
+    }
+
+    private function enviarTelegramCobranca(Cobranca $cobranca): ?array
+    {
+        if (! $this->podeEnviarTelegramCliente($cobranca)) {
+            return null;
+        }
+
+        return $this->telegram->enviarCobranca($cobranca);
+    }
+
+    private function enviarTelegramTextoCliente(Cobranca $cobranca, string $template, array $dados, string $tipo): ?array
+    {
+        if (! $this->podeEnviarTelegramCliente($cobranca)) {
+            return null;
+        }
+
+        $config = $this->telegram->config();
+        $mensagem = $this->telegram->renderizarTemplate((string) ($config->{$template} ?: $config->template_cobranca), $dados);
+
+        return $this->telegram->enviarTexto(
+            (string) $cobranca->cliente->telegram_chat_id,
+            $mensagem,
+            $cobranca,
+            $cobranca->cliente,
+            $tipo
+        );
+    }
+
+    private function enviarTelegramGerente(Cobranca $cobranca, array $dados): ?array
+    {
+        if (! $this->espelharTelegram()) {
+            return null;
+        }
+
+        $config = $this->telegram->config();
+        $chatId = trim((string) ($config->gerente_chat_id ?? ''));
+        if ($chatId === '') {
+            return null;
+        }
+
+        $mensagem = $this->telegram->renderizarTemplate(
+            (string) ($config->template_gerente ?: "Aviso ao gerente\n\nCliente: {cliente}\nMoto: {placa}\nDias em atraso: {dias_atraso}\nSaldo: {saldo}\nTelefone: {telefone_cliente}"),
+            [
+                'cliente' => $dados['cliente'],
+                'placa' => $dados['placa'],
+                'dias_atraso' => '3',
+                'saldo' => $dados['saldo'],
+                'telefone_cliente' => $cobranca->cliente->whatsapp ?: 'nao informado',
+                'cobranca_id' => (string) $cobranca->id,
+            ]
+        );
+
+        return $this->telegram->enviarTexto($chatId, $mensagem, $cobranca, $cobranca->cliente, self::AVISO_GERENTE_3_DIAS);
+    }
+
+    private function podeEnviarTelegramCliente(Cobranca $cobranca): bool
+    {
+        return $this->espelharTelegram()
+            && (bool) $cobranca->cliente?->telegram_notificacoes
+            && filled($cobranca->cliente?->telegram_chat_id);
+    }
+
+    private function espelharTelegram(): bool
+    {
+        return (bool) config('locx.telegram.espelhar_automacoes_whatsapp', true);
+    }
+
+    private function resultadoMulticanal(array $resultados): array
+    {
+        $sucessos = collect($resultados)->filter(fn (array $resultado) => $resultado['ok'] ?? false);
+        if ($sucessos->isNotEmpty()) {
+            $canais = $sucessos->keys()->implode(', ');
+
+            return [
+                'ok' => true,
+                'demo' => $sucessos->every(fn (array $resultado) => $resultado['demo'] ?? false),
+                'mensagem' => 'Mensagem enviada por '.$canais.'.',
+                'canais' => $resultados,
+            ];
+        }
+
+        $erros = collect($resultados)
+            ->map(fn (array $resultado, string $canal) => strtoupper($canal).': '.($resultado['erro'] ?? 'falha'))
+            ->implode(' | ');
+
+        return [
+            'ok' => false,
+            'erro' => $erros ?: 'Nenhum canal disponivel para envio.',
+            'canais' => $resultados,
         ];
     }
 }

@@ -9,7 +9,10 @@ use Illuminate\Support\Facades\DB;
 
 class CrmAutomationService
 {
-    public function __construct(private readonly WhatsAppService $whatsApp) {}
+    public function __construct(
+        private readonly WhatsAppService $whatsApp,
+        private readonly TelegramService $telegram,
+    ) {}
 
     public function sincronizarAtrasos(?CarbonInterface $hoje = null, bool $dryRun = false): array
     {
@@ -101,6 +104,7 @@ class CrmAutomationService
             'data_hora' => $agora->format('Y-m-d H:i:s'),
             'tarefas_analisadas' => 0,
             'whatsapp_enviados' => 0,
+            'telegram_enviados' => 0,
             'sem_cobranca' => 0,
             'erros' => [],
         ];
@@ -108,7 +112,7 @@ class CrmAutomationService
         CrmTarefa::query()
             ->with('cliente', 'cobranca.cliente', 'cobranca.contrato.motocicleta')
             ->where('status', 'aberta')
-            ->whereIn('tipo', ['whatsapp', 'cobranca'])
+            ->whereIn('tipo', ['whatsapp', 'telegram', 'cobranca'])
             ->whereNotNull('prazo_em')
             ->whereNull('disparado_em')
             ->where('prazo_em', '<=', $agora)
@@ -140,9 +144,14 @@ class CrmAutomationService
                     $tarefa->update(['cobranca_id' => $cobranca->id]);
                 }
 
-                $envio = $this->whatsApp->enviarCobranca($cobranca);
+                $envio = $this->enviarCobrancaDaTarefa($tarefa, $cobranca);
                 if ($envio['ok'] ?? false) {
-                    $resultado['whatsapp_enviados']++;
+                    if ($envio['whatsapp_ok'] ?? false) {
+                        $resultado['whatsapp_enviados']++;
+                    }
+                    if ($envio['telegram_ok'] ?? false) {
+                        $resultado['telegram_enviados']++;
+                    }
                     $tarefa->update([
                         'disparado_em' => $agora,
                         'disparo_status' => ($envio['demo'] ?? false) ? 'demo' : 'enviado',
@@ -162,6 +171,46 @@ class CrmAutomationService
             });
 
         return $resultado;
+    }
+
+    private function enviarCobrancaDaTarefa(CrmTarefa $tarefa, Cobranca $cobranca): array
+    {
+        $resultados = [];
+
+        if (in_array($tarefa->tipo, ['whatsapp', 'cobranca'], true)) {
+            $resultados['whatsapp'] = $this->whatsApp->enviarCobranca($cobranca);
+        }
+
+        if (in_array($tarefa->tipo, ['telegram', 'cobranca'], true)) {
+            $resultados['telegram'] = $this->enviarTelegramSeVinculado($cobranca);
+        }
+
+        $sucessos = collect($resultados)->filter(fn (?array $resultado) => $resultado['ok'] ?? false);
+        if ($sucessos->isNotEmpty()) {
+            return [
+                'ok' => true,
+                'demo' => $sucessos->every(fn (array $resultado) => $resultado['demo'] ?? false),
+                'whatsapp_ok' => (bool) ($resultados['whatsapp']['ok'] ?? false),
+                'telegram_ok' => (bool) ($resultados['telegram']['ok'] ?? false),
+                'canais' => $resultados,
+            ];
+        }
+
+        $erros = collect($resultados)
+            ->filter()
+            ->map(fn (array $resultado, string $canal) => strtoupper($canal).': '.($resultado['erro'] ?? 'falha'))
+            ->implode(' | ');
+
+        return ['ok' => false, 'erro' => $erros ?: 'Nenhum canal disponivel para envio.', 'canais' => $resultados];
+    }
+
+    private function enviarTelegramSeVinculado(Cobranca $cobranca): ?array
+    {
+        if (! $cobranca->cliente?->telegram_notificacoes || blank($cobranca->cliente?->telegram_chat_id)) {
+            return ['ok' => false, 'erro' => 'Cliente sem Telegram vinculado.'];
+        }
+
+        return $this->telegram->enviarCobranca($cobranca);
     }
 
     private function criarTarefaAtraso(

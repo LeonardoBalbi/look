@@ -377,6 +377,7 @@ class AsaasService
                 'status' => $status,
                 'asaas_status' => $statusAsaas,
                 'whatsapp_status' => $status === 'paga' ? 'conciliado' : $cobranca->whatsapp_status,
+                'telegram_status' => $status === 'paga' ? 'conciliado' : $cobranca->telegram_status,
                 'atualizado_em' => now(),
             ]);
 

@@ -14,6 +14,7 @@ class CobrancaRecorrenteService
         private readonly PixGatewayService $pixGateway,
         private readonly WhatsAppService $whatsApp,
         private readonly EmailCobrancaService $emailCobranca,
+        private readonly TelegramService $telegram,
     ) {}
 
     public function gerar(
@@ -22,6 +23,7 @@ class CobrancaRecorrenteService
         bool $gerarPix = false,
         bool $enviarWhatsApp = false,
         bool $enviarEmail = false,
+        bool $enviarTelegram = false,
         int $maxPorContrato = 12,
     ): array {
         $ate = Carbon::parse($ate ?: today())->startOfDay();
@@ -35,6 +37,7 @@ class CobrancaRecorrenteService
             'pix_gerados' => 0,
             'whatsapp_enviados' => 0,
             'emails_enviados' => 0,
+            'telegram_enviados' => 0,
             'limitados' => 0,
             'itens' => [],
             'erros' => [],
@@ -51,12 +54,13 @@ class CobrancaRecorrenteService
                 $gerarPix,
                 $enviarWhatsApp,
                 $enviarEmail,
+                $enviarTelegram,
                 $maxPorContrato,
                 &$resultado
             ): void {
                 foreach ($contratos as $contrato) {
                     $resultado['contratos']++;
-                    $this->processarContrato($contrato, $ate, $dryRun, $gerarPix, $enviarWhatsApp, $enviarEmail, $maxPorContrato, $resultado);
+                    $this->processarContrato($contrato, $ate, $dryRun, $gerarPix, $enviarWhatsApp, $enviarEmail, $enviarTelegram, $maxPorContrato, $resultado);
                 }
             });
 
@@ -70,6 +74,7 @@ class CobrancaRecorrenteService
         bool $gerarPix,
         bool $enviarWhatsApp,
         bool $enviarEmail,
+        bool $enviarTelegram,
         int $maxPorContrato,
         array &$resultado,
     ): void {
@@ -120,6 +125,7 @@ class CobrancaRecorrenteService
                 'valor_pago' => 0,
                 'status' => 'aberta',
                 'whatsapp_status' => 'pendente',
+                'telegram_status' => 'pendente',
             ]);
             $resultado['criadas']++;
             $geradasContrato++;
@@ -149,6 +155,15 @@ class CobrancaRecorrenteService
                     $resultado['emails_enviados']++;
                 } else {
                     $resultado['erros'][] = "Cobranca #{$cobranca->id}: ".($email['erro'] ?? 'E-mail nao enviado.');
+                }
+            }
+
+            if ($enviarTelegram) {
+                $telegram = $this->telegram->enviarCobranca($cobranca);
+                if ($telegram['ok'] ?? false) {
+                    $resultado['telegram_enviados']++;
+                } else {
+                    $resultado['erros'][] = "Cobranca #{$cobranca->id}: ".($telegram['erro'] ?? 'Telegram nao enviado.');
                 }
             }
 

@@ -95,8 +95,34 @@
                     <div class="client-data">
                         <span>CPF <b>{{ $cliente->cpf ?: '-' }}</b></span>
                         <span>WhatsApp <b>{{ $cliente->whatsapp ?: '-' }}</b></span>
+                        <span>Telegram atendimento <b>{{ $cliente->telegram_atendimento_chat_id ? ('@'.($cliente->telegram_atendimento_username ?: 'vinculado')) : 'nao vinculado' }}</b></span>
+                        <span>Telegram <b>{{ $cliente->telegram_chat_id ? ('@'.($cliente->telegram_username ?: 'vinculado')) : 'não vinculado' }}</b></span>
                         <span>Loja <b>{{ $cliente->loja?->nome ?: '-' }}</b></span>
                         <span>Status <b>{!! \App\Support\Locx::status($cliente->status) !!}</b></span>
+                    </div>
+                    <div class="telegram-link-card">
+                        <strong>Receber avisos pelo Telegram</strong>
+                        @if ($cliente->telegram_chat_id)
+                            <span class="tag ok">Telegram vinculado</span>
+                            <p>As cobrancas, PIX e lembretes chegam por este bot.</p>
+                        @elseif ($telegramLink)
+                            <p>Toque no botao, abra o bot e pressione Iniciar para vincular seu cadastro.</p>
+                            <a class="btn telegram-btn" href="{{ $telegramLink }}" target="_blank" rel="noopener">Vincular Telegram</a>
+                        @else
+                            <p>O bot ainda não foi configurado pela empresa.</p>
+                        @endif
+                    </div>
+                    <div class="telegram-link-card">
+                        <strong>Falar com a equipe pelo Telegram</strong>
+                        @if ($cliente->telegram_atendimento_chat_id)
+                            <span class="tag ok">Atendimento vinculado</span>
+                            <p>Voce pode enviar mensagens pelo bot de atendimento.</p>
+                        @elseif ($telegramAtendimentoLink)
+                            <p>Toque no botao, abra o bot de atendimento e pressione Iniciar.</p>
+                            <a class="btn telegram-btn" href="{{ $telegramAtendimentoLink }}" target="_blank" rel="noopener">Vincular atendimento</a>
+                        @else
+                            <p>O bot de atendimento ainda nao foi configurado pela empresa.</p>
+                        @endif
                     </div>
                 </div>
             </aside>

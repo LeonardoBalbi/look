@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Cliente;
 use App\Models\Cobranca;
+use App\Models\CobrancaCampanha;
+use App\Models\CobrancaCampanhaItem;
 use App\Models\Contrato;
 use App\Models\CrmNota;
 use App\Models\CrmTarefa;
@@ -22,8 +24,11 @@ use App\Models\User;
 use App\Models\UsuarioPermissao;
 use App\Models\WhatsappConfig;
 use App\Models\WhatsappLog;
+use App\Models\TelegramConfig;
+use App\Models\TelegramLog;
 use App\Services\AsaasService;
 use App\Services\CobrancaCalculator;
+use App\Services\CobrancaCampanhaService;
 use App\Services\CrmAutomationService;
 use App\Services\EmailCobrancaService;
 use App\Services\EmailPagamentoService;
@@ -31,6 +36,7 @@ use App\Services\PagBankService;
 use App\Services\PixGatewayService;
 use App\Services\SicoobService;
 use App\Services\WhatsAppService;
+use App\Services\TelegramService;
 use App\Support\Locx;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\JsonResponse;
@@ -51,6 +57,8 @@ class LocxController extends Controller
         private readonly SicoobService $sicoob,
         private readonly PixGatewayService $pixGateway,
         private readonly WhatsAppService $whatsApp,
+        private readonly TelegramService $telegram,
+        private readonly CobrancaCampanhaService $campanhasCobranca,
         private readonly CrmAutomationService $crmAutomation,
         private readonly EmailCobrancaService $emailCobranca,
         private readonly EmailPagamentoService $emailPagamento,
@@ -104,6 +112,11 @@ class LocxController extends Controller
                 'whatsappConfig' => $this->whatsApp->config(),
                 'whatsappLogs' => WhatsappLog::with('cliente')->latest('id')->limit(80)->get(),
                 'graphVersion' => $this->whatsApp->graphVersion(),
+            ],
+            'telegram' => [
+                'telegramConfig' => $this->telegram->config(),
+                'telegramLogs' => TelegramLog::with('cliente')->latest('id')->limit(100)->get(),
+                'telegramVinculados' => Cliente::query()->whereNotNull('telegram_chat_id')->count(),
             ],
             default => [],
         }));
@@ -234,6 +247,7 @@ class LocxController extends Controller
             'endereco' => ['nullable', 'string'],
             'telefone' => ['nullable', 'string', 'max:30'],
             'whatsapp' => ['nullable', 'string', 'max:30'],
+            'telegram_notificacoes' => ['nullable', 'boolean'],
             'email' => ['nullable', 'email', 'max:160'],
             'portal_ativo' => ['nullable', 'boolean'],
             'senha_portal' => [$cliente->exists ? 'nullable' : 'nullable', 'string', 'min:6', 'max:120'],
@@ -246,6 +260,7 @@ class LocxController extends Controller
         $senhaPortal = $dados['senha_portal'] ?? null;
         unset($dados['senha_portal']);
         $dados['portal_ativo'] = $request->boolean('portal_ativo');
+        $dados['telegram_notificacoes'] = $request->boolean('telegram_notificacoes', true);
         if ($senhaPortal) {
             $dados['senha'] = Hash::make($senhaPortal);
         }
@@ -453,7 +468,7 @@ class LocxController extends Controller
         $this->autorizar($request->user(), 'crm', 'criar');
         $dados = $request->validate([
             'cliente_id' => ['required', 'exists:clientes,id'],
-            'tipo' => ['required', Rule::in(['nota', 'ligacao', 'whatsapp', 'email', 'visita', 'negociacao'])],
+            'tipo' => ['required', Rule::in(['nota', 'ligacao', 'whatsapp', 'telegram', 'email', 'visita', 'negociacao'])],
             'texto' => ['required', 'string', 'max:3000'],
         ]);
         $cliente = Cliente::findOrFail($dados['cliente_id']);
@@ -474,7 +489,7 @@ class LocxController extends Controller
         $dados = $request->validate([
             'cliente_id' => ['required', 'exists:clientes,id'],
             'titulo' => ['required', 'string', 'max:180'],
-            'tipo' => ['required', Rule::in(['follow_up', 'ligacao', 'whatsapp', 'email', 'cobranca', 'recolhimento'])],
+            'tipo' => ['required', Rule::in(['follow_up', 'ligacao', 'whatsapp', 'telegram', 'email', 'cobranca', 'recolhimento'])],
             'prazo_em' => ['nullable', 'date'],
             'observacao' => ['nullable', 'string', 'max:3000'],
         ]);
@@ -482,7 +497,7 @@ class LocxController extends Controller
         $this->autorizarClienteCrm($request->user(), $cliente);
 
         $cobranca = null;
-        if (in_array($dados['tipo'], ['whatsapp', 'cobranca'], true)) {
+        if (in_array($dados['tipo'], ['whatsapp', 'telegram', 'cobranca'], true)) {
             $cobranca = Cobranca::with('cliente', 'contrato.motocicleta')
                 ->where('cliente_id', $cliente->id)
                 ->whereNotIn('status', ['paga', 'cancelada'])
@@ -498,10 +513,16 @@ class LocxController extends Controller
         ]);
 
         $mensagem = 'Tarefa criada no CRM.';
-        if (in_array($dados['tipo'], ['whatsapp', 'cobranca'], true)) {
-            $mensagem .= $dados['prazo_em']
-                ? ' WhatsApp agendado para o prazo da tarefa.'
-                : ' Informe um prazo para disparar o WhatsApp automaticamente.';
+        if (in_array($dados['tipo'], ['whatsapp', 'telegram', 'cobranca'], true)) {
+            if ($dados['tipo'] === 'whatsapp') {
+                $mensagem .= $dados['prazo_em']
+                    ? ' WhatsApp agendado para o prazo da tarefa.'
+                    : ' Informe um prazo para disparar o WhatsApp automaticamente.';
+            } else {
+                $mensagem .= $dados['prazo_em']
+                    ? ' Disparo agendado para o prazo da tarefa.'
+                    : ' Informe um prazo para disparar automaticamente.';
+            }
         }
 
         return redirect()->route('locx.index', ['page' => 'crm', 'cliente' => $cliente->id])->with('success', $mensagem);
@@ -595,6 +616,28 @@ class LocxController extends Controller
             'mensagem.max' => 'A resposta deve ter no maximo 2000 caracteres.',
         ]);
 
+        if (($atendimento->canal ?? 'portal') === 'telegram') {
+            $envioTelegram = $this->telegram->enviarTexto(
+                (string) ($atendimento->canal_chat_id ?: $atendimento->cliente->telegram_chat_id),
+                $dados['mensagem'],
+                null,
+                $atendimento->cliente,
+                'resposta_atendente',
+                'atendimento'
+            );
+
+            if (! ($envioTelegram['ok'] ?? false)) {
+                $erro = 'Não foi possível enviar a resposta pelo Telegram: '.($envioTelegram['erro'] ?? 'falha desconhecida');
+                if ($request->expectsJson()) {
+                    return response()->json(['ok' => false, 'message' => $erro], 422);
+                }
+
+                return redirect()
+                    ->route('locx.index', ['page' => 'crm', 'cliente' => $atendimento->cliente_id])
+                    ->withErrors(['telegram' => $erro]);
+            }
+        }
+
         $mensagem = PortalAtendimentoMensagem::create([
             'portal_atendimento_id' => $atendimento->id,
             'remetente' => 'humano',
@@ -631,7 +674,7 @@ class LocxController extends Controller
 
         return redirect()
             ->route('locx.index', ['page' => 'crm', 'cliente' => $atendimento->cliente_id])
-            ->with('success', 'Resposta enviada para o portal do cliente.');
+            ->with('success', ($atendimento->canal ?? 'portal') === 'telegram' ? 'Resposta enviada pelo Telegram.' : 'Resposta enviada para o portal do cliente.');
     }
 
     public function acaoPortalAtendimento(Request $request, PortalAtendimento $atendimento): RedirectResponse|JsonResponse
@@ -752,6 +795,7 @@ class LocxController extends Controller
             'valor_pago' => 0,
             'status' => 'aberta',
             'whatsapp_status' => 'pendente',
+            'telegram_status' => 'pendente',
         ]);
         $resultado = $this->pixGateway->criarPix($cobranca);
         $mensagem = $resultado['ok'] ?? false
@@ -798,6 +842,7 @@ class LocxController extends Controller
                 ),
                 'status' => $status,
                 'whatsapp_status' => $status === 'paga' ? 'conciliado' : $cobranca->whatsapp_status,
+                'telegram_status' => $status === 'paga' ? 'conciliado' : $cobranca->telegram_status,
                 'atualizado_em' => now(),
             ]);
 
@@ -864,12 +909,27 @@ class LocxController extends Controller
     public function enviarWhatsApp(Request $request, Cobranca $cobranca): RedirectResponse
     {
         $this->autorizar($request->user(), 'inadimplencia', 'editar');
+        $this->autorizarCobranca($request->user(), $cobranca);
         $resultado = $this->whatsApp->enviarCobranca($cobranca);
 
         return $this->voltar(
             'inadimplencia',
             ($resultado['ok'] ?? false)
                 ? ($resultado['mensagem'] ?? 'Cobrança aceita pela Meta para envio.')
+                : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida')
+        );
+    }
+
+    public function enviarTelegram(Request $request, Cobranca $cobranca): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'inadimplencia', 'editar');
+        $this->autorizarCobranca($request->user(), $cobranca);
+        $resultado = $this->telegram->enviarCobranca($cobranca);
+
+        return $this->voltar(
+            'inadimplencia',
+            ($resultado['ok'] ?? false)
+                ? ($resultado['mensagem'] ?? 'Cobrança enviada pelo Telegram.')
                 : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida')
         );
     }
@@ -912,7 +972,122 @@ class LocxController extends Controller
 
         return $this->voltar('whatsapp', ($resultado['ok'] ?? false)
             ? ($resultado['mensagem'] ?? 'Conexão validada.')
+            : 'Erro: '.($resultado['erro'] ?? $resultado['mensagem'] ?? 'falha desconhecida'));
+    }
+
+    public function salvarTelegram(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'telegram', 'editar');
+        $dados = $request->validate([
+            'modo' => ['required', Rule::in(['demo', 'api'])],
+            'ativo' => ['required', 'boolean'],
+            'bot_token' => ['nullable', 'string'],
+            'bot_username' => ['nullable', 'string', 'max:120'],
+            'atendimento_bot_token' => ['nullable', 'string'],
+            'atendimento_bot_username' => ['nullable', 'string', 'max:120'],
+            'webhook_secret' => ['required', 'string', 'min:16', 'max:255', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'atendimento_webhook_secret' => ['nullable', 'string', 'min:16', 'max:255', 'regex:/^[A-Za-z0-9_-]+$/'],
+            'parse_mode' => ['nullable', Rule::in(['HTML', 'MarkdownV2', 'sem_formatacao'])],
+            'template_cobranca' => ['required', 'string', 'max:4000'],
+            'template_lembrete' => ['nullable', 'string', 'max:4000'],
+            'template_vencimento' => ['nullable', 'string', 'max:4000'],
+            'template_pagamento' => ['nullable', 'string', 'max:4000'],
+            'template_gerente' => ['nullable', 'string', 'max:4000'],
+            'gerente_chat_id' => ['nullable', 'string', 'max:80'],
+        ]);
+
+        if (blank($dados['bot_token'] ?? null)) {
+            unset($dados['bot_token']);
+        }
+        if (blank($dados['atendimento_bot_token'] ?? null)) {
+            unset($dados['atendimento_bot_token']);
+        }
+        $dados['bot_username'] = ltrim((string) ($dados['bot_username'] ?? ''), '@') ?: null;
+        $dados['atendimento_bot_username'] = ltrim((string) ($dados['atendimento_bot_username'] ?? ''), '@') ?: null;
+        $temBotAtendimento = filled($dados['atendimento_bot_token'] ?? null) || filled($dados['atendimento_bot_username'] ?? null);
+        $dados['atendimento_webhook_secret'] = ($dados['atendimento_webhook_secret'] ?? null) ?: ($temBotAtendimento ? Str::random(48) : null);
+        $parseMode = $dados['parse_mode'] ?? null;
+        $dados['parse_mode'] = $parseMode === 'sem_formatacao' ? null : $parseMode;
+
+        TelegramConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);
+
+        return $this->voltar('telegram', 'Configurações do Telegram salvas.');
+    }
+
+    public function testarTelegram(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'telegram', 'editar');
+        $resultado = $this->telegram->testarTodos();
+
+        return $this->voltar('telegram', ($resultado['ok'] ?? false)
+            ? ($resultado['mensagem'] ?? 'Conexão validada.')
+            : 'Erro: '.($resultado['erro'] ?? $resultado['mensagem'] ?? 'falha desconhecida'));
+    }
+
+    public function configurarWebhookTelegram(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'telegram', 'editar');
+        $resultado = $this->telegram->configurarWebhooks(route('locx.webhook-telegram'));
+
+        return $this->voltar('telegram', ($resultado['ok'] ?? false)
+            ? ($resultado['mensagem'] ?? 'Webhook configurado.')
             : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida'));
+    }
+
+    public function criarCampanhaCobranca(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'cobrancas', 'criar');
+        $dados = $request->validate([
+            'nome' => ['required', 'string', 'max:180'],
+            'publico' => ['required', Rule::in(['todos_abertos', 'vence_hoje', 'vencidas_7', 'vencidas_15', 'vencidas_30', 'selecionadas'])],
+            'canais' => ['required', 'array', 'min:1'],
+            'canais.*' => ['required', Rule::in(['whatsapp', 'email', 'telegram'])],
+            'estrategia' => ['required', Rule::in(['todos', 'prioridade'])],
+            'mensagem' => ['required', 'string', 'min:10', 'max:4000'],
+            'agendado_para' => ['nullable', 'date'],
+            'cobrancas' => ['nullable', 'array'],
+            'cobrancas.*' => ['integer', 'exists:cobrancas,id'],
+        ], [
+            'canais.required' => 'Selecione pelo menos um canal de envio.',
+            'mensagem.required' => 'Informe a mensagem da campanha.',
+        ]);
+
+        if ($dados['publico'] === 'selecionadas' && empty($dados['cobrancas'])) {
+            return back()->withInput()->withErrors(['cobrancas' => 'Marque pelo menos uma cobrança na tabela.']);
+        }
+
+        $campanha = $this->campanhasCobranca->criar($dados, $request->user());
+        if ($campanha->total_destinatarios === 0) {
+            $this->campanhasCobranca->cancelar($campanha);
+            return $this->voltar('cobrancas', 'Nenhuma cobrança corresponde ao público escolhido.');
+        }
+
+        if (! $campanha->agendado_para || $campanha->agendado_para->isPast()) {
+            $resultado = $this->campanhasCobranca->processar($campanha, 200);
+            $mensagem = 'Campanha #'.$campanha->id.' processada: '.$resultado['enviados'].' enviados e '.$resultado['falhas'].' falhas.';
+        } else {
+            $mensagem = 'Campanha #'.$campanha->id.' agendada para '.$campanha->agendado_para->format('d/m/Y H:i').'.';
+        }
+
+        return $this->voltar('cobrancas', $mensagem);
+    }
+
+    public function executarCampanhaCobranca(Request $request, CobrancaCampanha $campanha): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'cobrancas', 'editar');
+        abort_unless($this->campanhasCobranca->podeGerenciar($campanha, $request->user()), 403, 'Campanha fora do seu acesso.');
+        $resultado = $this->campanhasCobranca->processar($campanha, 300);
+
+        return $this->voltar('cobrancas', 'Campanha #'.$campanha->id.': '.$resultado['processados'].' processados, '.$resultado['enviados'].' enviados e '.$resultado['falhas'].' falhas.');
+    }
+
+    public function cancelarCampanhaCobranca(Request $request, CobrancaCampanha $campanha): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'cobrancas', 'editar');
+        abort_unless($this->campanhasCobranca->podeGerenciar($campanha, $request->user()), 403, 'Campanha fora do seu acesso.');
+        $this->campanhasCobranca->cancelar($campanha);
+
+        return $this->voltar('cobrancas', 'Campanha #'.$campanha->id.' cancelada.');
     }
 
     public function salvarPagBank(Request $request): RedirectResponse
@@ -1392,6 +1567,8 @@ class LocxController extends Controller
             'cliente_nome' => $nome,
             'iniciais' => $iniciais ?: 'CL',
             'assunto' => $atendimento->assunto,
+            'canal' => $atendimento->canal ?? 'portal',
+            'canal_label' => ($atendimento->canal ?? 'portal') === 'telegram' ? 'Telegram' : 'Portal',
             'assunto_label' => ucfirst(str_replace('_', ' ', $atendimento->assunto)),
             'assuntos_busca' => (string) ($atendimento->cliente_assuntos_busca ?? $atendimento->assunto),
             'status' => $atendimento->status,
@@ -1497,6 +1674,33 @@ class LocxController extends Controller
                 'titulo' => $log->tipo ?: 'Mensagem',
                 'texto' => $log->erro ?: \Illuminate\Support\Str::limit((string) $log->mensagem, 140),
                 'status' => $log->status === 'enviado' || $log->status === 'demo' ? 'ok' : ($log->status === 'erro' ? 'danger' : 'warn'),
+            ]));
+
+        TelegramLog::query()
+            ->where('cliente_id', $cliente->id)
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->each(fn (TelegramLog $log) => $items->push([
+                'data' => $log->criado_em,
+                'tipo' => 'Telegram',
+                'titulo' => $log->tipo ?: 'Mensagem',
+                'texto' => $log->erro ?: \Illuminate\Support\Str::limit((string) $log->mensagem, 140),
+                'status' => in_array($log->status, ['enviado', 'demo', 'recebido'], true) ? 'ok' : ($log->status === 'erro' ? 'danger' : 'warn'),
+            ]));
+
+        CobrancaCampanhaItem::query()
+            ->with('campanha')
+            ->where('cliente_id', $cliente->id)
+            ->latest('id')
+            ->limit(20)
+            ->get()
+            ->each(fn (CobrancaCampanhaItem $item) => $items->push([
+                'data' => $item->processado_em ?: $item->criado_em,
+                'tipo' => 'Campanha',
+                'titulo' => $item->campanha?->nome ?: 'Campanha de cobrança',
+                'texto' => $item->erro ?: 'Canais: '.implode(', ', array_keys((array) $item->resultados_json)),
+                'status' => in_array($item->status, ['enviado', 'parcial'], true) ? 'ok' : ($item->status === 'falha' ? 'danger' : 'warn'),
             ]));
 
         DB::table('pagamentos as p')
@@ -1645,6 +1849,17 @@ class LocxController extends Controller
             }
         }
 
+        $campanhasQuery = CobrancaCampanha::query();
+        if (! $user->isAdmin()) {
+            $campanhasQuery->where('criado_por', $user->id);
+        }
+
+        $campanhaItensQuery = CobrancaCampanhaItem::query()
+            ->with('campanha', 'cliente', 'cobranca');
+        if (! $user->isAdmin()) {
+            $campanhaItensQuery->whereHas('campanha', fn (Builder $query) => $query->where('criado_por', $user->id));
+        }
+
         return [
             'financeiroResumo' => [
                 'aberto' => (float) (clone $cobrancasQuery)->where('status', '<>', 'paga')->sum(DB::raw('valor_atualizado - valor_pago')),
@@ -1655,6 +1870,13 @@ class LocxController extends Controller
             'contratos' => $this->scope(Contrato::with('cliente', 'motocicleta'), $user)->latest('id')->get(),
             'cobrancasAbertas' => $this->scope(Cobranca::with('cliente'), $user)->where('status', '<>', 'paga')->orderBy('vencimento')->get(),
             'cobrancas' => $cobrancas,
+            'campanhasCobranca' => (clone $campanhasQuery)->with('criador')->latest('id')->limit(30)->get(),
+            'campanhaItensRecentes' => $campanhaItensQuery->latest('id')->limit(100)->get(),
+            'campanhasResumo' => [
+                'agendadas' => (clone $campanhasQuery)->where('status', 'agendada')->count(),
+                'concluidas' => (clone $campanhasQuery)->where('status', 'concluida')->count(),
+                'falhas' => (clone $campanhasQuery)->whereIn('status', ['parcial', 'falha'])->count(),
+            ],
         ];
     }
 
@@ -1779,6 +2001,15 @@ class LocxController extends Controller
         }
 
         return 'bot';
+    }
+
+    private function autorizarCobranca(User $user, Cobranca $cobranca): void
+    {
+        if ($user->isAdmin()) {
+            return;
+        }
+
+        abort_unless(in_array((int) $cobranca->loja_id, $user->lojaIdsPermitidas(), true), 403, 'Cobrança fora da loja permitida.');
     }
 
     private function autorizarClienteCrm(User $user, Cliente $cliente): void

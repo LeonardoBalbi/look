@@ -27,6 +27,7 @@ class Locx
         'asaas' => 'Asaas',
         'sicoob' => 'Sicoob',
         'whatsapp' => 'WhatsApp API',
+        'telegram' => 'Telegram',
         'relatorios' => 'Relatórios',
         'documentos' => 'Documentos',
         'lojas' => 'Lojas / Unidades',
@@ -38,7 +39,7 @@ class Locx
         'Principal' => ['dashboard', 'reservas', 'crm'],
         'Operação' => ['clientes', 'motos', 'contratos', 'manutencao', 'estoque', 'multas'],
         'Financeiro' => ['financeiro', 'contas', 'cobrancas', 'inadimplencia', 'bancos'],
-        'Canais' => ['whatsapp', 'documentos'],
+        'Canais' => ['whatsapp', 'telegram', 'documentos'],
         'Gestão' => ['relatorios', 'lojas', 'usuarios', 'configuracoes'],
     ];
 
@@ -80,14 +81,14 @@ class Locx
         $status ??= '';
         $classe = [
             'ativo' => 'ok', 'ativa' => 'ok', 'disponivel' => 'ok', 'paga' => 'ok',
-            'concluida' => 'ok',
-            'alugada' => 'info', 'enviado' => 'info', 'conciliado' => 'ok', 'transferida' => 'info',
-            'aberta' => 'warn', 'parcial' => 'warn', 'pendente' => 'warn', 'em_andamento' => 'warn',
+            'concluida' => 'ok', 'vinculado' => 'ok', 'recebido' => 'ok',
+            'alugada' => 'info', 'enviado' => 'info', 'conciliado' => 'ok', 'transferida' => 'info', 'demo' => 'info',
+            'aberta' => 'warn', 'parcial' => 'warn', 'pendente' => 'warn', 'agendada' => 'warn', 'processando' => 'warn', 'em_andamento' => 'warn',
             'aguardando_peca' => 'warn', 'em_recurso' => 'warn',
             'suspenso' => 'warn', 'manutencao' => 'warn',
-            'inadimplente' => 'danger', 'atrasada' => 'danger', 'bloqueado' => 'danger',
+            'inadimplente' => 'danger', 'atrasada' => 'danger', 'bloqueado' => 'danger', 'falha' => 'danger', 'erro' => 'danger',
             'recuperacao' => 'danger', 'inativa' => 'danger',
-            'encerrado' => 'muted', 'encerrada' => 'muted', 'cancelada' => 'muted',
+            'encerrado' => 'muted', 'encerrada' => 'muted', 'cancelada' => 'muted', 'cancelado' => 'muted', 'não vinculado' => 'muted', 'ignorado' => 'muted',
         ][$status] ?? '';
 
         return new HtmlString('<span class="tag '.$classe.'">'.e($status).'</span>');
@@ -128,6 +129,7 @@ class Locx
             'asaas' => '<path d="M4 16.5 12 4l8 12.5"/><path d="M7.5 13h9"/><path d="M9.5 17h5"/><path d="M12 4v16"/>',
             'sicoob' => '<path d="M4 10 12 4l8 6"/><path d="M5.5 10v9h13v-9"/><path d="M8 19v-5h3v5"/><path d="M14 19v-5h2"/><path d="M4 19h16"/>',
             'whatsapp' => '<path d="M20.5 11.7a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.4-4.2A8.5 8.5 0 1 1 20.5 11.7z"/><path d="M9 8.8c.2 3.5 2.1 5.4 5.4 6.2l1.5-1.5-2.2-1.2-.8.8c-1.1-.5-2-1.3-2.5-2.5l.8-.8L10 7.5z"/>',
+            'telegram' => '<path d="M21 3 3.8 9.7c-1.2.5-1.2 1.2-.2 1.5l4.4 1.4 1.7 5.2c.2.6.1.9.8.9.5 0 .8-.2 1-.4l2.2-2.1 4.5 3.3c.8.5 1.4.3 1.6-.8L22.7 5c.3-1.4-.5-2-1.7-2z"/><path d="m8.1 12.4 10.2-6.3c.5-.3 1-.1.6.3l-8.4 7.6-.3 3.5z"/>',
             'relatorios' => '<path d="M4 20V4"/><path d="M4 20h16"/><path d="M8 16v-5"/><path d="M12 16V8"/><path d="M16 16v-9"/>',
             'bi' => '<path d="M4 19V5"/><path d="M4 19h16"/><rect x="7" y="11" width="3" height="5" rx="1"/><rect x="12" y="7" width="3" height="9" rx="1"/><rect x="17" y="9" width="3" height="7" rx="1"/>',
             'documentos' => '<path d="M7 3h7l4 4v14H7z"/><path d="M14 3v5h5"/><path d="M9 13h6"/><path d="M9 17h4"/>',

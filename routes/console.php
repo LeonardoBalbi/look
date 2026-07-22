@@ -1,6 +1,7 @@
 <?php
 
 use App\Services\CobrancaRecorrenteService;
+use App\Services\CobrancaCampanhaService;
 use App\Services\CrmAutomationService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
@@ -14,6 +15,7 @@ Artisan::command(
         {--gerar-pix : Gera PIX no gateway configurado}
         {--enviar-whatsapp : Envia WhatsApp depois de criar a cobranca}
         {--enviar-email : Envia e-mail depois de criar a cobranca}
+        {--enviar-telegram : Envia Telegram depois de criar a cobranca}
         {--dry-run : Simula sem gravar nada e sem chamar APIs externas}',
     function (): int {
         $diasAntecedencia = $this->option('dias-antecedencia');
@@ -27,6 +29,7 @@ Artisan::command(
             gerarPix: (bool) $this->option('gerar-pix'),
             enviarWhatsApp: (bool) $this->option('enviar-whatsapp'),
             enviarEmail: (bool) $this->option('enviar-email'),
+            enviarTelegram: (bool) $this->option('enviar-telegram'),
             maxPorContrato: (int) ($this->option('max-por-contrato') ?: config('locx.recorrencia.max_por_contrato', 12)),
         );
 
@@ -39,6 +42,7 @@ Artisan::command(
         $this->line('PIX gerados: '.$resultado['pix_gerados']);
         $this->line('WhatsApp enviados: '.$resultado['whatsapp_enviados']);
         $this->line('E-mails enviados: '.$resultado['emails_enviados']);
+        $this->line('Telegram enviados: '.$resultado['telegram_enviados']);
 
         if ($resultado['itens']) {
             $this->table(
@@ -89,7 +93,7 @@ Artisan::command(
 )->purpose('Cria tarefas automaticas do CRM para cobrancas em atraso.');
 
 Artisan::command(
-    'locx:disparar-crm-agendado {--dry-run : Simula sem enviar WhatsApp}',
+    'locx:disparar-crm-agendado {--dry-run : Simula sem enviar WhatsApp/Telegram}',
     function (): int {
         $resultado = app(CrmAutomationService::class)->dispararTarefasAgendadas(dryRun: (bool) $this->option('dry-run'));
         $modo = $resultado['dry_run'] ? 'SIMULACAO' : 'EXECUCAO REAL';
@@ -98,6 +102,7 @@ Artisan::command(
         $this->line('Data/hora: '.$resultado['data_hora']);
         $this->line('Tarefas analisadas: '.$resultado['tarefas_analisadas']);
         $this->line('WhatsApp enviados: '.$resultado['whatsapp_enviados']);
+        $this->line('Telegram enviados: '.($resultado['telegram_enviados'] ?? 0));
         $this->line('Sem cobranca aberta: '.$resultado['sem_cobranca']);
 
         foreach ($resultado['erros'] as $erro) {
@@ -106,7 +111,7 @@ Artisan::command(
 
         return empty($resultado['erros']) ? 0 : 1;
     }
-)->purpose('Dispara WhatsApp das tarefas do CRM quando o prazo agendado chegar.');
+)->purpose('Dispara WhatsApp e Telegram das tarefas do CRM quando o prazo agendado chegar.');
 
 Artisan::command(
     'locx:conciliar-pix {--limite= : Quantidade maxima de cobrancas consultadas}',
@@ -128,6 +133,23 @@ Artisan::command(
     }
 )->purpose('Consulta PagBank/Asaas e baixa automaticamente PIX pagos quando o webhook nao chegou.');
 
+Artisan::command(
+    'locx:processar-campanhas-cobranca {--limite-campanhas=10} {--limite-itens=200}',
+    function (): int {
+        $resultado = app(CobrancaCampanhaService::class)->processarAgendadas(
+            (int) $this->option('limite-campanhas'),
+            (int) $this->option('limite-itens')
+        );
+
+        $this->info('Campanhas de cobrança processadas: '.$resultado['campanhas']);
+        foreach ($resultado['resultados'] as $item) {
+            $this->line('#'.$item['id'].' '.$item['nome'].' · '.$item['status'].' · '.$item['enviados'].' enviados · '.$item['falhas'].' falhas');
+        }
+
+        return 0;
+    }
+)->purpose('Processa campanhas de cobrança por WhatsApp, e-mail e Telegram.');
+
 $opcoesAgendadas = [];
 if (config('locx.recorrencia.gerar_pix')) {
     $opcoesAgendadas[] = '--gerar-pix';
@@ -137,6 +159,9 @@ if (config('locx.recorrencia.enviar_whatsapp')) {
 }
 if (config('locx.recorrencia.enviar_email')) {
     $opcoesAgendadas[] = '--enviar-email';
+}
+if (config('locx.recorrencia.enviar_telegram')) {
+    $opcoesAgendadas[] = '--enviar-telegram';
 }
 $opcoesAgendadas[] = '--dias-antecedencia='.(int) config('locx.recorrencia.dias_antecedencia', 0);
 $opcoesAgendadas[] = '--max-por-contrato='.(int) config('locx.recorrencia.max_por_contrato', 12);
@@ -160,3 +185,7 @@ Schedule::command('locx:conciliar-pix')
     ->everyMinute()
     ->withoutOverlapping()
     ->when(fn () => (bool) config('locx.pix.conciliacao_ativa', true));
+
+Schedule::command('locx:processar-campanhas-cobranca')
+    ->everyMinute()
+    ->withoutOverlapping();

@@ -7,9 +7,13 @@ return [
         'gerar_pix' => env('LOCX_RECORRENCIA_GERAR_PIX', false),
         'enviar_whatsapp' => env('LOCX_RECORRENCIA_ENVIAR_WHATSAPP', false),
         'enviar_email' => env('LOCX_RECORRENCIA_ENVIAR_EMAIL', false),
+        'enviar_telegram' => env('LOCX_RECORRENCIA_ENVIAR_TELEGRAM', false),
         'dias_antecedencia' => (int) env('LOCX_RECORRENCIA_DIAS_ANTECEDENCIA', 0),
         'max_por_contrato' => (int) env('LOCX_RECORRENCIA_MAX_POR_CONTRATO', 12),
         'horario' => env('LOCX_RECORRENCIA_HORARIO', '07:00'),
+    ],
+    'telegram' => [
+        'espelhar_automacoes_whatsapp' => env('LOCX_TELEGRAM_ESPELHAR_AUTOMACOES_WHATSAPP', true),
     ],
     'crm' => [
         'automacoes_ativas' => env('LOCX_CRM_AUTOMACOES_ATIVAS', true),

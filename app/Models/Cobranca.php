@@ -32,6 +32,16 @@ class Cobranca extends BaseModel
         return $this->belongsTo(Loja::class);
     }
 
+    public function telegramLogs(): HasMany
+    {
+        return $this->hasMany(TelegramLog::class);
+    }
+
+    public function campanhaItens(): HasMany
+    {
+        return $this->hasMany(CobrancaCampanhaItem::class);
+    }
+
     public function pagamentos(): HasMany
     {
         return $this->hasMany(Pagamento::class);

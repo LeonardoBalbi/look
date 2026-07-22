@@ -1,0 +1,26 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Manual Telegram e Campanhas Multicanal</title>
+<style>
+body{margin:0;background:#f3f7f8;color:#172033;font:16px/1.55 Arial,sans-serif}.wrap{max-width:900px;margin:32px auto;padding:0 18px}.hero{background:linear-gradient(135deg,#087ea4,#1f9bd1);color:white;padding:30px;border-radius:20px;box-shadow:0 16px 42px #0b466326}.card{background:white;border:1px solid #dce8ec;border-radius:16px;padding:22px;margin-top:18px;box-shadow:0 8px 24px #1c40500d}h1,h2{margin-top:0}code,pre{background:#101c2b;color:#dff8ff;border-radius:10px}code{padding:2px 6px}pre{padding:16px;overflow:auto}.step{display:grid;grid-template-columns:38px 1fr;gap:12px;margin:14px 0}.n{display:grid;place-items:center;width:34px;height:34px;border-radius:50%;background:#e0f4fb;color:#087ea4;font-weight:bold}.note{border-left:4px solid #f59e0b;background:#fff8e8;padding:12px 16px;border-radius:8px}.ok{border-left-color:#10b981;background:#ecfdf5}li{margin:7px 0}
+</style>
+</head>
+<body><main class="wrap">
+<section class="hero"><h1>Telegram + Campanhas Multicanal</h1><p>Configure disparos de cobrança por WhatsApp, e-mail e Telegram dentro do mesmo CRM.</p></section>
+<section class="card"><h2>Atualizar o sistema</h2><pre>php artisan migrate --force
+php artisan optimize:clear</pre></section>
+<section class="card"><h2>Configurar o bot</h2>
+<div class="step"><span class="n">1</span><div>Crie o bot no <strong>BotFather</strong> e copie o token.</div></div>
+<div class="step"><span class="n">2</span><div>No CRM, abra <strong>Telegram</strong>, informe token, usuário do bot e segredo do webhook.</div></div>
+<div class="step"><span class="n">3</span><div>Salve e clique em <strong>Testar bot</strong>.</div></div>
+<div class="step"><span class="n">4</span><div>Clique em <strong>Configurar webhook</strong>. O endereço será <code>/webhooks/telegram</code>.</div></div>
+<p class="note">O domínio precisa usar HTTPS e o APP_URL do arquivo .env deve estar correto.</p>
+</section>
+<section class="card"><h2>Vincular clientes</h2><p>O cliente abre o Portal do Cliente, toca em <strong>Vincular Telegram</strong> e pressiona <strong>Iniciar</strong> no bot. Depois disso, o cadastro fica apto a receber avisos.</p></section>
+<section class="card"><h2>Criar campanha</h2><ol><li>Abra <strong>Cobranças</strong>.</li><li>Escolha o público.</li><li>Marque WhatsApp, e-mail e/ou Telegram.</li><li>Escolha enviar em todos ou tentar por prioridade.</li><li>Revise a mensagem e envie agora ou agende.</li></ol><p class="note ok">O relatório por destinatário mostra quais canais funcionaram e quais falharam.</p></section>
+<section class="card"><h2>Ativar agendamentos no cPanel</h2><pre>* * * * * cd /home/USUARIO/public_html/PROJETO &amp;&amp; php artisan schedule:run &gt;&gt; /dev/null 2&gt;&amp;1</pre></section>
+<section class="card"><h2>Observação do WhatsApp oficial</h2><p>No modo oficial da Meta, o WhatsApp usa o template aprovado configurado no próprio módulo. O texto livre da campanha segue diretamente para e-mail, Telegram e WhatsApp Evolution/demo.</p></section>
+</main></body></html>

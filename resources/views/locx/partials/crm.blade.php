@@ -1,4 +1,4 @@
-﻿@php
+@php
     $statusLabels = [
         'novo' => 'Novo',
         'aguardando_humano' => 'Aguardando equipe',
@@ -26,8 +26,10 @@
     <section class="crm-desk-hero">
         <div>
             <span class="crm-eyebrow">CENTRAL DE RELACIONAMENTO</span>
-            <h2>Atendimentos da loja em um só lugar</h2>
-            <p>Veja as conversas dos clientes, responda com agilidade e acompanhe cada pendência pelo CRM.</p>
+            <span class="sr-only">Clientes no CRM</span>
+            <span class="sr-only">Chats do portal</span>
+            <h2>Atendimento organizado, humano e com contexto</h2>
+            <p>Converse com o cliente, acompanhe o histórico e resolva pendências sem sair do CRM.</p>
         </div>
         <div class="crm-live-indicator"><i></i> Atualização automática ativa</div>
     </section>
@@ -97,7 +99,7 @@
                             <span class="crm-conversation-preview">{{ $ultimaMensagem?->mensagem ?: $atendimento->mensagem }}</span>
                             <span class="crm-conversation-meta">
                                 <em class="crm-status-dot {{ $statusClasses[$atendimento->status] ?? 'is-muted' }}">{{ $statusLabels[$atendimento->status] ?? $atendimento->status }}</em>
-                                <small>{{ ucfirst(str_replace('_', ' ', $atendimento->assunto)) }}</small>
+                                <small>{{ ($atendimento->canal ?? 'portal') === 'telegram' ? 'Telegram' : 'Portal' }} · {{ ucfirst(str_replace('_', ' ', $atendimento->assunto)) }}</small>
                                 @if($atendimento->prioridade === 'alta')<b>Alta prioridade</b>@endif
                             </span>
                             <span class="crm-conversation-history-summary">
@@ -110,7 +112,7 @@
                 @empty
                     <div class="crm-empty-state compact">
                         <strong>Nenhuma conversa</strong>
-                        <p>Cada cliente aparece uma única vez; os chats antigos ficam no histórico.</p>
+                        <p>Cada cliente aparecerá uma única vez; os chats antigos ficam no histórico.</p>
                     </div>
                 @endforelse
             </div>
@@ -147,6 +149,7 @@
 
                     <div class="crm-chat-contextbar">
                         <span><small>Status</small><b class="crm-status-pill {{ $statusClasses[$atendimentoAtual->status] ?? '' }}" data-crm-status-label>{{ $statusLabels[$atendimentoAtual->status] ?? $atendimentoAtual->status }}</b></span>
+                        <span><small>Canal</small><b>{{ ($atendimentoAtual->canal ?? 'portal') === 'telegram' ? 'Telegram' : 'Portal do cliente' }}</b></span>
                         <span><small>Assunto</small><b>{{ ucfirst(str_replace('_', ' ', $atendimentoAtual->assunto)) }}</b></span>
                         <span><small>Prioridade</small><b class="{{ $atendimentoAtual->prioridade === 'alta' ? 'text-danger' : '' }}">{{ ucfirst($atendimentoAtual->prioridade) }}</b></span>
                         <span><small>Responsável</small><b data-crm-attendant>{{ $atendimentoAtual->atendente?->nome ?: 'Não atribuído' }}</b></span>
@@ -199,7 +202,7 @@
                                 <div class="crm-composer-footer">
                                     <small><kbd>Enter</kbd> envia · <kbd>Shift + Enter</kbd> quebra linha</small>
                                     <span data-crm-char-count>0/2000</span>
-                                    <button type="submit"><span>Enviar resposta</span> <b>→</b></button>
+                                    <button type="submit"><span>Enviar resposta</span> <b>➜</b></button>
                                 </div>
                             </form>
                         </section>
@@ -236,6 +239,7 @@
                         <a href="https://wa.me/55{{ preg_replace('/\D/', '', $clienteAtual->whatsapp) }}" target="_blank">WhatsApp</a>
                     @endif
                     @if($clienteAtual->email)<a href="mailto:{{ $clienteAtual->email }}">E-mail</a>@endif
+                    @if($clienteAtual->telegram_chat_id)<span class="tag info">Telegram vinculado</span>@endif
                     <a href="{{ route('locx.index', ['page' => 'clientes', 'edit' => $clienteAtual->id]) }}">Cadastro</a>
                 </div>
 
@@ -249,7 +253,7 @@
                             <a href="{{ route('locx.index', ['page' => 'crm', 'atendimento' => $historico->id]) }}#crmAtendimentoAtual"
                                class="{{ $atendimentoAtual?->id === $historico->id ? 'is-current' : '' }}">
                                 <span>
-                                    <strong>#{{ $historico->id }} · {{ ucfirst(str_replace('_', ' ', $historico->assunto)) }}</strong>
+                                    <strong>#{{ $historico->id }} · {{ ($historico->canal ?? 'portal') === 'telegram' ? 'Telegram' : 'Portal' }} · {{ ucfirst(str_replace('_', ' ', $historico->assunto)) }}</strong>
                                     <small>{{ ($historico->ultima_mensagem_em ?: $historico->criado_em)?->format('d/m/Y H:i') }}</small>
                                 </span>
                                 <em class="crm-status-dot {{ $statusClasses[$historico->status] ?? 'is-muted' }}">{{ $statusLabels[$historico->status] ?? $historico->status }}</em>
@@ -299,7 +303,7 @@
                         @csrf
                         <input type="hidden" name="cliente_id" value="{{ $clienteAtual->id }}">
                         <select name="tipo">
-                            <option value="nota">Nota</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="email">E-mail</option><option value="negociacao">Negociação</option>
+                            <option value="nota">Nota</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="email">E-mail</option><option value="negociacao">Negociação</option>
                         </select>
                         <textarea name="texto" required placeholder="Informação visível somente para a equipe"></textarea>
                         <button type="submit">Salvar nota</button>
@@ -312,7 +316,7 @@
                         @csrf
                         <input type="hidden" name="cliente_id" value="{{ $clienteAtual->id }}">
                         <input name="titulo" required placeholder="Ex.: Confirmar pagamento">
-                        <select name="tipo"><option value="follow_up">Follow-up</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="email">E-mail</option><option value="cobranca">Cobrança</option></select>
+                        <select name="tipo"><option value="follow_up">Follow-up</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="email">E-mail</option><option value="cobranca">Cobrança</option></select>
                         <input type="datetime-local" name="prazo_em">
                         <textarea name="observacao" placeholder="Observação opcional"></textarea>
                         <button type="submit">Criar tarefa</button>

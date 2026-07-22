@@ -267,6 +267,7 @@ class PagBankService
                 'status' => $status,
                 'pagbank_status' => $statusPagbank,
                 'whatsapp_status' => $status === 'paga' ? 'conciliado' : $cobranca->whatsapp_status,
+                'telegram_status' => $status === 'paga' ? 'conciliado' : $cobranca->telegram_status,
                 'atualizado_em' => now(),
             ]);
 

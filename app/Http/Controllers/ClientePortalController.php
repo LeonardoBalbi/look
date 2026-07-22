@@ -7,6 +7,7 @@ use App\Models\Cobranca;
 use App\Models\PortalAtendimento;
 use App\Models\PortalAtendimentoMensagem;
 use App\Services\CobrancaCalculator;
+use App\Services\TelegramService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -18,7 +19,10 @@ class ClientePortalController extends Controller
 {
     private const CHAT_INACTIVITY_MINUTES = 15;
 
-    public function __construct(private readonly CobrancaCalculator $calculator) {}
+    public function __construct(
+        private readonly CobrancaCalculator $calculator,
+        private readonly TelegramService $telegram,
+    ) {}
 
     public function index(Request $request): View
     {
@@ -105,12 +109,14 @@ class ClientePortalController extends Controller
             ->each(fn (PortalAtendimento $atendimento) => $this->encerrarPorInatividade($atendimento));
 
         $cliente->load('portalAtendimentos.mensagens');
-        $atendimentosPortal = $cliente->portalAtendimentos->sortByDesc('id')->take(10)->values();
+        $atendimentosPortal = $cliente->portalAtendimentos->where('canal', 'portal')->sortByDesc('id')->take(10)->values();
         $chatAtendimento = $cliente->portalAtendimentos
+            ->where('canal', 'portal')
             ->sortByDesc('id')
             ->first(fn (PortalAtendimento $atendimento) => in_array($atendimento->status, ['novo', 'em_atendimento', 'aguardando_humano', 'respondido'], true)
                 && ! $this->atendimentoExpirouPorInatividade($atendimento));
         $ultimoAtendimentoEncerrado = $cliente->portalAtendimentos
+            ->where('canal', 'portal')
             ->sortByDesc('id')
             ->first(fn (PortalAtendimento $atendimento) => $atendimento->status === 'fechado');
         $labelsAssuntos = array_values($this->chatAssuntos());
@@ -136,6 +142,9 @@ class ClientePortalController extends Controller
             'chatAssuntos' => $this->chatAssuntos(),
             'saldoAberto' => $saldoAberto,
             'saldoAtrasado' => $saldoAtrasado,
+            'telegramLink' => $this->telegram->linkUrl($cliente),
+            'telegramAtendimentoLink' => $this->telegram->atendimentoLinkUrl($cliente),
+            'telegramConfig' => $this->telegram->config(),
         ]);
     }
 

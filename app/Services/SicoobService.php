@@ -358,6 +358,7 @@ class SicoobService
                 'status' => $status,
                 'sicoob_status' => $statusSicoob,
                 'whatsapp_status' => $status === 'paga' ? 'conciliado' : $cobranca->whatsapp_status,
+                'telegram_status' => $status === 'paga' ? 'conciliado' : $cobranca->telegram_status,
                 'atualizado_em' => now(),
             ]);
 

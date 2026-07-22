@@ -50,8 +50,15 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/pix/conciliar', [LocxController::class, 'conciliarPix'])->name('locx.pix.conciliar');
     Route::post('/cobrancas/{cobranca}/pix', [LocxController::class, 'gerarPix'])->name('locx.cobrancas.pix');
     Route::post('/cobrancas/{cobranca}/whatsapp', [LocxController::class, 'enviarWhatsApp'])->name('locx.cobrancas.whatsapp');
+    Route::post('/cobrancas/{cobranca}/telegram', [LocxController::class, 'enviarTelegram'])->name('locx.cobrancas.telegram');
     Route::post('/configuracoes/whatsapp', [LocxController::class, 'salvarWhatsApp'])->name('locx.whatsapp.salvar');
     Route::post('/configuracoes/whatsapp/testar', [LocxController::class, 'testarWhatsApp'])->name('locx.whatsapp.testar');
+    Route::post('/configuracoes/telegram', [LocxController::class, 'salvarTelegram'])->name('locx.telegram.salvar');
+    Route::post('/configuracoes/telegram/testar', [LocxController::class, 'testarTelegram'])->name('locx.telegram.testar');
+    Route::post('/configuracoes/telegram/webhook', [LocxController::class, 'configurarWebhookTelegram'])->name('locx.telegram.webhook');
+    Route::post('/cobrancas/campanhas', [LocxController::class, 'criarCampanhaCobranca'])->name('locx.cobrancas.campanhas.criar');
+    Route::post('/cobrancas/campanhas/{campanha}/executar', [LocxController::class, 'executarCampanhaCobranca'])->name('locx.cobrancas.campanhas.executar');
+    Route::post('/cobrancas/campanhas/{campanha}/cancelar', [LocxController::class, 'cancelarCampanhaCobranca'])->name('locx.cobrancas.campanhas.cancelar');
     Route::post('/configuracoes/pagbank', [LocxController::class, 'salvarPagBank'])->name('locx.pagbank.salvar');
     Route::post('/configuracoes/asaas', [LocxController::class, 'salvarAsaas'])->name('locx.asaas.salvar');
     Route::post('/configuracoes/sicoob', [LocxController::class, 'salvarSicoob'])->name('locx.sicoob.salvar');
@@ -61,6 +68,7 @@ Route::middleware('auth')->group(function (): void {
 });
 
 Route::match(['get', 'post'], '/webhooks/whatsapp', [WebhookController::class, 'whatsapp'])->name('locx.webhook-whatsapp');
+Route::post('/webhooks/telegram', [WebhookController::class, 'telegram'])->name('locx.webhook-telegram');
 Route::post('/webhooks/pagbank', [WebhookController::class, 'pagBank'])->name('locx.webhook-pagbank');
 Route::post('/webhooks/asaas', [WebhookController::class, 'asaas'])->name('locx.webhook-asaas');
 Route::post('/webhooks/sicoob', [WebhookController::class, 'sicoob'])->name('locx.webhook-sicoob');
@@ -70,6 +78,7 @@ Route::get('/locx/index.php', fn () => redirect()->route('locx.index', request()
 Route::get('/locx/login.php', fn () => redirect()->route('locx.login', status: 301));
 Route::get('/locx/logout.php', fn () => redirect()->route('locx.login', status: 301));
 Route::match(['get', 'post'], '/locx/webhooks/whatsapp.php', [WebhookController::class, 'whatsapp']);
+Route::post('/locx/webhooks/telegram.php', [WebhookController::class, 'telegram']);
 Route::post('/locx/webhooks/pagbank.php', [WebhookController::class, 'pagBank']);
 Route::post('/locx/webhooks/asaas.php', [WebhookController::class, 'asaas']);
 Route::post('/locx/webhooks/sicoob.php', [WebhookController::class, 'sicoob']);

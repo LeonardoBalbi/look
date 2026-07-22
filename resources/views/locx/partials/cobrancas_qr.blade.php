@@ -1,6 +1,6 @@
 <div class="table-wrap">
     <table>
-        <thead><tr><th>ID</th><th>Cliente</th><th>Vencimento</th><th>Principal</th><th>Pago</th><th>Atualizado</th><th>PIX/WhatsApp</th><th>Gateway PIX</th><th>Status</th></tr></thead>
+        <thead><tr><th>ID</th><th>Cliente</th><th>Vencimento</th><th>Principal</th><th>Pago</th><th>Atualizado</th><th>PIX/Canais</th><th>Gateway PIX</th><th>Status</th></tr></thead>
         <tbody>
         @forelse ($cobrancas as $cobranca)
             <tr>
@@ -12,7 +12,9 @@
                 <td>{{ \App\Support\Locx::moeda($cobranca->valor_atualizado) }}</td>
                 <td>
                     <div class="pix-cell">
-                        <div>{{ $cobranca->pix_copia_cola ? 'PIX gerado' : 'Sem PIX' }} / {!! \App\Support\Locx::status($cobranca->whatsapp_status) !!}</div>
+                        <div>{{ $cobranca->pix_copia_cola ? 'PIX gerado' : 'Sem PIX' }}</div>
+                        <small>WhatsApp: {!! \App\Support\Locx::status($cobranca->whatsapp_status) !!}</small><br>
+                        <small>Telegram: {!! \App\Support\Locx::status($cobranca->telegram_status ?? 'pendente') !!}</small>
                         @if ($cobranca->pix_copia_cola)
                             @php($qrImagem = \App\Support\PixQrCode::dataUri($cobranca->pix_copia_cola, $cobranca->pix_qrcode))
                             <div class="pix-tools">

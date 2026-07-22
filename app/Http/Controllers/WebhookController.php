@@ -6,6 +6,7 @@ use App\Services\AsaasService;
 use App\Services\PagBankService;
 use App\Services\SicoobService;
 use App\Services\WhatsAppService;
+use App\Services\TelegramService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
@@ -45,6 +46,18 @@ class WebhookController extends Controller
         $resultado = $service->processarWebhook($request->getContent());
 
         return response()->json($resultado, ($resultado['ok'] ?? false) ? 200 : 400);
+    }
+
+    public function telegram(Request $request, TelegramService $service): JsonResponse
+    {
+        $webhookTipo = $service->tipoWebhook($request->header('X-Telegram-Bot-Api-Secret-Token'));
+        if (! $webhookTipo) {
+            return response()->json(['ok' => false, 'erro' => 'Segredo do webhook inválido.'], 401);
+        }
+
+        $resultado = $service->processarWebhook($request->all(), $webhookTipo);
+
+        return response()->json($resultado, 200);
     }
 
     public function whatsapp(Request $request, WhatsAppService $service): Response

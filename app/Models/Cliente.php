@@ -20,6 +20,9 @@ class Cliente extends Authenticatable
         'crm_ultimo_contato_em' => 'datetime',
         'portal_ativo' => 'boolean',
         'ultimo_login_em' => 'datetime',
+        'telegram_notificacoes' => 'boolean',
+        'telegram_vinculado_em' => 'datetime',
+        'telegram_atendimento_vinculado_em' => 'datetime',
     ];
 
     public function getAuthPassword(): string
@@ -40,6 +43,11 @@ class Cliente extends Authenticatable
     public function cobrancas(): HasMany
     {
         return $this->hasMany(Cobranca::class);
+    }
+
+    public function telegramLogs(): HasMany
+    {
+        return $this->hasMany(TelegramLog::class);
     }
 
     public function portalAtendimentos(): HasMany
