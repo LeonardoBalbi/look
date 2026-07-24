@@ -487,6 +487,37 @@ function locxDonut(id, items){
       if(textarea) textarea.focus();
     }
   }
+  function billingMatchesFilter(row, filter){
+    const status=(row.dataset.status || '').toLowerCase();
+    const due=row.dataset.due || '';
+    const pix=row.dataset.pix || 'no';
+    const whatsapp=(row.dataset.whatsapp || '').toLowerCase();
+    const telegram=(row.dataset.telegram || '').toLowerCase();
+    if(filter==='overdue') return due==='overdue';
+    if(filter==='today') return due==='today';
+    if(filter==='open') return ['aberta','parcial','pendente','atrasada'].includes(status);
+    if(filter==='without-pix') return pix==='no';
+    if(filter==='with-pix') return pix==='yes';
+    if(filter==='whatsapp-sent') return ['enviado','sucesso','sent','ok'].includes(whatsapp);
+    if(filter==='telegram-sent') return ['enviado','sucesso','sent','ok'].includes(telegram);
+    return true;
+  }
+  function applyBillingFilters(scope){
+    if(!scope) return;
+    const panel=scope.closest('.panel') || document;
+    const term=(scope.querySelector('[data-billing-search]')?.value || '').trim().toLowerCase();
+    const filter=scope.querySelector('[data-billing-filter].is-active')?.dataset.billingFilter || 'all';
+    let visible=0;
+    panel.querySelectorAll('[data-billing-row]').forEach(row=>{
+      const matchesSearch=!term || (row.dataset.search || '').includes(term);
+      const matchesFilter=billingMatchesFilter(row, filter);
+      const show=matchesSearch && matchesFilter;
+      row.hidden=!show;
+      if(show) visible++;
+    });
+    panel.querySelectorAll('[data-billing-visible-count]').forEach(el=>el.textContent=String(visible));
+    panel.querySelectorAll('[data-billing-empty]').forEach(row=>row.hidden=visible!==0);
+  }
   document.addEventListener('DOMContentLoaded', function(){
     const s=getSidebar(); if(s) s.id = s.id || 'sidebarMenu';
     document.querySelectorAll('.mobile-menu-toggle,.hamburger,#menuToggle,[data-menu-toggle]').forEach(btn=>{
@@ -505,6 +536,18 @@ function locxDonut(id, items){
       });
     });
     document.querySelectorAll('.sidebar .menu a').forEach(a=>a.addEventListener('click',()=>{ if(window.innerWidth<=768) closeMenu(); }));
+    document.querySelectorAll('[data-billing-tools]').forEach(scope=>{
+      applyBillingFilters(scope);
+      scope.querySelectorAll('[data-billing-search]').forEach(input=>{
+        input.addEventListener('input', ()=>applyBillingFilters(scope));
+      });
+      scope.querySelectorAll('[data-billing-filter]').forEach(button=>{
+        button.addEventListener('click', ()=>{
+          scope.querySelectorAll('[data-billing-filter]').forEach(item=>item.classList.toggle('is-active', item===button));
+          applyBillingFilters(scope);
+        });
+      });
+    });
     document.querySelectorAll('.pix-copy-btn').forEach(btn=>{
       btn.addEventListener('click', async function(){
         const pix=this.dataset.pix || '';

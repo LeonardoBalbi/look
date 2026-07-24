@@ -20,7 +20,7 @@
                             <div class="pix-tools">
                                 <button type="button" class="btn secondary pix-copy-btn" data-pix="{{ e($cobranca->pix_copia_cola) }}">Copiar PIX</button>
                                 @if ($qrImagem)
-                                    <img class="pix-qr" src="{{ $qrImagem }}" alt="QR Code PIX da cobranca #{{ $cobranca->id }}">
+                                    <img class="pix-qr" src="{{ $qrImagem }}" alt="QR Code PIX da cobrança #{{ $cobranca->id }}">
                                 @endif
                             </div>
                             <code class="pix-code">{{ \Illuminate\Support\Str::limit($cobranca->pix_copia_cola, 52) }}</code>

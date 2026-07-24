@@ -49,9 +49,43 @@
         </div>
     </aside>
     <main class="main">
+        @php
+            $pageSubtitles = [
+                'dashboard' => 'Indicadores essenciais da operação, financeiro e cobrança em um só lugar.',
+                'clientes' => 'Cadastro, portal do cliente e relacionamento reunidos para consulta rápida.',
+                'motos' => 'Controle da frota por loja, placa e status operacional.',
+                'contratos' => 'Locações ativas, recorrência de cobrança e documentos de contrato.',
+                'cobrancas' => 'Geração de PIX, canais de cobrança e acompanhamento de status.',
+                'inadimplencia' => 'Clientes em atraso, saldos atualizados e prioridades de recuperação.',
+                'crm' => 'Atendimento, histórico e próximas ações com contexto do cliente.',
+                'bancos' => 'Configuração dos gateways PIX e status de integração.',
+                'whatsapp' => 'Configuração da integração oficial e histórico de envios.',
+                'telegram' => 'Bots de aviso, atendimento e logs de mensagens.',
+                'configuracoes' => 'Acessos rápidos para integrações e parâmetros operacionais.',
+            ];
+
+            $quickActions = [
+                'clientes' => [['label' => 'Novo cliente', 'href' => route('locx.index', ['page' => 'clientes'])]],
+                'motos' => [['label' => 'Nova moto', 'href' => route('locx.index', ['page' => 'motos'])]],
+                'contratos' => [['label' => 'Novo contrato', 'href' => route('locx.index', ['page' => 'contratos'])]],
+                'cobrancas' => [['label' => 'Nova cobrança', 'href' => '#nova-cobranca']],
+                'crm' => [['label' => 'Abrir clientes', 'href' => route('locx.index', ['page' => 'clientes'])]],
+                'whatsapp' => [['label' => 'Testar integração', 'href' => '#testar-integracao']],
+                'telegram' => [['label' => 'Testar bot', 'href' => '#testar-bot']],
+            ][$page] ?? [];
+        @endphp
         <header class="topbar">
-            <div><h1>{{ $pages[$page] }}</h1><p>Sistema web LocX com gestão multiunidades, operação, financeiro e cobrança.</p></div>
-            <div class="toolbar"><a class="btn secondary" href="{{ route('locx.index', ['page' => 'dashboard']) }}">Visão Geral</a></div>
+            <div class="topbar-title">
+                <span>{{ $page === 'dashboard' ? 'Painel executivo' : 'Área operacional' }}</span>
+                <h1>{{ $pages[$page] }}</h1>
+                <p>{{ $pageSubtitles[$page] ?? 'Sistema web LocX com gestão multiunidades, operação, financeiro e cobrança.' }}</p>
+            </div>
+            <div class="toolbar">
+                @foreach ($quickActions as $action)
+                    <a class="btn" href="{{ $action['href'] }}">{{ $action['label'] }}</a>
+                @endforeach
+                <a class="btn secondary" href="{{ route('locx.index', ['page' => 'dashboard']) }}">Visão Geral</a>
+            </div>
         </header>
 
         @if (session('success'))<div class="notice"><strong>{{ session('success') }}</strong></div>@endif
@@ -116,14 +150,14 @@
                         <label>E-mail<input type="email" name="email" value="{{ old('email',$clienteEdit?->email) }}"></label>
                         <label>Notificações Telegram<select name="telegram_notificacoes"><option value="1" @selected(old('telegram_notificacoes',$clienteEdit?->telegram_notificacoes ?? true))>permitidas</option><option value="0" @selected(!old('telegram_notificacoes',$clienteEdit?->telegram_notificacoes ?? true))>desativadas</option></select></label>
                         <label>Portal do cliente<select name="portal_ativo"><option value="0" @selected(!old('portal_ativo',$clienteEdit?->portal_ativo ?? false))>bloqueado</option><option value="1" @selected(old('portal_ativo',$clienteEdit?->portal_ativo ?? false))>liberado</option></select></label>
-                        <label class="span-2">Senha do portal<input type="password" name="senha_portal" placeholder="{{ $clienteEdit?->senha ? 'Preencha somente para trocar' : 'Minimo 6 caracteres' }}"></label>
+                        <label class="span-2">Senha do portal<input type="password" name="senha_portal" placeholder="{{ $clienteEdit?->senha ? 'Preencha somente para trocar' : 'Mínimo 6 caracteres' }}"></label>
                         <label class="span-3">Endereço<textarea name="endereco">{{ old('endereco',$clienteEdit?->endereco) }}</textarea></label>
                         <label>Foto Cliente<input type="file" name="foto_cliente"></label><label>Documento<input type="file" name="foto_documento"></label><label>Comprovante residência<input type="file" name="comprovante_residencia"></label>
                         <div class="span-3"><button type="submit">Salvar Cliente</button></div>
                     </form>
                 </div>
-                <div class="panel"><h2>Clientes Cadastrados</h2><div class="table-wrap"><table><tr><th>Nome</th><th>CPF</th><th>WhatsApp</th><th>Telegram</th><th>Status</th><th>Portal</th><th>Acoes</th></tr>
-                    @foreach($clientes as $cliente)<tr><td>{{ $cliente->nome }}</td><td>{{ $cliente->cpf }}</td><td>{{ $cliente->whatsapp }}</td><td>{!! \App\Support\Locx::status($cliente->telegram_chat_id ? 'vinculado' : 'não vinculado') !!}<br><small>{{ $cliente->telegram_username ? '@'.$cliente->telegram_username : '' }}</small></td><td>{!! \App\Support\Locx::status($cliente->status) !!}</td><td>{!! \App\Support\Locx::status($cliente->portal_ativo ? 'ativo' : 'bloqueado') !!}<br><small>{{ $cliente->ultimo_login_em ? 'Ultimo acesso '.$cliente->ultimo_login_em->format('d/m/Y H:i') : 'sem acesso' }}</small></td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'clientes','edit'=>$cliente->id]) }}">Editar</a> <a class="btn secondary" href="{{ route('locx.index',['page'=>'crm','cliente'=>$cliente->id]) }}">CRM</a></td></tr>@endforeach
+                <div class="panel"><h2>Clientes Cadastrados</h2><div class="table-wrap"><table><tr><th>Nome</th><th>CPF</th><th>WhatsApp</th><th>Telegram</th><th>Status</th><th>Portal</th><th>Ações</th></tr>
+                    @foreach($clientes as $cliente)<tr><td>{{ $cliente->nome }}</td><td>{{ $cliente->cpf }}</td><td>{{ $cliente->whatsapp }}</td><td>{!! \App\Support\Locx::status($cliente->telegram_chat_id ? 'vinculado' : 'não vinculado') !!}<br><small>{{ $cliente->telegram_username ? '@'.$cliente->telegram_username : '' }}</small></td><td>{!! \App\Support\Locx::status($cliente->status) !!}</td><td>{!! \App\Support\Locx::status($cliente->portal_ativo ? 'ativo' : 'bloqueado') !!}<br><small>{{ $cliente->ultimo_login_em ? 'Último acesso '.$cliente->ultimo_login_em->format('d/m/Y H:i') : 'sem acesso' }}</small></td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'clientes','edit'=>$cliente->id]) }}">Editar</a> <a class="btn secondary" href="{{ route('locx.index',['page'=>'crm','cliente'=>$cliente->id]) }}">CRM</a></td></tr>@endforeach
                 </table></div></div>
             </div>
 
@@ -223,7 +257,7 @@
         @elseif (in_array($page, ['financeiro','cobrancas'], true))
             <div class="cards"><div class="metric"><span>Total aberto</span><strong>{{ \App\Support\Locx::moeda($financeiroResumo['aberto']) }}</strong></div><div class="metric ok"><span>Pago mês</span><strong>{{ \App\Support\Locx::moeda($financeiroResumo['pagoMes']) }}</strong></div><div class="metric warn"><span>Parciais</span><strong>{{ $financeiroResumo['parciais'] }}</strong></div><div class="metric danger"><span>Atrasadas</span><strong>{{ $financeiroResumo['atrasadas'] }}</strong></div></div>
             <div class="grid side">
-                <div class="panel">
+                <div class="panel" id="{{ $page === 'cobrancas' ? 'nova-cobranca' : 'registrar-pagamento' }}">
                     @if ($page === 'cobrancas')
                         <h2>Nova Cobrança</h2>
                         <form method="post" action="{{ route('locx.cobrancas.salvar') }}" class="form-grid">@csrf
@@ -249,6 +283,23 @@
                     @endif
                 </div>
                 <div class="panel"><h2>{{ $page === 'cobrancas' ? 'Cobranças e envios' : 'Títulos e recebimentos' }}</h2>
+                    <div class="billing-tools" data-billing-tools>
+                        <label class="billing-search">
+                            <span>Buscar</span>
+                            <input type="search" placeholder="Cliente, ID, placa, status ou gateway" data-billing-search>
+                        </label>
+                        <div class="billing-filter-row" role="tablist" aria-label="Filtrar cobranças">
+                            <button type="button" class="is-active" data-billing-filter="all">Todas</button>
+                            <button type="button" data-billing-filter="overdue">Atrasadas</button>
+                            <button type="button" data-billing-filter="today">Vencem hoje</button>
+                            <button type="button" data-billing-filter="open">Em aberto</button>
+                            <button type="button" data-billing-filter="without-pix">Sem PIX</button>
+                            <button type="button" data-billing-filter="with-pix">PIX gerado</button>
+                            <button type="button" data-billing-filter="whatsapp-sent">WhatsApp enviado</button>
+                            <button type="button" data-billing-filter="telegram-sent">Telegram enviado</button>
+                        </div>
+                        <small><strong data-billing-visible-count>{{ $cobrancas->count() }}</strong> cobranças visíveis</small>
+                    </div>
                     @include('locx.partials.cobrancas_qr')
                 </div>
             </div>
@@ -475,7 +526,7 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                     <label>Template cobrança<input name="template_cobranca" value="{{ $whatsappConfig->template_cobranca }}"></label><label>Idioma do template<input name="template_language" value="{{ $whatsappConfig->template_language ?: 'pt_BR' }}" placeholder="pt_BR"></label><label>Template lembrete<input name="template_lembrete" value="{{ $whatsappConfig->template_lembrete }}"></label><label>Template bloqueio<input name="template_bloqueio" value="{{ $whatsappConfig->template_bloqueio }}"></label><div class="span-3"><button type="submit">Salvar Configuração</button></div>
                 </form>
             </div>
-            <div class="grid side"><div class="panel"><h2>Testar conexão</h2><form method="post" action="{{ route('locx.whatsapp.testar') }}">@csrf<button class="btn success">Validar integração</button></form><p>No modo oficial, valida a Meta e o template. No modo Evolution, valida a URL, instância e API Key.</p><p><strong>URL do Webhook:</strong><br><code>{{ route('locx.webhook-whatsapp') }}</code></p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_whatsapp.html') }}" target="_blank">Abrir manual WhatsApp</a></p></div>
+            <div class="grid side"><div class="panel" id="testar-integracao"><h2>Testar conexão</h2><form method="post" action="{{ route('locx.whatsapp.testar') }}">@csrf<button class="btn success">Validar integração</button></form><p>No modo oficial, valida a Meta e o template. No modo Evolution, valida a URL, instância e API Key.</p><p><strong>URL do Webhook:</strong><br><code>{{ route('locx.webhook-whatsapp') }}</code></p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_whatsapp.html') }}" target="_blank">Abrir manual WhatsApp</a></p></div>
                 <div class="panel"><h2>Últimos envios</h2><div class="table-wrap"><table><tr><th>Data</th><th>Cliente</th><th>Telefone</th><th>Status</th><th>HTTP</th><th>Detalhe</th></tr>@foreach($whatsappLogs as $log)<tr><td>{{ $log->criado_em?->format('d/m/Y H:i') }}</td><td>{{ $log->cliente?->nome ?? '-' }}</td><td>{{ $log->telefone }}</td><td>{!! \App\Support\Locx::status($log->status) !!}</td><td>{{ $log->http_code ?? '-' }}</td><td title="{{ $log->erro ?: $log->resposta_api }}">{{ \Illuminate\Support\Str::limit($log->erro ?: $log->resposta_api, 90) ?: '-' }}</td></tr>@endforeach</table></div></div>
             </div>
 
@@ -483,11 +534,11 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
             <div class="cards">
                 <div class="metric info"><span>Clientes vinculados</span><strong>{{ $telegramVinculados }}</strong><small>aptos a receber mensagens</small></div>
                 <div class="metric {{ $telegramConfig->ativo ? 'ok' : 'danger' }}"><span>Integração</span><strong>{{ $telegramConfig->modo === 'api' ? 'API' : 'DEMO' }}</strong><small>{{ $telegramConfig->ativo ? 'ativa' : 'inativa' }}</small></div>
-                <div class="metric"><span>Bot avisos</span><strong>{{ $telegramConfig->bot_username ? '@'.$telegramConfig->bot_username : '-' }}</strong><small>cobrancas e lembretes</small></div>
+                <div class="metric"><span>Bot avisos</span><strong>{{ $telegramConfig->bot_username ? '@'.$telegramConfig->bot_username : '-' }}</strong><small>cobranças e lembretes</small></div>
                 <div class="metric"><span>Bot atendimento</span><strong>{{ $telegramConfig->atendimento_bot_username ? '@'.$telegramConfig->atendimento_bot_username : '-' }}</strong><small>chat no CRM</small></div>
             </div>
             <div class="grid side">
-                <div class="panel"><h2>Telegram Bot</h2><p>Configure um bot para avisos de cobranca e outro bot opcional para atendimento no CRM.</p>
+                <div class="panel"><h2>Telegram Bot</h2><p>Configure um bot para avisos de cobrança e outro bot opcional para atendimento no CRM.</p>
                     <form method="post" action="{{ route('locx.telegram.salvar') }}" class="form-grid">@csrf
                         <label>Modo<select name="modo"><option value="demo" @selected($telegramConfig->modo==='demo')>Demo / Simulado</option><option value="api" @selected($telegramConfig->modo==='api')>API oficial</option></select></label>
                         <label>Status<select name="ativo"><option value="1" @selected($telegramConfig->ativo)>Ativo</option><option value="0" @selected(!$telegramConfig->ativo)>Inativo</option></select></label>
@@ -507,7 +558,7 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                         <div class="span-3"><button>Salvar Telegram</button></div>
                     </form>
                 </div>
-                <div class="panel"><h2>Conexao e webhook</h2><p><strong>Webhook publico:</strong><br><code>{{ route('locx.webhook-telegram') }}</code></p><p>Primeiro salve os tokens e usuarios dos bots. Depois teste e configure o webhook.</p>
+                <div class="panel" id="testar-bot"><h2>Conexão e webhook</h2><p><strong>Webhook público:</strong><br><code>{{ route('locx.webhook-telegram') }}</code></p><p>Primeiro salve os tokens e usuários dos bots. Depois teste e configure o webhook.</p>
                     <div class="actions"><form method="post" action="{{ route('locx.telegram.testar') }}">@csrf<button class="btn success">Testar bot</button></form><form method="post" action="{{ route('locx.telegram.webhook') }}">@csrf<button class="btn secondary">Configurar webhook</button></form></div>
                     <hr><h3>Como o cliente vincula</h3><p>No Portal do Cliente aparecerá o botão <strong>Vincular Telegram</strong>. O link identifica o cadastro com segurança e grava o chat ID após o cliente pressionar Iniciar.</p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_telegram.html') }}" target="_blank">Abrir manual Telegram</a></p>
                 </div>
