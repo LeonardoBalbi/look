@@ -704,12 +704,7 @@ class ClientePortalController extends Controller
                 'encerrar' => false,
                 'texto' => 'Entendi. Me diga se e renovacao, cancelamento ou duvida sobre contrato. Um atendente da loja continua por aqui com o historico da conversa.',
             ],
-            'moto_parada' => [
-                'humano' => true,
-                'mostrar_opcoes' => false,
-                'encerrar' => false,
-                'texto' => 'Vamos agilizar isso. Envie a placa, sua localizacao e diga se a moto ainda liga. Vou acionar a loja para acompanhar por aqui.',
-            ],
+            'moto_parada' => $this->respostaAutomaticaMotoParada($atendimento),
             'documentos' => [
                 'humano' => true,
                 'mostrar_opcoes' => false,
@@ -823,5 +818,156 @@ class ClientePortalController extends Controller
             'multa' => 'Multa',
             'outro' => 'Falar com a loja',
         ];
+    }
+
+    private function respostaAutomaticaMotoParada(PortalAtendimento $atendimento): array
+    {
+        $detalhes = $this->detalhesMotoParada($atendimento);
+        $pendencias = array_filter([
+            'placa' => ! $detalhes['placa'],
+            'localizacao' => ! $detalhes['localizacao'],
+            'liga' => $detalhes['liga'] === null,
+        ]);
+
+        if ($pendencias === []) {
+            return [
+                'humano' => true,
+                'mostrar_opcoes' => false,
+                'encerrar' => false,
+                'texto' => 'Recebi a placa '.strtoupper($detalhes['placa']).', a localizacao e que a moto '.($detalhes['liga'] ? 'ainda liga' : 'nao liga').'. Vou acionar a loja para acompanhar por aqui.',
+            ];
+        }
+
+        if (isset($pendencias['placa'])) {
+            return [
+                'humano' => false,
+                'mostrar_opcoes' => false,
+                'encerrar' => false,
+                'texto' => 'Me envie a placa da moto para eu localizar o contrato. Se puder, mande tambem sua localizacao e diga se a moto ainda liga.',
+            ];
+        }
+
+        if (isset($pendencias['localizacao'], $pendencias['liga'])) {
+            return [
+                'humano' => false,
+                'mostrar_opcoes' => false,
+                'encerrar' => false,
+                'texto' => 'Recebi a placa '.strtoupper($detalhes['placa']).'. Agora me mande sua localizacao e diga se a moto ainda liga.',
+            ];
+        }
+
+        if (isset($pendencias['localizacao'])) {
+            return [
+                'humano' => false,
+                'mostrar_opcoes' => false,
+                'encerrar' => false,
+                'texto' => 'Recebi. Falta so sua localizacao para a loja saber onde acionar o atendimento.',
+            ];
+        }
+
+        return [
+            'humano' => false,
+            'mostrar_opcoes' => false,
+            'encerrar' => false,
+            'texto' => 'Recebi. A moto ainda liga? Responda sim ou nao para eu passar o caso completo para a loja.',
+        ];
+    }
+
+    private function detalhesMotoParada(PortalAtendimento $atendimento): array
+    {
+        $detalhes = [
+            'placa' => null,
+            'localizacao' => null,
+            'liga' => null,
+        ];
+
+        $opcoes = $this->chatAssuntos();
+        $aguardandoLocalizacao = false;
+        $mensagens = $atendimento->mensagens()
+            ->get(['remetente', 'mensagem']);
+
+        foreach ($mensagens as $mensagem) {
+            $texto = trim((string) $mensagem->mensagem);
+
+            if ($mensagem->remetente === 'bot') {
+                $botTexto = Str::lower(Str::ascii($texto));
+                $aguardandoLocalizacao = Str::contains($botTexto, [
+                    'falta so sua localizacao',
+                    'mande sua localizacao',
+                    'me mande sua localizacao',
+                ]);
+
+                continue;
+            }
+
+            if ($mensagem->remetente !== 'cliente' || $texto === '' || in_array($texto, $opcoes, true)) {
+                continue;
+            }
+
+            if (! $detalhes['placa'] && preg_match('/\b([A-Z]{3}\s*-?\s*\d[A-Z0-9]\d{2}|[A-Z]{3}\s*-?\s*\d{4})\b/i', $texto, $matches)) {
+                $detalhes['placa'] = strtoupper(preg_replace('/[^A-Z0-9]/i', '', $matches[1]));
+            }
+
+            if ($detalhes['liga'] === null && $this->respostaSobreMotoLiga($texto) !== null) {
+                $detalhes['liga'] = $this->respostaSobreMotoLiga($texto);
+            }
+
+            if (! $detalhes['localizacao']
+                && ($this->pareceLocalizacao($texto) || ($aguardandoLocalizacao && $this->podeSerRespostaDeLocalizacao($texto)))) {
+                $detalhes['localizacao'] = $texto;
+            }
+
+            $aguardandoLocalizacao = false;
+        }
+
+        return $detalhes;
+    }
+
+    private function respostaSobreMotoLiga(string $mensagem): ?bool
+    {
+        $texto = Str::lower(Str::ascii(trim($mensagem)));
+
+        if (preg_match('/^(nao|n|negativo)$/', $texto) === 1
+            || Str::contains($texto, ['nao liga', 'nao esta ligando', 'nao esta funcionando', 'nao funciona', 'nao pega'])) {
+            return false;
+        }
+
+        if (preg_match('/^(sim|s|positivo)$/', $texto) === 1
+            || Str::contains($texto, ['ainda liga', 'liga sim', 'esta ligando', 'ta ligando', 'funciona', 'esta funcionando'])) {
+            return true;
+        }
+
+        return null;
+    }
+
+    private function pareceLocalizacao(string $mensagem): bool
+    {
+        $texto = Str::lower(Str::ascii(trim($mensagem)));
+
+        if ($texto === '' || $this->respostaSobreMotoLiga($mensagem) !== null) {
+            return false;
+        }
+
+        if (preg_match('/^\s*[A-Z]{3}\s*-?\s*\d[A-Z0-9]\d{2}\s*$/i', $mensagem) === 1
+            || preg_match('/^\s*[A-Z]{3}\s*-?\s*\d{4}\s*$/i', $mensagem) === 1) {
+            return false;
+        }
+
+        return Str::contains($texto, ['rua', 'avenida', 'av ', 'bairro', 'posto', 'oficina', 'rodovia', 'br-', 'rj-', 'sp-', 'perto', 'proximo', 'em frente', 'km ', 'praca', 'localizacao', 'local', 'centro', 'estrada', 'condominio', 'shopping', 'mercado', 'igreja', 'escola', 'hospital', 'aqui'])
+            || preg_match('/\b(na|no|em|estou|to|tou)\s+\S+/u', $texto) === 1 && str_word_count($texto) >= 2
+            || preg_match('/\d+/', $texto) === 1 && str_word_count($texto) >= 2
+            || str_word_count($texto) >= 4;
+    }
+
+    private function podeSerRespostaDeLocalizacao(string $mensagem): bool
+    {
+        $texto = trim($mensagem);
+
+        if ($texto === '' || $this->respostaSobreMotoLiga($texto) !== null) {
+            return false;
+        }
+
+        return preg_match('/^\s*[A-Z]{3}\s*-?\s*\d[A-Z0-9]\d{2}\s*$/i', $texto) !== 1
+            && preg_match('/^\s*[A-Z]{3}\s*-?\s*\d{4}\s*$/i', $texto) !== 1;
     }
 }

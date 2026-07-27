@@ -321,7 +321,7 @@ class ClientePortalTest extends TestCase
         $this->actingAs($atendente)
             ->get(route('locx.index', ['page' => 'crm']))
             ->assertOk()
-            ->assertSee('Chats do portal')
+            ->assertSee('Clientes com atendimento')
             ->assertSee('Cliente Chat')
             ->assertSee('Boa tarde, vou continuar seu atendimento por aqui.');
 
@@ -457,6 +457,64 @@ class ClientePortalTest extends TestCase
             ->assertJsonPath('humano', true)
             ->assertJsonPath('mensagens.0.remetente', 'humano')
             ->assertJsonPath('mensagens.0.mensagem', 'Recebido. Pode enviar o comprovante por aqui.');
+    }
+
+    public function test_lau_coleta_dados_de_moto_parada_antes_de_chamar_loja(): void
+    {
+        $loja = Loja::create(['nome' => 'Loja Centro']);
+        $cliente = Cliente::create([
+            'loja_id' => $loja->id,
+            'nome' => 'Cliente Moto',
+            'email' => 'moto@locx.test',
+            'senha' => Hash::make('123456'),
+            'portal_ativo' => true,
+            'status' => 'ativo',
+        ]);
+
+        $this->actingAs($cliente, 'cliente')
+            ->postJson('/portal/chat', ['assunto' => 'moto_parada'])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('assunto', 'moto_parada')
+            ->assertJsonPath('status', 'em_atendimento')
+            ->assertJsonPath('humano', false)
+            ->assertJsonPath('mensagens.1.remetente', 'bot')
+            ->assertJsonPath('mensagens.1.mensagem', 'Me envie a placa da moto para eu localizar o contrato. Se puder, mande tambem sua localizacao e diga se a moto ainda liga.');
+
+        $atendimento = PortalAtendimento::where('cliente_id', $cliente->id)->firstOrFail();
+
+        $this->actingAs($cliente, 'cliente')
+            ->postJson('/portal/chat', [
+                'atendimento_id' => $atendimento->id,
+                'mensagem' => 'kmn5B60',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'em_atendimento')
+            ->assertJsonPath('humano', false)
+            ->assertJsonPath('mensagens.1.remetente', 'bot')
+            ->assertJsonPath('mensagens.1.mensagem', 'Recebi a placa KMN5B60. Agora me mande sua localizacao e diga se a moto ainda liga.');
+
+        $this->actingAs($cliente, 'cliente')
+            ->postJson('/portal/chat', [
+                'atendimento_id' => $atendimento->id,
+                'mensagem' => 'sim',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'em_atendimento')
+            ->assertJsonPath('humano', false)
+            ->assertJsonPath('mensagens.1.remetente', 'bot')
+            ->assertJsonPath('mensagens.1.mensagem', 'Recebi. Falta so sua localizacao para a loja saber onde acionar o atendimento.');
+
+        $this->actingAs($cliente, 'cliente')
+            ->postJson('/portal/chat', [
+                'atendimento_id' => $atendimento->id,
+                'mensagem' => 'praca',
+            ])
+            ->assertOk()
+            ->assertJsonPath('status', 'aguardando_humano')
+            ->assertJsonPath('humano', true)
+            ->assertJsonPath('mensagens.1.remetente', 'bot')
+            ->assertJsonPath('mensagens.1.mensagem', 'Recebi a placa KMN5B60, a localizacao e que a moto ainda liga. Vou acionar a loja para acompanhar por aqui.');
     }
 
     public function test_chat_vazio_orienta_cliente_sem_erro_de_validacao(): void
