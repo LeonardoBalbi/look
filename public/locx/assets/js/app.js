@@ -113,7 +113,11 @@ function locxDonut(id, items){
         popup.dataset.chatShowOptions='0';
         chatSetStatus(popup, 'Aguardando a loja');
       }
-      (data.mensagens || []).forEach(msg=>chatAppend(thread, msg.remetente, msg.mensagem, msg.hora, msg.id, msg.criado_em, msg.client_token, false, msg.remetente_nome));
+      const novas=data.mensagens || [];
+      const temNovaRecebida=novas.some(msg=>crmNormalizarRemetente(msg.remetente)!=='cliente');
+      novas.forEach(msg=>chatAppend(thread, msg.remetente, msg.mensagem, msg.hora, msg.id, msg.criado_em, msg.client_token, false, msg.remetente_nome));
+      if(popup.dataset.chatSoundReady==='1' && temNovaRecebida) crmPlayNotification();
+      popup.dataset.chatSoundReady='1';
       const options=popup.querySelector('[data-chat-options]');
       if(data.mostrar_opcoes && !data.humano){
         popup.dataset.chatShowOptions='1';
