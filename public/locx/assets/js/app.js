@@ -191,6 +191,44 @@ function locxDonut(id, items){
   function crmStatusClass(status){
     return ({novo:'is-new',aguardando_humano:'is-attention',em_atendimento:'is-active',respondido:'is-waiting',fechado:'is-resolved',cancelado:'is-muted'})[status] || 'is-muted';
   }
+  const crmSoundState={ctx:null,unlocked:false,lastAt:0};
+  function crmAudioContext(){
+    const AudioCtx=window.AudioContext || window.webkitAudioContext;
+    if(!AudioCtx) return null;
+    if(!crmSoundState.ctx) crmSoundState.ctx=new AudioCtx();
+    return crmSoundState.ctx;
+  }
+  function crmUnlockSound(){
+    const ctx=crmAudioContext();
+    if(!ctx) return;
+    crmSoundState.unlocked=true;
+    if(ctx.state==='suspended') ctx.resume().catch(()=>{});
+  }
+  function crmPlayNotification(){
+    const ctx=crmAudioContext();
+    if(!ctx || !crmSoundState.unlocked) return;
+    const nowMs=Date.now();
+    if(nowMs-crmSoundState.lastAt<1200) return;
+    crmSoundState.lastAt=nowMs;
+    if(ctx.state==='suspended'){
+      ctx.resume().catch(()=>{});
+      return;
+    }
+    const now=ctx.currentTime;
+    [0,0.13].forEach((offset,index)=>{
+      const osc=ctx.createOscillator();
+      const gain=ctx.createGain();
+      osc.type='sine';
+      osc.frequency.value=index ? 880 : 660;
+      gain.gain.setValueAtTime(0.0001, now+offset);
+      gain.gain.exponentialRampToValueAtTime(0.16, now+offset+0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now+offset+0.11);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now+offset);
+      osc.stop(now+offset+0.12);
+    });
+  }
   function crmApplyStatus(card, status, label, attendant){
     if(!card) return;
     card.classList.remove('is-new','is-attention','is-active','is-waiting','is-resolved','is-muted');
@@ -257,9 +295,12 @@ function locxDonut(id, items){
       const data=await response.json();
       if(!response.ok || !data.ok) return;
       const novas=data.mensagens || [];
+      const temNovaDoCliente=novas.some(msg=>crmNormalizarRemetente(msg.remetente)==='cliente');
       novas.forEach(msg=>crmAppendMessage(thread, msg));
       crmApplyStatus(card, data.status, data.status_label, data.atendente_nome);
-      if(novas.some(msg=>msg.remetente==='cliente')) crmMarkRead(card);
+      if(card.dataset.crmSoundReady==='1' && temNovaDoCliente) crmPlayNotification();
+      card.dataset.crmSoundReady='1';
+      if(temNovaDoCliente) crmMarkRead(card);
     }catch(e){
       // Falha silenciosa para nao travar o atendimento.
     }finally{
@@ -338,6 +379,9 @@ function locxDonut(id, items){
     });
     crmApplyInboxFilters(scope);
   }
+  function crmInboxUnreadTotal(data){
+    return (data?.atendimentos || []).reduce((total,item)=>total+Math.max(0, Number(item.nao_lidos || 0)),0);
+  }
   async function syncCrmPortalInbox(inbox){
     if(!inbox || inbox.dataset.syncing==='1') return;
     const url=inbox.dataset.syncUrl || '';
@@ -350,8 +394,13 @@ function locxDonut(id, items){
       });
       const data=await response.json();
       if(!response.ok || !data.ok) return;
+      const unreadTotal=crmInboxUnreadTotal(data);
+      const previousUnread=Number(inbox.dataset.unreadTotal || unreadTotal);
       if((data.assinatura || '') !== (inbox.dataset.signature || '')) crmRenderInbox(inbox, data);
       else Object.entries(data.metricas || {}).forEach(([key,value])=>document.querySelectorAll('[data-crm-metric="'+key+'"]').forEach(el=>el.textContent=String(value)));
+      if(inbox.dataset.crmSoundReady==='1' && unreadTotal>previousUnread) crmPlayNotification();
+      inbox.dataset.unreadTotal=String(unreadTotal);
+      inbox.dataset.crmSoundReady='1';
     }catch(e){
       // Mantem a tela aberta se houver oscilacao.
     }finally{
@@ -519,6 +568,9 @@ function locxDonut(id, items){
     panel.querySelectorAll('[data-billing-empty]').forEach(row=>row.hidden=visible!==0);
   }
   document.addEventListener('DOMContentLoaded', function(){
+    ['pointerdown','keydown','touchstart'].forEach(eventName=>{
+      document.addEventListener(eventName, crmUnlockSound, {once:true,passive:true});
+    });
     const s=getSidebar(); if(s) s.id = s.id || 'sidebarMenu';
     document.querySelectorAll('.mobile-menu-toggle,.hamburger,#menuToggle,[data-menu-toggle]').forEach(btn=>{
       btn.setAttribute('type','button');

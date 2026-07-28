@@ -482,6 +482,55 @@ table{min-width:680px}
 .menu-group summary small{min-width:22px;height:22px;border-radius:999px;display:grid;place-items:center;background:#fff;border:1px solid #e2e8f0;color:#64748b;font-size:11px;font-weight:800}
 .menu-group-items{display:grid;gap:4px;padding:6px}
 .menu-group .menu-group-items a{border-radius:10px;padding:6px}
+.sidebar-menu-info{
+  position:relative;
+}
+.sidebar-menu-info:after{
+  content:attr(data-menu-info);
+  position:absolute;
+  left:calc(100% + 12px);
+  top:50%;
+  z-index:10030;
+  width:260px;
+  max-width:calc(100vw - 330px);
+  padding:11px 12px;
+  border:1px solid #bfcee2;
+  border-radius:10px;
+  background:#0f172a;
+  color:#fff;
+  font-size:12px;
+  line-height:1.4;
+  font-weight:500;
+  white-space:normal;
+  box-shadow:0 14px 30px rgba(15,23,42,.22);
+  opacity:0;
+  transform:translateY(-50%) translateX(-4px);
+  pointer-events:none;
+  transition:opacity .14s ease, transform .14s ease;
+}
+.sidebar-menu-info:before{
+  content:"";
+  position:absolute;
+  left:calc(100% + 6px);
+  top:50%;
+  z-index:10031;
+  width:12px;
+  height:12px;
+  background:#0f172a;
+  transform:translateY(-50%) rotate(45deg);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .14s ease;
+}
+.sidebar-menu-info:hover:after,
+.sidebar-menu-info:focus-visible:after{
+  opacity:1;
+  transform:translateY(-50%) translateX(0);
+}
+.sidebar-menu-info:hover:before,
+.sidebar-menu-info:focus-visible:before{
+  opacity:1;
+}
 
 
 /* LOCX V8 - WhatsApp API */
@@ -1231,6 +1280,20 @@ code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border
   }
 }
 
+.crm-schedule-details{
+  border:1px solid #bfd7ff;
+  background:#f5f9ff;
+}
+.crm-schedule-details summary{
+  color:#1d4ed8;
+}
+.crm-schedule-details .crm-stacked-form{
+  padding:0 12px 12px;
+}
+.crm-schedule-details .crm-stacked-form textarea{
+  min-height:54px;
+}
+
 .crm-note-card{
   margin:14px;
   padding:14px;
@@ -1513,6 +1576,58 @@ tr:hover td{
   border-color:#b9c8dc;
   background:#f8fbff;
 }
+.module-card-info{
+  position:relative;
+}
+.module-card-info:after{
+  content:attr(data-module-info);
+  position:absolute;
+  left:14px;
+  right:14px;
+  bottom:calc(100% + 10px);
+  z-index:30;
+  display:block;
+  padding:11px 12px;
+  border:1px solid #bfcee2;
+  border-radius:10px;
+  background:#0f172a;
+  color:#fff;
+  font-size:12px;
+  line-height:1.4;
+  font-weight:500;
+  white-space:normal;
+  box-shadow:0 14px 30px rgba(15,23,42,.22);
+  opacity:0;
+  transform:translateY(4px);
+  pointer-events:none;
+  transition:opacity .14s ease, transform .14s ease;
+}
+.module-card-info:before{
+  content:"";
+  position:absolute;
+  left:34px;
+  bottom:calc(100% + 4px);
+  z-index:31;
+  width:12px;
+  height:12px;
+  background:#0f172a;
+  transform:rotate(45deg);
+  opacity:0;
+  pointer-events:none;
+  transition:opacity .14s ease;
+}
+.module-card-info:hover:after,
+.module-card-info:focus-visible:after{
+  opacity:1;
+  transform:translateY(0);
+}
+.module-card-info:hover:before,
+.module-card-info:focus-visible:before{
+  opacity:1;
+}
+.panel:has(.module-card-info){
+  overflow:visible;
+}
 .section-head{
   padding-bottom:10px;
   border-bottom:1px solid #e5ebf3;
@@ -1686,9 +1801,69 @@ tr[hidden]{
     border-radius:8px;
     white-space:normal;
   }
+  .module-card-info:after{
+    left:10px;
+    right:10px;
+    bottom:auto;
+    top:calc(100% + 10px);
+  }
+  .module-card-info:before{
+    left:30px;
+    bottom:auto;
+    top:calc(100% + 4px);
+  }
+  .sidebar-menu-info:after{
+    left:0;
+    right:0;
+    top:calc(100% + 6px);
+    width:auto;
+    max-width:none;
+    transform:translateY(4px);
+  }
+  .sidebar-menu-info:before{
+    left:24px;
+    top:calc(100% + 1px);
+    transform:rotate(45deg);
+  }
+  .sidebar-menu-info:hover:after,
+  .sidebar-menu-info:focus-visible:after{
+    transform:translateY(0);
+  }
 }
 
 /* CRM - garantia final dos scrolls individuais apos os overrides gerais. */
+.crm-chat-panel{
+  min-height:620px!important;
+}
+.crm-active-conversation{
+  display:grid!important;
+  grid-template-rows:auto auto minmax(260px,1fr) auto!important;
+  min-height:620px!important;
+}
+.crm-chat-thread{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:8px!important;
+  min-height:260px!important;
+  background-color:#f0f4f8!important;
+}
+.crm-chat-thread>.crm-chat-line{
+  display:flex!important;
+  width:100%!important;
+  flex:0 0 auto!important;
+  visibility:visible!important;
+  opacity:1!important;
+}
+.crm-chat-bubble{
+  display:block!important;
+  min-width:120px;
+  max-width:min(82%,620px)!important;
+  color:#0f172a!important;
+}
+.crm-chat-bubble p{
+  display:block!important;
+  color:#172033!important;
+}
 .crm-conversation-sidebar,
 .crm-chat-panel,
 .crm-customer-context,
@@ -1708,6 +1883,36 @@ tr[hidden]{
 .crm-history-panel .crm-timeline{
   overflow:auto!important;
 }
+@media(max-width:1320px) and (min-width:781px){
+  .crm-service-workspace{
+    height:auto!important;
+    min-height:0!important;
+    align-items:start!important;
+    grid-auto-rows:auto!important;
+    overflow:visible!important;
+    margin-bottom:18px!important;
+  }
+  .crm-service-workspace>.panel{
+    height:auto!important;
+  }
+  .crm-conversation-sidebar,
+  .crm-chat-panel{
+    height:clamp(600px,calc(100dvh - 40px),760px)!important;
+  }
+  .crm-customer-context{
+    height:auto!important;
+    min-height:0!important;
+    max-height:none!important;
+    position:relative!important;
+    z-index:1;
+    overflow:visible!important;
+  }
+  .crm-management-grid{
+    position:relative!important;
+    z-index:0;
+    margin-top:18px!important;
+  }
+}
 @media(max-width:780px){
   .crm-service-workspace{
     overflow:visible!important;
@@ -1717,6 +1922,13 @@ tr[hidden]{
   }
   .crm-chat-panel{
     max-height:calc(100dvh - 96px)!important;
+    min-height:560px!important;
+  }
+  .crm-active-conversation{
+    min-height:560px!important;
+  }
+  .crm-chat-thread{
+    min-height:240px!important;
   }
   .crm-customer-context{
     max-height:560px!important;

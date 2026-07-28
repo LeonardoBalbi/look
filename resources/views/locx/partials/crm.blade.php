@@ -25,13 +25,11 @@
 <div class="crm-desk" data-crm-desk data-csrf="{{ csrf_token() }}">
     <section class="crm-desk-hero">
         <div>
-            <span class="crm-eyebrow">CENTRAL DE RELACIONAMENTO</span>
-            <span class="sr-only">Clientes no CRM</span>
-            <span class="sr-only">Chats do portal</span>
-            <h2>Atendimento organizado, humano e com contexto</h2>
-            <p>Converse com o cliente, acompanhe o histórico e resolva pendências sem sair do CRM.</p>
+            <span class="crm-eyebrow">ATENDIMENTO AO CLIENTE</span>
+            <h2>Central de atendimentos</h2>
+            <p>Acompanhe conversas, tarefas e historico do cliente em uma unica tela.</p>
         </div>
-        <div class="crm-live-indicator"><i></i> Atualização automática ativa</div>
+        <div class="crm-live-indicator"><i></i> Sincronizacao ativa</div>
     </section>
 
     <section class="crm-support-metrics" aria-label="Indicadores do atendimento">
@@ -243,6 +241,19 @@
                     <a href="{{ route('locx.index', ['page' => 'clientes', 'edit' => $clienteAtual->id]) }}">Cadastro</a>
                 </div>
 
+                <details class="crm-context-details crm-schedule-details" open>
+                    <summary>Criar tarefa de acompanhamento</summary>
+                    <form method="post" action="{{ route('locx.crm.tarefas.salvar') }}" class="crm-stacked-form">
+                        @csrf
+                        <input type="hidden" name="cliente_id" value="{{ $clienteAtual->id }}">
+                        <input name="titulo" required placeholder="Ex.: Confirmar pagamento">
+                        <select name="tipo"><option value="follow_up">Follow-up</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="email">E-mail</option><option value="cobranca">Cobrança</option></select>
+                        <input type="datetime-local" name="prazo_em">
+                        <textarea name="observacao" placeholder="Observação opcional"></textarea>
+                        <button type="submit">Criar tarefa</button>
+                    </form>
+                </details>
+
                 <section class="crm-context-section crm-attendance-history-section">
                     <header>
                         <h4>Histórico de atendimentos</h4>
@@ -297,6 +308,19 @@
                     @endif
                 </section>
 
+                <details class="crm-context-details crm-schedule-details" open hidden>
+                    <summary>Criar tarefa de acompanhamento</summary>
+                    <form method="post" action="{{ route('locx.crm.tarefas.salvar') }}" class="crm-stacked-form">
+                        @csrf
+                        <input type="hidden" name="cliente_id" value="{{ $clienteAtual->id }}">
+                        <input name="titulo" required placeholder="Ex.: Confirmar pagamento">
+                        <select name="tipo"><option value="follow_up">Follow-up</option><option value="ligacao">LigaÃ§Ã£o</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="email">E-mail</option><option value="cobranca">CobranÃ§a</option></select>
+                        <input type="datetime-local" name="prazo_em">
+                        <textarea name="observacao" placeholder="ObservaÃ§Ã£o opcional"></textarea>
+                        <button type="submit">Criar tarefa</button>
+                    </form>
+                </details>
+
                 <section class="crm-note-card">
                     <header>
                         <div>
@@ -316,19 +340,6 @@
                         <button type="submit">Salvar nota interna</button>
                     </form>
                 </section>
-
-                <details class="crm-context-details">
-                    <summary>Criar tarefa de acompanhamento</summary>
-                    <form method="post" action="{{ route('locx.crm.tarefas.salvar') }}" class="crm-stacked-form">
-                        @csrf
-                        <input type="hidden" name="cliente_id" value="{{ $clienteAtual->id }}">
-                        <input name="titulo" required placeholder="Ex.: Confirmar pagamento">
-                        <select name="tipo"><option value="follow_up">Follow-up</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="email">E-mail</option><option value="cobranca">Cobrança</option></select>
-                        <input type="datetime-local" name="prazo_em">
-                        <textarea name="observacao" placeholder="Observação opcional"></textarea>
-                        <button type="submit">Criar tarefa</button>
-                    </form>
-                </details>
             @else
                 <div class="crm-empty-state compact"><p>Nenhum cliente selecionado.</p></div>
             @endif

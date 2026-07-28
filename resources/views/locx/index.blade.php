@@ -17,6 +17,35 @@
         <button type="button" class="mobile-menu-close">Fechar</button>
         <div class="brand brand-logo"><img src="{{ \App\Support\Locx::asset('assets/img/logo-locx.svg') }}" alt="LocX Aluguel de Motos"></div>
         <div class="nav-title">Navegação</div>
+        @php
+            $moduleDetails = [
+            'dashboard' => 'Painel executivo com indicadores de receita, cobranças, inadimplência, frota e operação por loja.',
+            'reservas' => 'Controle pedidos de reserva, disponibilidade da frota, previsão de retirada e oportunidades antes de virar contrato.',
+            'crm' => 'Centralize conversas, notas internas, tarefas de follow-up, histórico do cliente e acompanhamento comercial.',
+            'clientes' => 'Cadastre dados pessoais, documentos, contatos, portal do cliente, status e vínculos com lojas.',
+            'motos' => 'Gerencie placa, modelo, cor, ano, loja, status operacional, manutenção e histórico da frota.',
+            'contratos' => 'Crie contratos de locação, acompanhe vigência, valores, recorrência de cobrança e vínculo com moto e cliente.',
+            'manutencao' => 'Registre ordens de serviço, vistorias, custos, previsão de conclusão e indisponibilidade da moto.',
+            'estoque' => 'Controle peças, entradas, saídas e custos ligados à operação e manutenção.',
+            'multas' => 'Acompanhe infrações, vencimentos, responsáveis, valores e repasses ao cliente.',
+            'financeiro' => 'Veja recebimentos, baixas, pagamentos, saldos em aberto e movimentações financeiras.',
+            'contas' => 'Organize contas bancárias, lançamentos, conciliação e visão de caixa.',
+            'cobrancas' => 'Gere cobranças, Pix, QR Code, campanhas de cobrança e acompanhe status de pagamento.',
+            'inadimplencia' => 'Priorize clientes em atraso, calcule saldo atualizado, juros, acordos e ações de recuperação.',
+            'bancos' => 'Configure gateways Pix, credenciais, webhooks e o provedor principal de recebimento.',
+            'pagbank' => 'Configure o PagBank para gerar Pix, webhooks e conciliação de pagamentos.',
+            'asaas' => 'Configure o Asaas para emissão de cobranças Pix, API Key e webhook.',
+            'sicoob' => 'Configure o Sicoob para Pix com credenciais, certificado, chave Pix e webhook.',
+            'itau' => 'Configure o Itaú Pix com OAuth, certificado, chave privada e webhook.',
+            'whatsapp' => 'Configure envios automáticos, cobranças, testes de integração e histórico de mensagens.',
+            'telegram' => 'Configure bots de aviso e atendimento, vínculo de clientes e logs de envio.',
+            'documentos' => 'Centralize anexos, contratos, comprovantes, documentos do cliente e controle de assinatura.',
+            'relatorios' => 'Analise indicadores, faturamento por loja, clientes, frota, cobranças e resultados operacionais.',
+            'lojas' => 'Compare unidades, motos, recebidos, atrasos e desempenho por loja.',
+            'usuarios' => 'Administre usuários, perfis, permissões por módulo e lojas liberadas.',
+            'configuracoes' => 'Acesse integrações, canais, gateways e parâmetros operacionais do sistema.',
+            ];
+        @endphp
         <nav class="menu">
             @foreach (\App\Support\Locx::MENU_GRUPOS as $grupo => $modulos)
                 @php
@@ -32,7 +61,7 @@
                         </summary>
                         <div class="menu-group-items">
                             @foreach ($itens as $key)
-                                <a class="{{ $page === $key ? 'active' : '' }}" href="{{ route('locx.index', ['page' => $key]) }}">
+                                <a class="sidebar-menu-info {{ $page === $key ? 'active' : '' }}" href="{{ route('locx.index', ['page' => $key]) }}" data-menu-info="{{ $moduleDetails[$key] ?? $pages[$key] }}" title="{{ $moduleDetails[$key] ?? $pages[$key] }}" aria-label="{{ $pages[$key] }}. {{ $moduleDetails[$key] ?? $pages[$key] }}">
                                     <span>{!! \App\Support\Locx::icon($key) !!}</span>{{ $pages[$key] }}
                                 </a>
                             @endforeach
@@ -121,7 +150,7 @@
             </div>
             <div class="panel"><h2>Módulos do sistema</h2><div class="module-grid">
                 @foreach (['reservas' => 'Disponibilidade e pré-locação', 'crm' => 'Relacionamento e follow-up', 'clientes' => 'Cadastro completo e documentos', 'motos' => 'Frota, status e lojas', 'contratos' => 'Locação e histórico', 'manutencao' => 'Ordens de serviço da frota', 'estoque' => 'Peças, entradas e saídas', 'multas' => 'Infrações e repasses', 'financeiro' => 'Recebimentos, baixas e caixa', 'cobrancas' => 'Gerar, enviar e acompanhar', 'inadimplencia' => 'Juros, acordos e bloqueios', 'contas' => 'Bancos, despesas e conciliação', 'documentos' => 'Anexos e assinatura digital', 'relatorios' => 'Indicadores e DRE', 'lojas' => 'Resultado por unidade', 'usuarios' => 'Perfis e permissões'] as $modulo => $descricao)
-                    <a class="module-card" href="{{ route('locx.index', ['page' => $modulo]) }}"><i>{!! \App\Support\Locx::icon($modulo) !!}</i><div><strong>{{ $pages[$modulo] }}</strong><br><small>{{ $descricao }}</small></div></a>
+                    <a class="module-card module-card-info" href="{{ route('locx.index', ['page' => $modulo]) }}" data-module-info="{{ $moduleDetails[$modulo] ?? $descricao }}" aria-label="{{ $pages[$modulo] }}. {{ $moduleDetails[$modulo] ?? $descricao }}"><i>{!! \App\Support\Locx::icon($modulo) !!}</i><div><strong>{{ $pages[$modulo] }}</strong><br><small>{{ $descricao }}</small></div></a>
                 @endforeach
             </div></div>
             <script>

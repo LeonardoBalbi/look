@@ -40,7 +40,7 @@ class CrmModuleTest extends TestCase
         $this->actingAs($usuario)
             ->get('/?page=crm&cliente='.$cliente->id)
             ->assertOk()
-            ->assertSee('Clientes no CRM')
+            ->assertSee('Central de atendimentos')
             ->assertSee('Cliente CRM');
 
         $this->actingAs($usuario)->withSession(['_token' => 'token-teste'])->post('/crm/notas', [
