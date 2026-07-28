@@ -1068,6 +1068,249 @@ code{display:inline-block;background:#f8fafc;border:1px solid var(--line);border
 @media(max-width:640px){.campaign-head{padding:18px}.campaign-channels{flex-direction:column;gap:9px}.campaign-item .actions{flex-direction:column;align-items:stretch}.campaign-item .actions form,.campaign-item .actions button{width:100%}}
 
 /* =========================================================
+   CRM - SCROLL INDIVIDUAL POR SECAO
+   Evita que uma area grande esconda as outras partes da tela.
+   Cada bloco controla sua propria rolagem vertical e horizontal.
+   ========================================================= */
+.crm-desk{
+  overflow:visible;
+}
+.crm-service-workspace{
+  max-width:100%;
+  overflow:hidden!important;
+}
+.crm-conversation-sidebar,
+.crm-chat-panel,
+.crm-customer-context,
+.crm-management-grid>.panel,
+.crm-client-base,
+.crm-history-panel{
+  max-width:100%;
+  min-width:0;
+  overflow:auto!important;
+  scrollbar-gutter:stable;
+}
+.crm-conversation-list,
+.crm-chat-thread,
+.crm-attendance-history,
+.crm-task-list.modern,
+.crm-client-base .table-wrap,
+.crm-history-panel .crm-timeline{
+  overflow:auto!important;
+  -webkit-overflow-scrolling:touch;
+}
+.crm-conversation-list{
+  max-height:100%;
+}
+.crm-customer-context{
+  max-height:100%;
+}
+.crm-management-grid>.panel{
+  max-height:420px;
+}
+.crm-client-base{
+  max-height:560px;
+}
+.crm-history-panel{
+  max-height:440px;
+}
+.crm-client-base .table-wrap{
+  max-height:470px;
+}
+.crm-task-list.modern{
+  max-height:330px;
+  padding-right:3px;
+}
+.crm-stage-cards.modern{
+  min-width:620px;
+}
+.crm-client-table{
+  min-width:860px;
+}
+.crm-timeline.modern{
+  min-width:640px;
+  padding-right:3px;
+}
+
+@media(max-width:1320px) and (min-width:781px){
+  .crm-service-workspace{
+    overflow:hidden!important;
+  }
+  .crm-customer-context{
+    max-height:430px;
+    overflow:auto!important;
+  }
+}
+
+@media(max-width:780px){
+  .crm-service-workspace{
+    overflow:visible!important;
+  }
+  .crm-conversation-sidebar,
+  .crm-chat-panel,
+  .crm-customer-context,
+  .crm-management-grid>.panel,
+  .crm-client-base,
+  .crm-history-panel{
+    max-height:none;
+    overflow:auto!important;
+  }
+  .crm-conversation-sidebar{
+    max-height:430px;
+  }
+  .crm-chat-panel{
+    max-height:calc(100dvh - 96px);
+  }
+  .crm-customer-context{
+    max-height:560px;
+  }
+  .crm-management-grid>.panel,
+  .crm-client-base,
+  .crm-history-panel{
+    max-height:520px;
+  }
+  .crm-stage-cards.modern,
+  .crm-timeline.modern{
+    min-width:520px;
+  }
+}
+
+/* =========================================================
+   CRM - AJUSTE DE VISIBILIDADE EM TELAS MENORES
+   A area util desconta o menu lateral, entao o CRM precisa
+   quebrar de tres para duas colunas antes do restante do app.
+   ========================================================= */
+@media(max-width:1320px) and (min-width:781px){
+  .crm-service-workspace{
+    grid-template-columns:300px minmax(0,1fr)!important;
+    overflow:visible;
+  }
+  .crm-service-workspace>.panel{
+    min-width:0;
+  }
+  .crm-customer-context{
+    grid-column:1/-1;
+    border-left:0!important;
+    border-top:1px solid #e2e8f0;
+    display:grid;
+    grid-template-columns:260px repeat(2,minmax(0,1fr));
+    align-items:start;
+    max-height:none;
+    overflow:visible;
+  }
+  .crm-context-profile{
+    grid-row:span 2;
+  }
+  .crm-contact-actions{
+    grid-column:1;
+  }
+}
+
+@media(max-width:780px){
+  .crm-desk,
+  .crm-service-workspace,
+  .crm-service-workspace>.panel,
+  .crm-chat-panel,
+  .crm-customer-context{
+    overflow:visible!important;
+  }
+  .crm-conversation-sidebar{
+    overflow:hidden!important;
+  }
+  .crm-conversation-list,
+  .crm-chat-thread,
+  .crm-attendance-history{
+    overflow:auto!important;
+  }
+  .crm-chat-panel{
+    height:auto!important;
+    min-height:0!important;
+  }
+  .crm-active-conversation{
+    min-height:0!important;
+  }
+}
+
+.crm-note-card{
+  margin:14px;
+  padding:14px;
+  border:1px solid #cfe0f5;
+  border-radius:14px;
+  background:#f7fbff;
+  box-shadow:0 6px 16px rgba(37,99,235,.06);
+}
+.crm-note-card header{
+  margin-bottom:12px;
+}
+.crm-note-card h4{
+  margin:0;
+  color:#0f172a;
+  font-size:13px;
+  letter-spacing:0;
+  text-transform:none;
+}
+.crm-note-card p{
+  margin:4px 0 0;
+  color:#64748b;
+  font-size:11px;
+  line-height:1.4;
+}
+.crm-note-form{
+  display:grid;
+  gap:10px;
+}
+.crm-note-form label{
+  display:grid;
+  gap:6px;
+  color:#334155;
+  font-size:11px;
+  font-weight:800;
+}
+.crm-note-form select,
+.crm-note-form textarea{
+  width:100%;
+  border:1px solid #bfd2e8;
+  border-radius:10px;
+  background:#fff;
+  color:#0f172a;
+  font-size:12px;
+  line-height:1.45;
+  padding:10px 11px;
+}
+.crm-note-form textarea{
+  min-height:118px;
+  resize:vertical;
+}
+.crm-note-form button{
+  justify-content:center;
+  width:100%;
+  min-height:38px;
+  border-radius:10px;
+  background:#1d4ed8;
+  font-size:11px;
+}
+@media(max-width:1320px) and (min-width:781px){
+  .crm-note-card{
+    margin:0;
+    align-self:stretch;
+    border-radius:0;
+    border-top:0;
+    border-bottom:0;
+  }
+  .crm-note-form textarea{
+    min-height:132px;
+  }
+}
+@media(max-width:780px){
+  .crm-note-card{
+    margin:14px;
+  }
+  .crm-note-form textarea{
+    min-height:128px;
+  }
+}
+
+/* =========================================================
    LOCX V8 - LAYOUT OPERACIONAL MAIS LIMPO
    Padroniza topbar, formularios, tabelas e cards sem alterar fluxos.
    ========================================================= */
@@ -1442,5 +1685,45 @@ tr[hidden]{
     justify-content:center;
     border-radius:8px;
     white-space:normal;
+  }
+}
+
+/* CRM - garantia final dos scrolls individuais apos os overrides gerais. */
+.crm-conversation-sidebar,
+.crm-chat-panel,
+.crm-customer-context,
+.crm-management-grid>.panel,
+.crm-client-base,
+.crm-history-panel{
+  overflow:auto!important;
+}
+.crm-service-workspace{
+  overflow:hidden!important;
+}
+.crm-conversation-list,
+.crm-chat-thread,
+.crm-attendance-history,
+.crm-task-list.modern,
+.crm-client-base .table-wrap,
+.crm-history-panel .crm-timeline{
+  overflow:auto!important;
+}
+@media(max-width:780px){
+  .crm-service-workspace{
+    overflow:visible!important;
+  }
+  .crm-conversation-sidebar{
+    max-height:430px!important;
+  }
+  .crm-chat-panel{
+    max-height:calc(100dvh - 96px)!important;
+  }
+  .crm-customer-context{
+    max-height:560px!important;
+  }
+  .crm-management-grid>.panel,
+  .crm-client-base,
+  .crm-history-panel{
+    max-height:520px!important;
   }
 }

@@ -297,18 +297,25 @@
                     @endif
                 </section>
 
-                <details class="crm-context-details">
-                    <summary>Registrar nota interna</summary>
-                    <form method="post" action="{{ route('locx.crm.notas.salvar') }}" class="crm-stacked-form">
+                <section class="crm-note-card">
+                    <header>
+                        <div>
+                            <h4>Registrar nota interna</h4>
+                            <p>Observação visível somente para a equipe.</p>
+                        </div>
+                    </header>
+                    <form method="post" action="{{ route('locx.crm.notas.salvar') }}" class="crm-note-form">
                         @csrf
                         <input type="hidden" name="cliente_id" value="{{ $clienteAtual->id }}">
+                        <label>Tipo
                         <select name="tipo">
                             <option value="nota">Nota</option><option value="ligacao">Ligação</option><option value="whatsapp">WhatsApp</option><option value="telegram">Telegram</option><option value="email">E-mail</option><option value="negociacao">Negociação</option>
                         </select>
+                        </label>
                         <textarea name="texto" required placeholder="Informação visível somente para a equipe"></textarea>
-                        <button type="submit">Salvar nota</button>
+                        <button type="submit">Salvar nota interna</button>
                     </form>
-                </details>
+                </section>
 
                 <details class="crm-context-details">
                     <summary>Criar tarefa de acompanhamento</summary>
