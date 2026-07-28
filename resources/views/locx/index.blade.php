@@ -169,13 +169,15 @@
                     <label>Marca<input name="marca" list="marcas-moto" value="{{ old('marca',$motoEdit?->marca_nome ?? $motoEdit?->marca) }}"></label><label>Modelo<input name="modelo" list="modelos-moto" required value="{{ old('modelo',$motoEdit?->modelo_nome ?? $motoEdit?->modelo) }}"></label>
                     <datalist id="marcas-moto">@foreach($marcasMoto as $marca)<option value="{{ $marca }}"></option>@endforeach</datalist>
                     <datalist id="modelos-moto">@foreach($modelosMoto as $modelo)<option value="{{ $modelo }}"></option>@endforeach</datalist>
-                    <label>Ano<input type="number" name="ano" value="{{ old('ano',$motoEdit?->ano) }}"></label><label>Placa<input name="placa" value="{{ old('placa',$motoEdit?->placa) }}"></label><label>Renavam<input name="renavam" value="{{ old('renavam',$motoEdit?->renavam) }}"></label>
+                    <label>Ano<input type="number" name="ano" value="{{ old('ano',$motoEdit?->ano) }}"></label><label>Placa<input name="placa" value="{{ old('placa',$motoEdit?->placa) }}"></label><label>Cor<input name="cor" list="cores-moto" value="{{ old('cor',$motoEdit?->cor) }}"></label>
+                    <datalist id="cores-moto">@foreach($coresMoto as $cor)<option value="{{ $cor }}"></option>@endforeach</datalist>
+                    <label>Renavam<input name="renavam" value="{{ old('renavam',$motoEdit?->renavam) }}"></label>
                     <label>Chassi<input name="chassi" value="{{ old('chassi',$motoEdit?->chassi) }}"></label><label>Data aquisição<input type="date" name="data_aquisicao" value="{{ old('data_aquisicao',$motoEdit?->data_aquisicao?->format('Y-m-d')) }}"></label>
                     <label>Status<select name="status_operacional">@foreach(['disponivel','alugada','manutencao','recuperacao','encerrada'] as $status)<option value="{{ $status }}" @selected(old('status_operacional',$motoEdit?->status_operacional ?? 'disponivel')===$status)>{{ $status }}</option>@endforeach</select></label>
                     <label>Seguro<input name="seguro" value="{{ old('seguro',$motoEdit?->seguro) }}"></label><label>Rastreador<input name="rastreador" value="{{ old('rastreador',$motoEdit?->rastreador) }}"></label><div class="span-3"><button type="submit">Salvar Moto</button></div>
                 </form></div>
-                <div class="panel"><h2>Frota Cadastrada</h2><div class="table-wrap"><table><tr><th>Loja</th><th>Placa</th><th>Modelo</th><th>Ano</th><th>Status</th><th>Ações</th></tr>
-                    @foreach($motos as $moto)<tr><td>{{ $moto->loja?->nome }}</td><td>{{ $moto->placa }}</td><td>{{ $moto->modelo_nome }}</td><td>{{ $moto->ano }}</td><td>{!! \App\Support\Locx::status($moto->status_operacional) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'motos','edit'=>$moto->id]) }}">Editar</a></td></tr>@endforeach
+                <div class="panel"><h2>Frota Cadastrada</h2><div class="table-wrap"><table><tr><th>Loja</th><th>Placa</th><th>Modelo</th><th>Cor</th><th>Ano</th><th>Status</th><th>Ações</th></tr>
+                    @foreach($motos as $moto)<tr><td>{{ $moto->loja?->nome }}</td><td>{{ $moto->placa }}</td><td>{{ $moto->modelo_nome }}</td><td>{{ $moto->cor ?: '-' }}</td><td>{{ $moto->ano }}</td><td>{!! \App\Support\Locx::status($moto->status_operacional) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'motos','edit'=>$moto->id]) }}">Editar</a></td></tr>@endforeach
                 </table></div></div>
             </div>
 

@@ -293,6 +293,7 @@ class LocxController extends Controller
             'marca' => ['nullable', 'string', 'max:80'],
             'ano' => ['nullable', 'integer', 'min:1900', 'max:'.(date('Y') + 1)],
             'placa' => ['nullable', 'string', 'max:15'],
+            'cor' => ['nullable', 'string', 'max:40'],
             'renavam' => ['nullable', 'string', 'max:40'],
             'chassi' => ['nullable', 'string', 'max:80'],
             'data_aquisicao' => ['nullable', 'date'],
@@ -1813,6 +1814,13 @@ class LocxController extends Controller
             'modelosMoto' => $motos
                 ->map(fn (Motocicleta $moto) => $moto->modelo_nome)
                 ->merge(Motocicleta::modelosConhecidos())
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values(),
+            'coresMoto' => $motos
+                ->pluck('cor')
+                ->merge(['Azul', 'Branca', 'Cinza', 'Preta', 'Prata', 'Vermelha'])
                 ->filter()
                 ->unique()
                 ->sort()
