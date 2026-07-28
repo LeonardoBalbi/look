@@ -12,7 +12,7 @@
             @csrf
             <input type="hidden" name="id" value="{{ $multaEdit?->id }}">
             <label>Loja<select name="loja_id"><option value="">Selecione</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$multaEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
-            <label>Moto<select name="motocicleta_id"><option value="">Sem moto</option>@foreach($motos as $moto)<option value="{{ $moto->id }}" @selected(old('motocicleta_id',$multaEdit?->motocicleta_id)==$moto->id)>{{ $moto->placa ?: 'sem placa' }} - {{ $moto->modelo }}</option>@endforeach</select></label>
+            <label>Moto<select name="motocicleta_id"><option value="">Sem moto</option>@foreach($motos as $moto)<option value="{{ $moto->id }}" @selected(old('motocicleta_id',$multaEdit?->motocicleta_id)==$moto->id)>{{ $moto->placa ?: 'sem placa' }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
             <label>Cliente<select name="cliente_id"><option value="">Sem cliente</option>@foreach($clientes as $cliente)<option value="{{ $cliente->id }}" @selected(old('cliente_id',$multaEdit?->cliente_id)==$cliente->id)>{{ $cliente->nome }}</option>@endforeach</select></label>
             <label class="span-2">Contrato<select name="contrato_id"><option value="">Sem contrato</option>@foreach($contratos as $contrato)<option value="{{ $contrato->id }}" @selected(old('contrato_id',$multaEdit?->contrato_id)==$contrato->id)>#{{ $contrato->id }} - {{ $contrato->cliente?->nome }} / {{ $contrato->motocicleta?->placa }}</option>@endforeach</select></label>
             <label>Auto<input name="auto_infracao" value="{{ old('auto_infracao',$multaEdit?->auto_infracao) }}"></label>

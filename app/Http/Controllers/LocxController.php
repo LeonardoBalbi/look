@@ -1798,9 +1798,25 @@ class LocxController extends Controller
 
     private function motos(Request $request, User $user): array
     {
+        $motos = $this->scope(Motocicleta::with('loja'), $user)->latest('id')->limit(150)->get();
+
         return [
             'motoEdit' => $request->integer('edit') ? Motocicleta::findOrFail($request->integer('edit')) : null,
-            'motos' => $this->scope(Motocicleta::with('loja'), $user)->latest('id')->limit(150)->get(),
+            'motos' => $motos,
+            'marcasMoto' => $motos
+                ->map(fn (Motocicleta $moto) => $moto->marca_nome)
+                ->merge(Motocicleta::marcasConhecidas())
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values(),
+            'modelosMoto' => $motos
+                ->map(fn (Motocicleta $moto) => $moto->modelo_nome)
+                ->merge(Motocicleta::modelosConhecidos())
+                ->filter()
+                ->unique()
+                ->sort()
+                ->values(),
         ];
     }
 

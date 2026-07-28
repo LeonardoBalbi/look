@@ -166,14 +166,16 @@
                 <div class="panel"><h2>{{ $motoEdit ? 'Editar' : 'Nova' }} Motocicleta</h2><form method="post" action="{{ route('locx.motos.salvar') }}" class="form-grid">@csrf
                     <input type="hidden" name="id" value="{{ $motoEdit?->id }}">
                     <label>Loja<select name="loja_id" required>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$motoEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
-                    <label>Marca<input name="marca" value="{{ old('marca',$motoEdit?->marca) }}"></label><label>Modelo<input name="modelo" required value="{{ old('modelo',$motoEdit?->modelo) }}"></label>
+                    <label>Marca<input name="marca" list="marcas-moto" value="{{ old('marca',$motoEdit?->marca_nome ?? $motoEdit?->marca) }}"></label><label>Modelo<input name="modelo" list="modelos-moto" required value="{{ old('modelo',$motoEdit?->modelo_nome ?? $motoEdit?->modelo) }}"></label>
+                    <datalist id="marcas-moto">@foreach($marcasMoto as $marca)<option value="{{ $marca }}"></option>@endforeach</datalist>
+                    <datalist id="modelos-moto">@foreach($modelosMoto as $modelo)<option value="{{ $modelo }}"></option>@endforeach</datalist>
                     <label>Ano<input type="number" name="ano" value="{{ old('ano',$motoEdit?->ano) }}"></label><label>Placa<input name="placa" value="{{ old('placa',$motoEdit?->placa) }}"></label><label>Renavam<input name="renavam" value="{{ old('renavam',$motoEdit?->renavam) }}"></label>
                     <label>Chassi<input name="chassi" value="{{ old('chassi',$motoEdit?->chassi) }}"></label><label>Data aquisição<input type="date" name="data_aquisicao" value="{{ old('data_aquisicao',$motoEdit?->data_aquisicao?->format('Y-m-d')) }}"></label>
                     <label>Status<select name="status_operacional">@foreach(['disponivel','alugada','manutencao','recuperacao','encerrada'] as $status)<option value="{{ $status }}" @selected(old('status_operacional',$motoEdit?->status_operacional ?? 'disponivel')===$status)>{{ $status }}</option>@endforeach</select></label>
                     <label>Seguro<input name="seguro" value="{{ old('seguro',$motoEdit?->seguro) }}"></label><label>Rastreador<input name="rastreador" value="{{ old('rastreador',$motoEdit?->rastreador) }}"></label><div class="span-3"><button type="submit">Salvar Moto</button></div>
                 </form></div>
                 <div class="panel"><h2>Frota Cadastrada</h2><div class="table-wrap"><table><tr><th>Loja</th><th>Placa</th><th>Modelo</th><th>Ano</th><th>Status</th><th>Ações</th></tr>
-                    @foreach($motos as $moto)<tr><td>{{ $moto->loja?->nome }}</td><td>{{ $moto->placa }}</td><td>{{ $moto->modelo }}</td><td>{{ $moto->ano }}</td><td>{!! \App\Support\Locx::status($moto->status_operacional) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'motos','edit'=>$moto->id]) }}">Editar</a></td></tr>@endforeach
+                    @foreach($motos as $moto)<tr><td>{{ $moto->loja?->nome }}</td><td>{{ $moto->placa }}</td><td>{{ $moto->modelo_nome }}</td><td>{{ $moto->ano }}</td><td>{!! \App\Support\Locx::status($moto->status_operacional) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'motos','edit'=>$moto->id]) }}">Editar</a></td></tr>@endforeach
                 </table></div></div>
             </div>
 
@@ -181,7 +183,7 @@
             <div class="grid side">
                 <div class="panel"><h2>Novo Contrato</h2><form method="post" action="{{ route('locx.contratos.salvar') }}" class="form-grid">@csrf
                     <label>Cliente<select name="cliente_id">@foreach($clientes as $cliente)<option value="{{ $cliente->id }}">{{ $cliente->nome }}</option>@endforeach</select></label>
-                    <label>Moto<select name="motocicleta_id">@foreach($motos as $moto)<option value="{{ $moto->id }}">{{ $moto->placa }} - {{ $moto->modelo }}</option>@endforeach</select></label>
+                    <label>Moto<select name="motocicleta_id">@foreach($motos as $moto)<option value="{{ $moto->id }}">{{ $moto->placa }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
                     <label>Loja<select name="loja_id">@foreach($lojas as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>
                     <label>Data início<input type="date" name="data_inicio" value="{{ old('data_inicio',today()->format('Y-m-d')) }}"></label><label>Valor contratado<input type="number" step="0.01" name="valor_contratado" value="{{ old('valor_contratado','500.00') }}"></label>
                     <label>Forma<select name="forma_cobranca"><option>semanal</option><option>quinzenal</option><option>mensal</option></select></label><label>Status<select name="status"><option>ativo</option><option>suspenso</option><option>encerrado</option></select></label>
@@ -221,7 +223,7 @@
                             <h2>2. CONTRATADA</h2>
                             <p>LOCX, unidade {{ $lojaContrato?->nome ?: 'Central' }}, responsável pela operação, gestão financeira e acompanhamento da locação.</p>
                             <h2>3. MOTOCICLETA LOCADA</h2>
-                            <p><strong>Moto:</strong> {{ trim(($motoContrato?->marca ? $motoContrato->marca.' ' : '').($motoContrato?->modelo ?: '')) ?: '-' }}</p>
+                            <p><strong>Moto:</strong> {{ $motoContrato?->modelo_nome ?: '-' }}</p>
                             <p><strong>Placa:</strong> {{ $motoContrato?->placa ?: '-' }}</p>
                             <p><strong>Ano:</strong> {{ $motoContrato?->ano ?: '-' }}</p>
                             <p><strong>Renavam:</strong> {{ $motoContrato?->renavam ?: '-' }}</p>

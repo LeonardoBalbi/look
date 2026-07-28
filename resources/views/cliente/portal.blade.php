@@ -133,7 +133,7 @@
                 <h2>Contratos</h2>
                 <div class="table-wrap"><table><tr><th>ID</th><th>Moto</th><th>Inicio</th><th>Valor</th><th>Status</th></tr>
                     @forelse ($contratos as $contrato)
-                        <tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->motocicleta?->placa }} - {{ $contrato->motocicleta?->modelo }}</td><td>{{ $contrato->data_inicio?->format('d/m/Y') }}</td><td>{{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</td><td>{!! \App\Support\Locx::status($contrato->status) !!}</td></tr>
+                        <tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->motocicleta?->placa }} - {{ $contrato->motocicleta?->modelo_nome }}</td><td>{{ $contrato->data_inicio?->format('d/m/Y') }}</td><td>{{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</td><td>{!! \App\Support\Locx::status($contrato->status) !!}</td></tr>
                     @empty
                         <tr><td colspan="5" class="empty">Nenhum contrato encontrado.</td></tr>
                     @endforelse

@@ -12,7 +12,7 @@
             @csrf
             <input type="hidden" name="id" value="{{ $ordemEdit?->id }}">
             <label>Loja<select name="loja_id"><option value="">Selecione</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$ordemEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
-            <label>Moto<select name="motocicleta_id"><option value="">Sem moto</option>@foreach($motos as $moto)<option value="{{ $moto->id }}" @selected(old('motocicleta_id',$ordemEdit?->motocicleta_id)==$moto->id)>{{ $moto->placa ?: 'sem placa' }} - {{ $moto->modelo }}</option>@endforeach</select></label>
+            <label>Moto<select name="motocicleta_id"><option value="">Sem moto</option>@foreach($motos as $moto)<option value="{{ $moto->id }}" @selected(old('motocicleta_id',$ordemEdit?->motocicleta_id)==$moto->id)>{{ $moto->placa ?: 'sem placa' }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
             <label>Cliente<select name="cliente_id"><option value="">Sem cliente</option>@foreach($clientes as $cliente)<option value="{{ $cliente->id }}" @selected(old('cliente_id',$ordemEdit?->cliente_id)==$cliente->id)>{{ $cliente->nome }}</option>@endforeach</select></label>
             <label>Tipo<select name="tipo">@foreach(['preventiva','corretiva','vistoria','sinistro'] as $tipo)<option value="{{ $tipo }}" @selected(old('tipo',$ordemEdit?->tipo ?? 'corretiva')===$tipo)>{{ ucfirst($tipo) }}</option>@endforeach</select></label>
             <label>Status<select name="status">@foreach(['aberta','em_andamento','aguardando_peca','concluida','cancelada'] as $status)<option value="{{ $status }}" @selected(old('status',$ordemEdit?->status ?? 'aberta')===$status)>{{ str_replace('_',' ', $status) }}</option>@endforeach</select></label>
@@ -29,7 +29,7 @@
         <h2>Ordens de Serviço</h2>
         <div class="table-wrap"><table><tr><th>ID</th><th>Moto</th><th>Cliente</th><th>Status</th><th>Previsão</th><th>Custo</th><th>Ações</th></tr>
             @foreach($ordensServico as $ordem)
-                <tr><td>#{{ $ordem->id }}</td><td>{{ $ordem->motocicleta?->placa ?? '-' }}<br><small>{{ $ordem->motocicleta?->modelo }}</small></td><td>{{ $ordem->cliente?->nome ?? '-' }}</td><td>{!! \App\Support\Locx::status($ordem->status) !!}</td><td>{{ $ordem->previsto_em?->format('d/m/Y') ?? '-' }}</td><td>{{ \App\Support\Locx::moeda($ordem->custo_final ?: $ordem->custo_previsto) }}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'manutencao','edit'=>$ordem->id]) }}">Editar</a></td></tr>
+                <tr><td>#{{ $ordem->id }}</td><td>{{ $ordem->motocicleta?->placa ?? '-' }}<br><small>{{ $ordem->motocicleta?->modelo_nome }}</small></td><td>{{ $ordem->cliente?->nome ?? '-' }}</td><td>{!! \App\Support\Locx::status($ordem->status) !!}</td><td>{{ $ordem->previsto_em?->format('d/m/Y') ?? '-' }}</td><td>{{ \App\Support\Locx::moeda($ordem->custo_final ?: $ordem->custo_previsto) }}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'manutencao','edit'=>$ordem->id]) }}">Editar</a></td></tr>
             @endforeach
         </table></div>
     </div>
