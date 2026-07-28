@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Services\AsaasService;
+use App\Services\ItauService;
 use App\Services\PagBankService;
 use App\Services\SicoobService;
 use App\Services\WhatsAppService;
@@ -37,6 +38,18 @@ class WebhookController extends Controller
     }
 
     public function sicoob(Request $request, SicoobService $service): JsonResponse
+    {
+        $token = $request->header('x-locx-token', $request->query('token'));
+        if (! $service->validarWebhook($token)) {
+            return response()->json(['ok' => false, 'erro' => 'Token de webhook invalido.'], 401);
+        }
+
+        $resultado = $service->processarWebhook($request->getContent());
+
+        return response()->json($resultado, ($resultado['ok'] ?? false) ? 200 : 400);
+    }
+
+    public function itau(Request $request, ItauService $service): JsonResponse
     {
         $token = $request->header('x-locx-token', $request->query('token'));
         if (! $service->validarWebhook($token)) {

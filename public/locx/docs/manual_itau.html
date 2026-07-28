@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Manual Itau PIX - LocX</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:920px;margin:32px auto;padding:0 18px;line-height:1.55;color:#1f2937}
+    h1,h2{color:#111827}
+    code,pre{background:#f3f4f6;border-radius:6px;padding:2px 5px}
+    pre{padding:14px;overflow:auto}
+    li{margin-bottom:8px}
+    .box{border:1px solid #d1d5db;border-radius:8px;padding:14px;background:#f9fafb}
+  </style>
+</head>
+<body>
+  <h1>Manual Itau PIX no LocX</h1>
+  <p>Use este guia para preparar o certificado dinamico do Itau e preencher a integracao no LocX.</p>
+
+  <h2>1. O que voce precisa pedir ao Itau</h2>
+  <ol>
+    <li>Ter o produto/API PIX contratado no Itau.</li>
+    <li>Pedir ao gerente, ponto focal, OfficerCash ou API Owner as credenciais de producao para PIX.</li>
+    <li>Receber o <strong>Client ID</strong> e o <strong>token temporario</strong>. Esse token tem prazo curto; gere o certificado logo depois.</li>
+  </ol>
+
+  <h2>2. Gerar o certificado dinamico</h2>
+  <ol>
+    <li>Acesse o Portal Itau for Developers e faca login com um usuario administrador.</li>
+    <li>Entre em <strong>gestao de certificados</strong> e clique em <strong>gerar certificado</strong>.</li>
+    <li>Informe um nome para o certificado, o Client ID, site/app da empresa, pais, estado, cidade e o token da credencial.</li>
+    <li>Baixe e guarde os arquivos retornados: certificado <code>.crt</code>, chave privada <code>.key</code> e o <strong>Client Secret</strong>.</li>
+  </ol>
+
+  <div class="box">
+    <strong>Importante:</strong> o certificado e a chave privada sao segredos. Nao envie por WhatsApp, nao coloque no GitHub e nao deixe em pasta publica do site.
+  </div>
+
+  <h2>3. Gerar manualmente com OpenSSL, se o portal pedir CSR</h2>
+  <p>Se voce precisar gerar um CSR manual, o campo <code>CN</code> precisa ser exatamente igual ao seu Client ID.</p>
+  <pre>openssl genrsa -out itau-key.key 2048
+openssl req -new -key itau-key.key -out itau-request.csr -subj "/CN=SEU_CLIENT_ID/OU=LOCX/L=SuaCidade/ST=SeuEstado/C=BR"</pre>
+  <p>Depois envie o conteudo do arquivo <code>itau-request.csr</code> ao endpoint de solicitacao de certificado do Itau com o token temporario. O retorno traz o <code>Client Secret</code> e o certificado <code>.crt</code>.</p>
+
+  <h2>4. Configurar no LocX</h2>
+  <ol>
+    <li>Abra <strong>Integrações de pagamento</strong> e selecione <strong>Itau</strong>.</li>
+    <li>Deixe em <strong>demo</strong> ate ter tudo pronto.</li>
+    <li>Preencha Client ID, Client Secret, Chave PIX, URL Token OAuth, URL Base API PIX, caminho do certificado <code>.crt</code> e caminho da chave <code>.key</code>.</li>
+    <li>Clique em <strong>Salvar Itau</strong>.</li>
+    <li>Depois clique em <strong>Testar conexao</strong>. Se o teste passar, selecione <strong>Itau</strong> em "Usar para gerar PIX".</li>
+  </ol>
+
+  <h2>5. URLs padrao</h2>
+  <p>Token OAuth:</p>
+  <pre>https://sts.itau.com.br/api/oauth/token</pre>
+  <p>Base PIX configuravel no LocX:</p>
+  <pre>https://secure.api.itau/pix_recebimentos/v2</pre>
+  <p>Confirme a URL exata no produto contratado no portal do Itau, porque ela pode variar por API.</p>
+
+  <h2>6. Erros comuns</h2>
+  <ul>
+    <li><strong>C100/C200:</strong> certificado ausente ou invalido. Confira o caminho do <code>.crt</code>.</li>
+    <li><strong>C600/C800a:</strong> CN diferente do Client ID. Gere outro CSR/certificado.</li>
+    <li><strong>403:</strong> token expirado, certificado errado, Client Secret incorreto ou URL da API errada.</li>
+    <li><strong>Token vencido:</strong> normal. O LocX renova automaticamente; o token do Itau dura poucos minutos.</li>
+  </ul>
+
+  <p>Documentacao oficial: <a href="https://devportal.itau.com.br/certificado-dinamico" target="_blank" rel="noopener">certificado dinamico</a>, <a href="https://devportal.itau.com.br/autenticacao-documentacao" target="_blank" rel="noopener">autenticacao mTLS</a> e <a href="https://devportal.itau.com.br/como-fazer-a-primeira-chamada-a-uma-api" target="_blank" rel="noopener">primeira chamada a API</a>.</p>
+</body>
+</html>

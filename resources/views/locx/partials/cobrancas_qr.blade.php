@@ -8,7 +8,7 @@
                 $dueState = $cobranca->vencimento?->isPast() && !$cobranca->vencimento?->isToday()
                     ? 'overdue'
                     : ($cobranca->vencimento?->isToday() ? 'today' : 'future');
-                $gateway = $cobranca->asaas_status ? 'asaas' : ($cobranca->sicoob_status ? 'sicoob' : ($cobranca->pagbank_status ? 'pagbank' : 'nao gerado'));
+                $gateway = $cobranca->asaas_status ? 'asaas' : ($cobranca->sicoob_status ? 'sicoob' : ($cobranca->itau_status ? 'itau' : ($cobranca->pagbank_status ? 'pagbank' : 'nao gerado')));
                 $searchText = \Illuminate\Support\Str::lower(implode(' ', [
                     '#'.$cobranca->id,
                     $cobranca->cliente?->nome,
@@ -59,6 +59,8 @@
                             <small>Asaas</small><br>{!! \App\Support\Locx::status($cobranca->asaas_status) !!}
                         @elseif ($cobranca->sicoob_status)
                             <small>Sicoob</small><br>{!! \App\Support\Locx::status($cobranca->sicoob_status) !!}
+                        @elseif ($cobranca->itau_status)
+                            <small>Itau</small><br>{!! \App\Support\Locx::status($cobranca->itau_status) !!}
                         @elseif ($cobranca->pagbank_status)
                             <small>PagBank</small><br>{!! \App\Support\Locx::status($cobranca->pagbank_status) !!}
                         @else

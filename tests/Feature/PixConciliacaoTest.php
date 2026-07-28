@@ -7,9 +7,12 @@ use App\Models\AsaasConfig;
 use App\Models\Cliente;
 use App\Models\Cobranca;
 use App\Models\Contrato;
+use App\Models\ItauConfig;
 use App\Models\Motocicleta;
+use App\Models\PixGatewayConfig;
 use App\Models\User;
 use App\Services\AutomacaoService;
+use App\Services\PixGatewayService;
 use Database\Seeders\LocxInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
@@ -149,6 +152,69 @@ class PixConciliacaoTest extends TestCase
             'status' => 'RECEIVED',
         ]);
         $this->assertDatabaseCount('pagamentos', 0);
+    }
+
+    public function test_gateway_itau_demo_gera_pix_e_grava_txid(): void
+    {
+        PixGatewayConfig::query()->updateOrCreate(['id' => 1], ['gateway' => 'itau']);
+        ItauConfig::query()->updateOrCreate(['id' => 1], [
+            'modo' => 'demo',
+            'ambiente' => 'producao',
+            'ativo' => true,
+        ]);
+        $cobranca = $this->cobranca([
+            'pix_copia_cola' => null,
+            'asaas_status' => null,
+        ]);
+
+        $resultado = app(PixGatewayService::class)->criarPix($cobranca);
+
+        $this->assertTrue($resultado['ok']);
+        $this->assertTrue($resultado['demo']);
+        $this->assertDatabaseHas('cobrancas', [
+            'id' => $cobranca->id,
+            'itau_txid' => 'DEMO-LOCX'.str_pad((string) $cobranca->id, 21, '0', STR_PAD_LEFT),
+            'itau_status' => 'DEMO',
+        ]);
+    }
+
+    public function test_webhook_itau_baixa_cobranca_por_txid(): void
+    {
+        ItauConfig::query()->updateOrCreate(['id' => 1], [
+            'modo' => 'api',
+            'ambiente' => 'producao',
+            'ativo' => true,
+            'webhook_token' => 'token-itau',
+        ]);
+        $cobranca = $this->cobranca([
+            'asaas_status' => null,
+            'itau_txid' => 'LOCX000000000000000000123',
+            'itau_status' => 'ATIVA',
+        ]);
+
+        $this->postJson('/webhooks/itau?token=token-itau', [
+            'pix' => [[
+                'txid' => 'LOCX000000000000000000123',
+                'valor' => '50.00',
+                'endToEndId' => 'E123',
+            ]],
+        ])
+            ->assertOk()
+            ->assertJsonPath('ok', true)
+            ->assertJsonPath('baixado', true);
+
+        $this->assertDatabaseHas('cobrancas', [
+            'id' => $cobranca->id,
+            'valor_pago' => 50.00,
+            'status' => 'paga',
+            'itau_status' => 'ITAU_E123',
+        ]);
+        $this->assertDatabaseHas('pagamentos', [
+            'cobranca_id' => $cobranca->id,
+            'valor' => 50.00,
+            'forma' => 'pix',
+            'comprovante' => 'Itau ITAU_E123',
+        ]);
     }
 
     private function cobranca(array $dados = []): Cobranca

@@ -11,6 +11,7 @@ use App\Models\CrmNota;
 use App\Models\CrmTarefa;
 use App\Models\EstoqueMovimento;
 use App\Models\EstoqueProduto;
+use App\Models\ItauConfig;
 use App\Models\LookModuloRegistro;
 use App\Models\Loja;
 use App\Models\MultaTransito;
@@ -32,6 +33,7 @@ use App\Services\CobrancaCampanhaService;
 use App\Services\CrmAutomationService;
 use App\Services\EmailCobrancaService;
 use App\Services\EmailPagamentoService;
+use App\Services\ItauService;
 use App\Services\PagBankService;
 use App\Services\PixGatewayService;
 use App\Services\SicoobService;
@@ -55,6 +57,7 @@ class LocxController extends Controller
         private readonly PagBankService $pagBank,
         private readonly AsaasService $asaas,
         private readonly SicoobService $sicoob,
+        private readonly ItauService $itau,
         private readonly PixGatewayService $pixGateway,
         private readonly WhatsAppService $whatsApp,
         private readonly TelegramService $telegram,
@@ -100,14 +103,16 @@ class LocxController extends Controller
                 'pagbankConfig' => $this->pagBank->config(),
                 'asaasConfig' => $this->asaas->config(),
                 'sicoobConfig' => $this->sicoob->config(),
+                'itauConfig' => $this->itau->config(),
                 'pixGatewayConfig' => $this->pixGateway->config(),
-                'bancoSelecionado' => in_array($request->query('banco'), ['pagbank', 'asaas', 'sicoob'], true)
+                'bancoSelecionado' => in_array($request->query('banco'), ['pagbank', 'asaas', 'sicoob', 'itau'], true)
                     ? $request->query('banco')
                     : $this->pixGateway->config()->gateway,
             ],
             'pagbank' => ['pagbankConfig' => $this->pagBank->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'asaas' => ['asaasConfig' => $this->asaas->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'sicoob' => ['sicoobConfig' => $this->sicoob->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
+            'itau' => ['itauConfig' => $this->itau->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'whatsapp' => [
                 'whatsappConfig' => $this->whatsApp->config(),
                 'whatsappLogs' => WhatsappLog::with('cliente')->latest('id')->limit(80)->get(),
@@ -1202,16 +1207,62 @@ class LocxController extends Controller
         return $this->voltar('sicoob', $mensagem);
     }
 
+    public function salvarItau(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'itau', 'editar');
+        $dados = $request->validate([
+            'modo' => ['required', Rule::in(['demo', 'api'])],
+            'ambiente' => ['required', Rule::in(['sandbox', 'producao'])],
+            'ativo' => ['required', 'boolean'],
+            'client_id' => ['nullable', 'string', 'max:255'],
+            'client_secret' => ['nullable', 'string'],
+            'chave_pix' => ['nullable', 'string', 'max:180'],
+            'api_base_url' => ['nullable', 'url', 'max:500'],
+            'token_url' => ['nullable', 'url', 'max:500'],
+            'cert_path' => ['nullable', 'string', 'max:500'],
+            'key_path' => ['nullable', 'string', 'max:500'],
+            'webhook_url' => ['nullable', 'url', 'max:500'],
+            'webhook_token' => ['nullable', 'string', 'max:160'],
+            'acao' => ['nullable', Rule::in(['salvar', 'testar'])],
+            'page' => ['nullable', 'string'],
+        ]);
+
+        $dados['api_base_url'] = $dados['api_base_url'] ?: ItauService::DEFAULT_API_BASE_URL;
+        $dados['token_url'] = $dados['token_url'] ?: ItauService::DEFAULT_TOKEN_URL;
+        $dados['webhook_token'] = $dados['webhook_token'] ?: ItauService::DEFAULT_WEBHOOK_TOKEN;
+        $dados['webhook_url'] = $dados['webhook_url'] ?: route('locx.webhook-itau', ['token' => $dados['webhook_token']]);
+        unset($dados['acao'], $dados['page']);
+
+        ItauConfig::query()->updateOrCreate(
+            ['id' => 1],
+            $dados + ['access_token' => null, 'token_expires_at' => null, 'atualizado_em' => now()]
+        );
+
+        $mensagem = 'Configuracoes do Itau salvas.';
+        if ($request->input('acao') === 'testar') {
+            $resultado = $this->itau->testar();
+            $mensagem = ($resultado['ok'] ?? false)
+                ? 'Itau salvo e conexao validada: '.($resultado['mensagem'] ?? 'ok')
+                : 'Itau salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
+        }
+
+        if ($request->input('page') === 'bancos') {
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'itau'])->with('success', $mensagem);
+        }
+
+        return $this->voltar('itau', $mensagem);
+    }
+
     public function salvarGatewayPix(Request $request): RedirectResponse
     {
         $this->autorizar($request->user(), 'configuracoes', 'editar');
         $dados = $request->validate([
-            'gateway' => ['required', Rule::in(['pagbank', 'asaas', 'sicoob'])],
+            'gateway' => ['required', Rule::in(['pagbank', 'asaas', 'sicoob', 'itau'])],
             'page' => ['nullable', 'string'],
         ]);
 
         $this->pixGateway->salvar($dados['gateway']);
-        $page = in_array($dados['page'] ?? '', ['bancos', 'pagbank', 'asaas', 'sicoob', 'configuracoes'], true)
+        $page = in_array($dados['page'] ?? '', ['bancos', 'pagbank', 'asaas', 'sicoob', 'itau', 'configuracoes'], true)
             ? $dados['page']
             : 'configuracoes';
 

@@ -62,6 +62,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/configuracoes/pagbank', [LocxController::class, 'salvarPagBank'])->name('locx.pagbank.salvar');
     Route::post('/configuracoes/asaas', [LocxController::class, 'salvarAsaas'])->name('locx.asaas.salvar');
     Route::post('/configuracoes/sicoob', [LocxController::class, 'salvarSicoob'])->name('locx.sicoob.salvar');
+    Route::post('/configuracoes/itau', [LocxController::class, 'salvarItau'])->name('locx.itau.salvar');
     Route::post('/configuracoes/gateway-pix', [LocxController::class, 'salvarGatewayPix'])->name('locx.gateway-pix.salvar');
     Route::post('/look/modulos', [LocxController::class, 'salvarLookModulo'])->name('locx.look-modulos.salvar');
     Route::post('/usuarios', [LocxController::class, 'salvarUsuario'])->name('locx.usuarios.salvar');
@@ -72,6 +73,7 @@ Route::post('/webhooks/telegram', [WebhookController::class, 'telegram'])->name(
 Route::post('/webhooks/pagbank', [WebhookController::class, 'pagBank'])->name('locx.webhook-pagbank');
 Route::post('/webhooks/asaas', [WebhookController::class, 'asaas'])->name('locx.webhook-asaas');
 Route::post('/webhooks/sicoob', [WebhookController::class, 'sicoob'])->name('locx.webhook-sicoob');
+Route::post('/webhooks/itau', [WebhookController::class, 'itau'])->name('locx.webhook-itau');
 
 Route::get('/locx', fn () => redirect()->route('locx.index', request()->query(), 301));
 Route::get('/locx/index.php', fn () => redirect()->route('locx.index', request()->query(), 301));
@@ -82,3 +84,4 @@ Route::post('/locx/webhooks/telegram.php', [WebhookController::class, 'telegram'
 Route::post('/locx/webhooks/pagbank.php', [WebhookController::class, 'pagBank']);
 Route::post('/locx/webhooks/asaas.php', [WebhookController::class, 'asaas']);
 Route::post('/locx/webhooks/sicoob.php', [WebhookController::class, 'sicoob']);
+Route::post('/locx/webhooks/itau.php', [WebhookController::class, 'itau']);

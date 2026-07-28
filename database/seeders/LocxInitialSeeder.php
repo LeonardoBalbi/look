@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Services\AsaasService;
+use App\Services\ItauService;
 use App\Services\SicoobService;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class LocxInitialSeeder extends Seeder
 
         $modulos = [
             'dashboard', 'crm', 'clientes', 'motos', 'contratos', 'financeiro', 'cobrancas',
-            'manutencao', 'estoque', 'multas', 'inadimplencia', 'pix', 'bancos', 'pagbank', 'asaas', 'sicoob', 'whatsapp', 'relatorios', 'lojas',
+            'manutencao', 'estoque', 'multas', 'inadimplencia', 'pix', 'bancos', 'pagbank', 'asaas', 'sicoob', 'itau', 'whatsapp', 'relatorios', 'lojas',
             'usuarios', 'configuracoes',
         ];
         $acoes = ['visualizar', 'criar', 'editar', 'excluir'];
@@ -88,6 +89,18 @@ class LocxInitialSeeder extends Seeder
                 'api_base_url' => SicoobService::DEFAULT_API_BASE_URL,
                 'token_url' => SicoobService::DEFAULT_TOKEN_URL,
                 'webhook_token' => SicoobService::DEFAULT_WEBHOOK_TOKEN,
+            ]);
+        }
+
+        if (Schema::hasTable('itau_config')) {
+            DB::table('itau_config')->insertOrIgnore([
+                'id' => 1,
+                'modo' => 'demo',
+                'ambiente' => 'producao',
+                'ativo' => 1,
+                'api_base_url' => ItauService::DEFAULT_API_BASE_URL,
+                'token_url' => ItauService::DEFAULT_TOKEN_URL,
+                'webhook_token' => ItauService::DEFAULT_WEBHOOK_TOKEN,
             ]);
         }
 

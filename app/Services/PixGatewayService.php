@@ -12,6 +12,7 @@ class PixGatewayService
         private readonly AsaasService $asaas,
         private readonly PagBankService $pagBank,
         private readonly SicoobService $sicoob,
+        private readonly ItauService $itau,
     ) {}
 
     public function config(): PixGatewayConfig
@@ -35,6 +36,7 @@ class PixGatewayService
         return match ($this->config()->gateway) {
             'asaas' => $this->asaas->criarPix($cobranca),
             'sicoob' => $this->sicoob->criarPix($cobranca),
+            'itau' => $this->itau->criarPix($cobranca),
             default => $this->pagBank->criarPix($cobranca),
         };
     }
@@ -44,6 +46,7 @@ class PixGatewayService
         return match ($this->config()->gateway) {
             'asaas' => 'Asaas',
             'sicoob' => 'Sicoob',
+            'itau' => 'Itau',
             default => 'PagBank',
         };
     }
@@ -69,6 +72,9 @@ class PixGatewayService
                     })
                     ->orWhere(function ($sicoob): void {
                         $sicoob->whereNotNull('sicoob_txid')->where('sicoob_txid', 'not like', 'DEMO-%');
+                    })
+                    ->orWhere(function ($itau): void {
+                        $itau->whereNotNull('itau_txid')->where('itau_txid', 'not like', 'DEMO-%');
                     });
             })
             ->orderBy('id')
@@ -81,6 +87,7 @@ class PixGatewayService
                     $consulta = match (true) {
                         $cobranca->asaas_id && ! str_starts_with((string) $cobranca->asaas_id, 'DEMO-') => $this->asaas->conciliarCobranca($cobranca),
                         $cobranca->sicoob_txid && ! str_starts_with((string) $cobranca->sicoob_txid, 'DEMO-') => $this->sicoob->conciliarCobranca($cobranca),
+                        $cobranca->itau_txid && ! str_starts_with((string) $cobranca->itau_txid, 'DEMO-') => $this->itau->conciliarCobranca($cobranca),
                         default => $this->pagBank->conciliarCobranca($cobranca),
                     };
 
