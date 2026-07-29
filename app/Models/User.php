@@ -37,6 +37,11 @@ class User extends Authenticatable
         return $this->belongsTo(Loja::class);
     }
 
+    public function perfilAcesso(): BelongsTo
+    {
+        return $this->belongsTo(UsuarioPerfil::class, 'perfil', 'codigo');
+    }
+
     public function lojas(): BelongsToMany
     {
         return $this->belongsToMany(Loja::class, 'usuario_lojas', 'usuario_id', 'loja_id');
@@ -47,33 +52,91 @@ class User extends Authenticatable
         return $this->hasMany(UsuarioPermissao::class, 'usuario_id');
     }
 
-    public function isAdmin(): bool
+    public function isSuperAdmin(): bool
     {
         return in_array(strtolower((string) $this->perfil), [
-            'administrador_geral',
-            'diretor',
+            'super_admin',
             'admin',
             'administrador',
         ], true);
     }
 
+    public function isAdministradorGeral(): bool
+    {
+        return strtolower((string) $this->perfil) === 'administrador_geral';
+    }
+
+    public function podeGerenciarUsuarios(): bool
+    {
+        return $this->isSuperAdmin() || $this->isAdministradorGeral();
+    }
+
+    public function isAdmin(): bool
+    {
+        return $this->isSuperAdmin() || $this->isAdministradorGeral() || strtolower((string) $this->perfil) === 'diretor';
+    }
+
     public function pode(string $modulo, string $acao = 'visualizar'): bool
     {
-        if ($this->isAdmin()) {
+        if ($this->isSuperAdmin()) {
+            return true;
+        }
+
+        if ($this->relationLoaded('perfilAcesso')) {
+            if ($this->perfilAcesso) {
+                if ($this->perfilAcesso->status !== 'ativo') {
+                    return false;
+                }
+
+                if ($this->perfilAcesso->relationLoaded('permissoes')) {
+                    return $this->perfilAcesso->permissoes->contains(
+                        fn (UsuarioPerfilPermissao $permissao) => $permissao->modulo === $modulo
+                            && $permissao->acao === $acao
+                    );
+                }
+
+                return $this->perfilAcesso->permissoes()
+                    ->where('modulo', $modulo)
+                    ->where('acao', $acao)
+                    ->exists();
+            }
+        } else {
+            $perfil = UsuarioPerfil::query()
+                ->where('codigo', $this->perfil)
+                ->first();
+
+            if ($perfil) {
+                if ($perfil->status !== 'ativo') {
+                    return false;
+                }
+
+                return $perfil->permissoes()
+                    ->where('modulo', $modulo)
+                    ->where('acao', $acao)
+                    ->exists();
+            }
+        }
+
+        if ($this->isAdministradorGeral()) {
             return true;
         }
 
         if ($this->relationLoaded('permissoes')) {
-            return $this->permissoes->contains(
+            $temPermissao = $this->permissoes->contains(
                 fn (UsuarioPermissao $permissao) => $permissao->modulo === $modulo
                     && $permissao->acao === $acao
             );
-        }
-
-        return $this->permissoes()
+            if ($temPermissao) {
+                return true;
+            }
+        } elseif ($this->permissoes()
             ->where('modulo', $modulo)
             ->where('acao', $acao)
-            ->exists();
+            ->exists()) {
+            return true;
+        }
+
+        return false;
     }
 
     public function lojaIdsPermitidas(): array
@@ -86,6 +149,12 @@ class User extends Authenticatable
             ? $this->lojas->pluck('id')
             : $this->lojas()->pluck('lojas.id');
 
-        return $ids->map(fn ($id) => (int) $id)->all();
+        return $ids
+            ->push($this->loja_id)
+            ->filter()
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
     }
 }

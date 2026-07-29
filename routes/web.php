@@ -66,6 +66,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/configuracoes/gateway-pix', [LocxController::class, 'salvarGatewayPix'])->name('locx.gateway-pix.salvar');
     Route::post('/look/modulos', [LocxController::class, 'salvarLookModulo'])->name('locx.look-modulos.salvar');
     Route::post('/usuarios', [LocxController::class, 'salvarUsuario'])->name('locx.usuarios.salvar');
+    Route::post('/usuarios/perfis', [LocxController::class, 'salvarUsuarioPerfil'])->name('locx.usuarios.perfis.salvar');
 });
 
 Route::match(['get', 'post'], '/webhooks/whatsapp', [WebhookController::class, 'whatsapp'])->name('locx.webhook-whatsapp');

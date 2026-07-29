@@ -1,4 +1,10 @@
 <div class="table-wrap">
+    @php
+        $podeGerarPix = $page === 'cobrancas'
+            ? $user->pode('cobrancas', 'editar')
+            : $user->pode('financeiro', 'editar');
+        $podeEnviarCobranca = $user->pode('inadimplencia', 'editar');
+    @endphp
     <table>
         <thead><tr><th>ID</th><th>Cliente</th><th>Vencimento</th><th>Principal</th><th>Pago</th><th>Atualizado</th><th>PIX/Canais</th><th>Gateway PIX</th><th>Status</th><th>Ações</th></tr></thead>
         <tbody>
@@ -71,16 +77,23 @@
                 <td>{!! \App\Support\Locx::status($cobranca->status) !!}</td>
                 <td>
                     <div class="billing-actions">
-                    <form method="post" action="{{ route('locx.cobrancas.pix', $cobranca) }}">
-                        @csrf
-                        <input type="hidden" name="page" value="{{ $page }}">
-                        <button class="btn secondary" type="submit">Gerar PIX</button>
-                    </form>
-                    @if($cobranca->cliente?->whatsapp)
-                        <a class="btn secondary" target="_blank" href="https://wa.me/55{{ preg_replace('/\D/','',$cobranca->cliente?->whatsapp) }}">WhatsApp</a>
-                    @endif
-                    <form method="post" action="{{ route('locx.cobrancas.whatsapp',$cobranca) }}">@csrf<button class="btn success" type="submit">Enviar WhatsApp</button></form>
-                    <form method="post" action="{{ route('locx.cobrancas.telegram',$cobranca) }}">@csrf<button class="btn secondary" type="submit">Enviar Telegram</button></form>
+                        @if($podeGerarPix)
+                            <form method="post" action="{{ route('locx.cobrancas.pix', $cobranca) }}">
+                                @csrf
+                                <input type="hidden" name="page" value="{{ $page }}">
+                                <button class="btn secondary" type="submit">Gerar PIX</button>
+                            </form>
+                        @endif
+                        @if($cobranca->cliente?->whatsapp)
+                            <a class="btn secondary" target="_blank" href="https://wa.me/55{{ preg_replace('/\D/','',$cobranca->cliente?->whatsapp) }}">WhatsApp</a>
+                        @endif
+                        @if($podeEnviarCobranca)
+                            <form method="post" action="{{ route('locx.cobrancas.whatsapp',$cobranca) }}">@csrf<button class="btn success" type="submit">Enviar WhatsApp</button></form>
+                            <form method="post" action="{{ route('locx.cobrancas.telegram',$cobranca) }}">@csrf<button class="btn secondary" type="submit">Enviar Telegram</button></form>
+                        @endif
+                        @if(!$podeGerarPix && !$podeEnviarCobranca && !$cobranca->cliente?->whatsapp)
+                            <span class="tag muted">somente consulta</span>
+                        @endif
                     </div>
                 </td>
             </tr>

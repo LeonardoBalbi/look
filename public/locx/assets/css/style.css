@@ -1632,6 +1632,56 @@ tr:hover td{
   padding-bottom:10px;
   border-bottom:1px solid #e5ebf3;
 }
+.user-role-panel .section-head{
+  margin-bottom:14px;
+}
+.role-preset-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(170px,1fr));
+  gap:8px;
+  margin:4px 0 12px;
+}
+.role-preset-grid article{
+  border:1px solid #dbe3ee;
+  border-radius:10px;
+  padding:10px;
+  background:#fbfdff;
+}
+.role-preset-grid article.is-active{
+  border-color:#2563eb;
+  background:#eff6ff;
+  box-shadow:inset 3px 0 #2563eb;
+}
+.role-preset-grid strong,
+.role-preset-grid span{
+  display:block;
+}
+.role-preset-grid strong{
+  color:#0f172a;
+  font-size:12px;
+}
+.role-preset-grid span{
+  margin-top:5px;
+  color:#64748b;
+  font-size:10px;
+  line-height:1.35;
+}
+.permission-head{
+  display:flex;
+  align-items:flex-end;
+  justify-content:space-between;
+  gap:12px;
+  margin:14px 0 10px;
+}
+.permission-head h3{
+  margin:0;
+}
+.permission-head small{
+  display:block;
+  margin-top:4px;
+  color:#64748b;
+  line-height:1.35;
+}
 .actions{
   flex-wrap:wrap;
   align-items:center;

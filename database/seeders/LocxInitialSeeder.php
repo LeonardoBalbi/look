@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Services\AsaasService;
 use App\Services\ItauService;
 use App\Services\SicoobService;
+use App\Support\Locx;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
@@ -23,9 +24,19 @@ class LocxInitialSeeder extends Seeder
         ]);
 
         DB::table('usuarios')->updateOrInsert(
+            ['email' => 'superadmin@locx.com.br'],
+            [
+                'nome' => 'Super Admin LocX',
+                'senha' => $hash,
+                'perfil' => 'super_admin',
+                'loja_id' => null,
+                'status' => 'ativo',
+            ]
+        );
+
+        DB::table('usuarios')->updateOrInsert(
             ['email' => 'admin@locx.com.br'],
             [
-                'id' => 1,
                 'nome' => 'Administrador LocX',
                 'senha' => $hash,
                 'perfil' => 'administrador_geral',
@@ -33,6 +44,7 @@ class LocxInitialSeeder extends Seeder
                 'status' => 'ativo',
             ]
         );
+        $adminId = (int) DB::table('usuarios')->where('email', 'admin@locx.com.br')->value('id');
 
         $modulos = [
             'dashboard', 'crm', 'clientes', 'motos', 'contratos', 'financeiro', 'cobrancas',
@@ -41,19 +53,44 @@ class LocxInitialSeeder extends Seeder
         ];
         $acoes = ['visualizar', 'criar', 'editar', 'excluir'];
 
+        if (Schema::hasTable('usuario_perfis')) {
+            foreach (Locx::PERFIS as $codigo => $nome) {
+                DB::table('usuario_perfis')->updateOrInsert(
+                    ['codigo' => $codigo],
+                    [
+                        'codigo' => $codigo,
+                        'nome' => $nome,
+                        'descricao' => Locx::perfilDescricao($codigo),
+                        'sistema' => true,
+                        'status' => 'ativo',
+                    ]
+                );
+                $perfilId = (int) DB::table('usuario_perfis')->where('codigo', $codigo)->value('id');
+                DB::table('usuario_perfil_permissoes')->where('perfil_id', $perfilId)->delete();
+                foreach (Locx::perfilPermissoesPadrao($codigo) as $modulo => $permissoes) {
+                    foreach (array_keys($permissoes) as $acao) {
+                        DB::table('usuario_perfil_permissoes')->updateOrInsert(
+                            ['perfil_id' => $perfilId, 'modulo' => $modulo, 'acao' => $acao],
+                            ['perfil_id' => $perfilId, 'modulo' => $modulo, 'acao' => $acao]
+                        );
+                    }
+                }
+            }
+        }
+
         foreach ($modulos as $modulo) {
             foreach ($acoes as $acao) {
                 DB::table('usuario_permissoes')->updateOrInsert(
-                    ['usuario_id' => 1, 'modulo' => $modulo, 'acao' => $acao],
-                    ['usuario_id' => 1, 'modulo' => $modulo, 'acao' => $acao]
+                    ['usuario_id' => $adminId, 'modulo' => $modulo, 'acao' => $acao],
+                    ['usuario_id' => $adminId, 'modulo' => $modulo, 'acao' => $acao]
                 );
             }
         }
 
         foreach ([1, 2, 3, 4] as $lojaId) {
             DB::table('usuario_lojas')->updateOrInsert(
-                ['usuario_id' => 1, 'loja_id' => $lojaId],
-                ['usuario_id' => 1, 'loja_id' => $lojaId]
+                ['usuario_id' => $adminId, 'loja_id' => $lojaId],
+                ['usuario_id' => $adminId, 'loja_id' => $lojaId]
             );
         }
 

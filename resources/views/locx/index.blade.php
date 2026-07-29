@@ -73,7 +73,7 @@
         <div class="sidebar-footer">
             <div class="empresa-logo"><img src="{{ \App\Support\Locx::asset('assets/img/logo-locx.svg') }}" alt="LocX Aluguel de Motos"></div>
             Logado como: <strong>{{ $user->nome }}</strong><br>
-            {{ \App\Support\Locx::perfil($user->perfil) }}<br><br>
+            {{ $user->perfilAcesso?->nome ?? \App\Support\Locx::perfil($user->perfil) }}<br><br>
             <form method="post" action="{{ route('locx.logout') }}">@csrf<button class="btn secondary" type="submit">Sair</button></form>
         </div>
     </aside>
@@ -95,12 +95,12 @@
 
             $quickActions = [
                 'clientes' => [['label' => 'Novo cliente', 'href' => route('locx.index', ['page' => 'clientes'])]],
-                'motos' => [['label' => 'Nova moto', 'href' => route('locx.index', ['page' => 'motos'])]],
-                'contratos' => [['label' => 'Novo contrato', 'href' => route('locx.index', ['page' => 'contratos'])]],
-                'cobrancas' => [['label' => 'Nova cobrança', 'href' => '#nova-cobranca']],
+                'motos' => $user->pode('motos', 'criar') ? [['label' => 'Nova moto', 'href' => route('locx.index', ['page' => 'motos'])]] : [],
+                'contratos' => $user->pode('contratos', 'criar') ? [['label' => 'Novo contrato', 'href' => route('locx.index', ['page' => 'contratos'])]] : [],
+                'cobrancas' => $user->pode('cobrancas', 'criar') ? [['label' => 'Nova cobrança', 'href' => '#nova-cobranca']] : [],
                 'crm' => [['label' => 'Abrir clientes', 'href' => route('locx.index', ['page' => 'clientes'])]],
-                'whatsapp' => [['label' => 'Testar integração', 'href' => '#testar-integracao']],
-                'telegram' => [['label' => 'Testar bot', 'href' => '#testar-bot']],
+                'whatsapp' => $user->pode('whatsapp', 'editar') ? [['label' => 'Testar integração', 'href' => '#testar-integracao']] : [],
+                'telegram' => $user->pode('telegram', 'editar') ? [['label' => 'Testar bot', 'href' => '#testar-bot']] : [],
             ][$page] ?? [];
         @endphp
         <header class="topbar">
@@ -150,6 +150,7 @@
             </div>
             <div class="panel"><h2>Módulos do sistema</h2><div class="module-grid">
                 @foreach (['reservas' => 'Disponibilidade e pré-locação', 'crm' => 'Relacionamento e follow-up', 'clientes' => 'Cadastro completo e documentos', 'motos' => 'Frota, status e lojas', 'contratos' => 'Locação e histórico', 'manutencao' => 'Ordens de serviço da frota', 'estoque' => 'Peças, entradas e saídas', 'multas' => 'Infrações e repasses', 'financeiro' => 'Recebimentos, baixas e caixa', 'cobrancas' => 'Gerar, enviar e acompanhar', 'inadimplencia' => 'Juros, acordos e bloqueios', 'contas' => 'Bancos, despesas e conciliação', 'documentos' => 'Anexos e assinatura digital', 'relatorios' => 'Indicadores e DRE', 'lojas' => 'Resultado por unidade', 'usuarios' => 'Perfis e permissões'] as $modulo => $descricao)
+                    @continue(!$user->pode($modulo))
                     <a class="module-card module-card-info" href="{{ route('locx.index', ['page' => $modulo]) }}" data-module-info="{{ $moduleDetails[$modulo] ?? $descricao }}" aria-label="{{ $pages[$modulo] }}. {{ $moduleDetails[$modulo] ?? $descricao }}"><i>{!! \App\Support\Locx::icon($modulo) !!}</i><div><strong>{{ $pages[$modulo] }}</strong><br><small>{{ $descricao }}</small></div></a>
                 @endforeach
             </div></div>
@@ -192,19 +193,26 @@
 
         @elseif ($page === 'motos')
             <div class="grid side">
-                <div class="panel"><h2>{{ $motoEdit ? 'Editar' : 'Nova' }} Motocicleta</h2><form method="post" action="{{ route('locx.motos.salvar') }}" class="form-grid">@csrf
-                    <input type="hidden" name="id" value="{{ $motoEdit?->id }}">
-                    <label>Loja<select name="loja_id" required>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$motoEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
-                    <label>Marca<input name="marca" list="marcas-moto" value="{{ old('marca',$motoEdit?->marca_nome ?? $motoEdit?->marca) }}"></label><label>Modelo<input name="modelo" list="modelos-moto" required value="{{ old('modelo',$motoEdit?->modelo_nome ?? $motoEdit?->modelo) }}"></label>
-                    <datalist id="marcas-moto">@foreach($marcasMoto as $marca)<option value="{{ $marca }}"></option>@endforeach</datalist>
-                    <datalist id="modelos-moto">@foreach($modelosMoto as $modelo)<option value="{{ $modelo }}"></option>@endforeach</datalist>
-                    <label>Ano<input type="number" name="ano" value="{{ old('ano',$motoEdit?->ano) }}"></label><label>Placa<input name="placa" value="{{ old('placa',$motoEdit?->placa) }}"></label><label>Cor<input name="cor" list="cores-moto" value="{{ old('cor',$motoEdit?->cor) }}"></label>
-                    <datalist id="cores-moto">@foreach($coresMoto as $cor)<option value="{{ $cor }}"></option>@endforeach</datalist>
-                    <label>Renavam<input name="renavam" value="{{ old('renavam',$motoEdit?->renavam) }}"></label>
-                    <label>Chassi<input name="chassi" value="{{ old('chassi',$motoEdit?->chassi) }}"></label><label>Data aquisição<input type="date" name="data_aquisicao" value="{{ old('data_aquisicao',$motoEdit?->data_aquisicao?->format('Y-m-d')) }}"></label>
-                    <label>Status<select name="status_operacional">@foreach(['disponivel','alugada','manutencao','recuperacao','encerrada'] as $status)<option value="{{ $status }}" @selected(old('status_operacional',$motoEdit?->status_operacional ?? 'disponivel')===$status)>{{ $status }}</option>@endforeach</select></label>
-                    <label>Seguro<input name="seguro" value="{{ old('seguro',$motoEdit?->seguro) }}"></label><label>Rastreador<input name="rastreador" value="{{ old('rastreador',$motoEdit?->rastreador) }}"></label><div class="span-3"><button type="submit">Salvar Moto</button></div>
-                </form></div>
+                <div class="panel">
+                    @if($user->pode('motos', $motoEdit ? 'editar' : 'criar'))
+                        <h2>{{ $motoEdit ? 'Editar' : 'Nova' }} Motocicleta</h2><form method="post" action="{{ route('locx.motos.salvar') }}" class="form-grid">@csrf
+                            <input type="hidden" name="id" value="{{ $motoEdit?->id }}">
+                            <label>Loja<select name="loja_id" required>@foreach($lojasMoto as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$motoEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                            <label>Marca<input name="marca" list="marcas-moto" value="{{ old('marca',$motoEdit?->marca_nome ?? $motoEdit?->marca) }}"></label><label>Modelo<input name="modelo" list="modelos-moto" required value="{{ old('modelo',$motoEdit?->modelo_nome ?? $motoEdit?->modelo) }}"></label>
+                            <datalist id="marcas-moto">@foreach($marcasMoto as $marca)<option value="{{ $marca }}"></option>@endforeach</datalist>
+                            <datalist id="modelos-moto">@foreach($modelosMoto as $modelo)<option value="{{ $modelo }}"></option>@endforeach</datalist>
+                            <label>Ano<input type="number" name="ano" value="{{ old('ano',$motoEdit?->ano) }}"></label><label>Placa<input name="placa" value="{{ old('placa',$motoEdit?->placa) }}"></label><label>Cor<input name="cor" list="cores-moto" value="{{ old('cor',$motoEdit?->cor) }}"></label>
+                            <datalist id="cores-moto">@foreach($coresMoto as $cor)<option value="{{ $cor }}"></option>@endforeach</datalist>
+                            <label>Renavam<input name="renavam" value="{{ old('renavam',$motoEdit?->renavam) }}"></label>
+                            <label>Chassi<input name="chassi" value="{{ old('chassi',$motoEdit?->chassi) }}"></label><label>Data aquisição<input type="date" name="data_aquisicao" value="{{ old('data_aquisicao',$motoEdit?->data_aquisicao?->format('Y-m-d')) }}"></label>
+                            <label>Status<select name="status_operacional">@foreach(['disponivel','alugada','manutencao','recuperacao','encerrada'] as $status)<option value="{{ $status }}" @selected(old('status_operacional',$motoEdit?->status_operacional ?? 'disponivel')===$status)>{{ $status }}</option>@endforeach</select></label>
+                            <label>Seguro<input name="seguro" value="{{ old('seguro',$motoEdit?->seguro) }}"></label><label>Rastreador<input name="rastreador" value="{{ old('rastreador',$motoEdit?->rastreador) }}"></label><div class="span-3"><button type="submit">Salvar Moto</button></div>
+                        </form>
+                    @else
+                        <h2>Motocicletas</h2>
+                        <p class="empty">Este perfil consulta a frota, mas não altera motocicletas.</p>
+                    @endif
+                </div>
                 <div class="panel"><h2>Frota Cadastrada</h2><div class="table-wrap"><table><tr><th>Loja</th><th>Placa</th><th>Modelo</th><th>Cor</th><th>Ano</th><th>Status</th><th>Ações</th></tr>
                     @foreach($motos as $moto)<tr><td>{{ $moto->loja?->nome }}</td><td>{{ $moto->placa }}</td><td>{{ $moto->modelo_nome }}</td><td>{{ $moto->cor ?: '-' }}</td><td>{{ $moto->ano }}</td><td>{!! \App\Support\Locx::status($moto->status_operacional) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'motos','edit'=>$moto->id]) }}">Editar</a></td></tr>@endforeach
                 </table></div></div>
@@ -212,16 +220,23 @@
 
         @elseif ($page === 'contratos')
             <div class="grid side">
-                <div class="panel"><h2>Novo Contrato</h2><form method="post" action="{{ route('locx.contratos.salvar') }}" class="form-grid">@csrf
-                    <label>Cliente<select name="cliente_id">@foreach($clientes as $cliente)<option value="{{ $cliente->id }}">{{ $cliente->nome }}</option>@endforeach</select></label>
-                    <label>Moto<select name="motocicleta_id">@foreach($motos as $moto)<option value="{{ $moto->id }}">{{ $moto->placa }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
-                    <label>Loja<select name="loja_id">@foreach($lojas as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>
-                    <label>Data início<input type="date" name="data_inicio" value="{{ old('data_inicio',today()->format('Y-m-d')) }}"></label><label>Valor contratado<input type="number" step="0.01" name="valor_contratado" value="{{ old('valor_contratado','500.00') }}"></label>
-                    <label>Forma<select name="forma_cobranca"><option>semanal</option><option>quinzenal</option><option>mensal</option></select></label><label>Status<select name="status"><option>ativo</option><option>suspenso</option><option>encerrado</option></select></label>
-                    <label>Próxima cobrança<input type="date" name="proxima_cobranca_em" value="{{ old('proxima_cobranca_em', today()->format('Y-m-d')) }}"></label>
-                    <label><input type="checkbox" name="cobranca_automatica" value="1" @checked(old('cobranca_automatica', true))> Cobrança automática</label>
-                    <div class="span-3"><button type="submit">Criar Contrato</button></div>
-                </form></div>
+                <div class="panel">
+                    @if($user->pode('contratos', 'criar'))
+                        <h2>Novo Contrato</h2><form method="post" action="{{ route('locx.contratos.salvar') }}" class="form-grid">@csrf
+                            <label>Cliente<select name="cliente_id">@foreach($clientes as $cliente)<option value="{{ $cliente->id }}">{{ $cliente->nome }}</option>@endforeach</select></label>
+                            <label>Moto<select name="motocicleta_id">@foreach($motos as $moto)<option value="{{ $moto->id }}">{{ $moto->placa }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
+                            <label>Loja<select name="loja_id">@foreach($lojasContrato as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>
+                            <label>Data início<input type="date" name="data_inicio" value="{{ old('data_inicio',today()->format('Y-m-d')) }}"></label><label>Valor contratado<input type="number" step="0.01" name="valor_contratado" value="{{ old('valor_contratado','500.00') }}"></label>
+                            <label>Forma<select name="forma_cobranca"><option>semanal</option><option>quinzenal</option><option>mensal</option></select></label><label>Status<select name="status"><option>ativo</option><option>suspenso</option><option>encerrado</option></select></label>
+                            <label>Próxima cobrança<input type="date" name="proxima_cobranca_em" value="{{ old('proxima_cobranca_em', today()->format('Y-m-d')) }}"></label>
+                            <label><input type="checkbox" name="cobranca_automatica" value="1" @checked(old('cobranca_automatica', true))> Cobrança automática</label>
+                            <div class="span-3"><button type="submit">Criar Contrato</button></div>
+                        </form>
+                    @else
+                        <h2>Contratos</h2>
+                        <p class="empty">Este perfil consulta contratos, mas não cria novas locações.</p>
+                    @endif
+                </div>
                 <div class="panel"><h2>Contratos</h2><div class="table-wrap"><table><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Loja</th><th>Valor</th><th>Recorrência</th><th>Status</th><th>Ações</th></tr>
                     @foreach($contratos as $contrato)<tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->cliente?->nome }}</td><td>{{ $contrato->motocicleta?->placa }}</td><td>{{ $contrato->loja?->nome }}</td><td>{{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</td><td>{{ $contrato->cobranca_automatica ? $contrato->forma_cobranca : 'manual' }}<br><small>{{ $contrato->proxima_cobranca_em ? 'Próx. '.$contrato->proxima_cobranca_em->format('d/m/Y') : 'sem data' }}</small></td><td>{!! \App\Support\Locx::status($contrato->status) !!}</td><td><button type="button" class="btn contract-generate-btn" data-contract-open="contrato-preview-{{ $contrato->id }}">Gerar contrato</button></td></tr>@endforeach
                 </table></div></div>
@@ -292,27 +307,37 @@
             <div class="grid side">
                 <div class="panel" id="{{ $page === 'cobrancas' ? 'nova-cobranca' : 'registrar-pagamento' }}">
                     @if ($page === 'cobrancas')
-                        <h2>Nova Cobrança</h2>
-                        <form method="post" action="{{ route('locx.cobrancas.salvar') }}" class="form-grid">@csrf
-                            <label class="span-2">Contrato<select name="contrato_id">@foreach($contratos as $contrato)<option value="{{ $contrato->id }}">#{{ $contrato->id }} - {{ $contrato->cliente?->nome }} / {{ $contrato->motocicleta?->placa }} - {{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</option>@endforeach</select></label>
-                            <label>Vencimento<input type="date" name="vencimento" value="{{ today()->format('Y-m-d') }}"></label>
-                            <label>Valor<input type="number" step="0.01" name="valor_principal" value="500.00"></label>
-                            <div class="span-3"><button type="submit">Gerar cobrança + PIX</button></div>
-                        </form>
+                        @if($user->pode('cobrancas', 'criar'))
+                            <h2>Nova Cobrança</h2>
+                            <form method="post" action="{{ route('locx.cobrancas.salvar') }}" class="form-grid">@csrf
+                                <label class="span-2">Contrato<select name="contrato_id">@foreach($contratos as $contrato)<option value="{{ $contrato->id }}">#{{ $contrato->id }} - {{ $contrato->cliente?->nome }} / {{ $contrato->motocicleta?->placa }} - {{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</option>@endforeach</select></label>
+                                <label>Vencimento<input type="date" name="vencimento" value="{{ today()->format('Y-m-d') }}"></label>
+                                <label>Valor<input type="number" step="0.01" name="valor_principal" value="500.00"></label>
+                                <div class="span-3"><button type="submit">Gerar cobrança + PIX</button></div>
+                            </form>
+                        @else
+                            <h2>Cobranças</h2>
+                            <p class="empty">Este perfil consulta cobranças, mas não cria novos títulos.</p>
+                        @endif
                     @else
-                        <h2>Registrar Pagamento</h2>
-                        <form method="post" action="{{ route('locx.pagamentos.salvar') }}" class="form-grid">@csrf
-                            <label class="span-2">Cobrança<select name="cobranca_id">@foreach($cobrancasAbertas as $cobranca)<option value="{{ $cobranca->id }}">#{{ $cobranca->id }} - {{ $cobranca->cliente?->nome }} - {{ \App\Support\Locx::moeda($cobranca->valor_atualizado-$cobranca->valor_pago) }}</option>@endforeach</select></label>
-                            <label>Valor pago<input type="number" step="0.01" name="valor" required></label>
-                            <label>Forma<select name="forma"><option>pix</option><option>dinheiro</option><option>cartao</option><option>transferencia</option></select></label>
-                            <div class="span-3"><button class="btn success" type="submit">Registrar pagamento</button></div>
-                        </form>
-                        <hr>
-                        <form method="post" action="{{ route('locx.pix.conciliar') }}" class="toolbar">
-                            @csrf
-                            <input type="hidden" name="page" value="financeiro">
-                            <button class="btn secondary" type="submit">Conciliar PIX</button>
-                        </form>
+                        @if($user->pode('financeiro', 'editar'))
+                            <h2>Registrar Pagamento</h2>
+                            <form method="post" action="{{ route('locx.pagamentos.salvar') }}" class="form-grid">@csrf
+                                <label class="span-2">Cobrança<select name="cobranca_id">@foreach($cobrancasAbertas as $cobranca)<option value="{{ $cobranca->id }}">#{{ $cobranca->id }} - {{ $cobranca->cliente?->nome }} - {{ \App\Support\Locx::moeda($cobranca->valor_atualizado-$cobranca->valor_pago) }}</option>@endforeach</select></label>
+                                <label>Valor pago<input type="number" step="0.01" name="valor" required></label>
+                                <label>Forma<select name="forma"><option>pix</option><option>dinheiro</option><option>cartao</option><option>transferencia</option></select></label>
+                                <div class="span-3"><button class="btn success" type="submit">Registrar pagamento</button></div>
+                            </form>
+                            <hr>
+                            <form method="post" action="{{ route('locx.pix.conciliar') }}" class="toolbar">
+                                @csrf
+                                <input type="hidden" name="page" value="financeiro">
+                                <button class="btn secondary" type="submit">Conciliar PIX</button>
+                            </form>
+                        @else
+                            <h2>Financeiro</h2>
+                            <p class="empty">Este perfil consulta o financeiro, mas não registra pagamentos.</p>
+                        @endif
                     @endif
                 </div>
                 <div class="panel"><h2>{{ $page === 'cobrancas' ? 'Cobranças e envios' : 'Títulos e recebimentos' }}</h2>
@@ -337,16 +362,17 @@
                 </div>
             </div>
 
-            @if ($page === 'cobrancas')
+            @if ($page === 'cobrancas' && ($user->pode('cobrancas', 'criar') || $user->pode('cobrancas', 'editar')))
                 <section class="campaign-section">
                     <div class="campaign-head">
                         <div><span>CENTRAL MULTICANAL</span><h2>Campanhas de cobrança</h2><p>Envie por WhatsApp, e-mail e Telegram sem duplicar a mesma cobrança dentro da campanha.</p></div>
                         <div class="campaign-kpis"><b>{{ $campanhasResumo['agendadas'] }}</b><small>agendadas</small><b>{{ $campanhasResumo['concluidas'] }}</b><small>concluídas</small><b>{{ $campanhasResumo['falhas'] }}</b><small>com falhas</small></div>
                     </div>
                     <div class="grid side campaign-grid">
-                        <div class="panel">
-                            <h2>Nova campanha</h2>
-                            <form method="post" action="{{ route('locx.cobrancas.campanhas.criar') }}" class="form-grid campaign-form">@csrf
+                        @if($user->pode('cobrancas', 'criar'))
+                            <div class="panel">
+                                <h2>Nova campanha</h2>
+                                <form method="post" action="{{ route('locx.cobrancas.campanhas.criar') }}" class="form-grid campaign-form">@csrf
                                 <label class="span-2">Nome da campanha<input name="nome" required value="{{ old('nome','Cobranças '.now()->format('d/m/Y H:i')) }}"></label>
                                 <label>Público<select name="publico" id="campaignAudience"><option value="todos_abertos">Todas em aberto</option><option value="vence_hoje">Vencem hoje</option><option value="vencidas_7">Vencidas há 7 dias ou mais</option><option value="vencidas_15">Vencidas há 15 dias ou mais</option><option value="vencidas_30">Vencidas há 30 dias ou mais</option><option value="selecionadas">Somente selecionadas abaixo</option></select></label>
                                 <label>Estratégia<select name="estrategia"><option value="todos">Enviar em todos os canais marcados</option><option value="prioridade">Tentar canais em prioridade até um funcionar</option></select></label>
@@ -370,8 +396,9 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                                     </div>
                                 </div>
                                 <div class="span-3"><button type="submit">Criar e processar campanha</button></div>
-                            </form>
-                        </div>
+                                </form>
+                            </div>
+                        @endif
                         <div class="panel">
                             <h2>Últimas campanhas</h2>
                             <div class="campaign-list">
@@ -382,7 +409,7 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                                         <div class="campaign-progress"><span style="width: {{ $campanha->total_destinatarios ? min(100, round(($campanha->total_processados/$campanha->total_destinatarios)*100)) : 0 }}%"></span></div>
                                         <small>{{ $campanha->total_processados }}/{{ $campanha->total_destinatarios }} processados · {{ $campanha->total_enviados }} enviados · {{ $campanha->total_falhas }} falhas</small>
                                         <div class="actions">
-                                            @if(!in_array($campanha->status,['concluida','cancelada'],true))
+                                            @if($user->pode('cobrancas', 'editar') && !in_array($campanha->status,['concluida','cancelada'],true))
                                                 <form method="post" action="{{ route('locx.cobrancas.campanhas.executar',$campanha) }}">@csrf<button class="btn secondary">Processar agora</button></form>
                                                 <form method="post" action="{{ route('locx.cobrancas.campanhas.cancelar',$campanha) }}">@csrf<button class="btn danger">Cancelar</button></form>
                                             @endif
@@ -438,19 +465,38 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
 
         @elseif ($page === 'usuarios')
             <div class="grid side">
-                <div class="panel"><h2>{{ $usuarioEdit ? 'Editar' : 'Novo' }} Usuário</h2><form method="post" action="{{ route('locx.usuarios.salvar') }}" class="form">@csrf
-                    <input type="hidden" name="id" value="{{ $usuarioEdit?->id }}"><label>Nome<input name="nome" required value="{{ old('nome',$usuarioEdit?->nome) }}"></label><label>E-mail<input type="email" name="email" required value="{{ old('email',$usuarioEdit?->email) }}"></label>
-                    <label>Senha<input type="password" name="senha" {{ $usuarioEdit ? '' : 'required' }} placeholder="{{ $usuarioEdit ? 'Manter senha atual' : 'Mínimo de 6 caracteres' }}"></label>
-                    <label>Perfil<select name="perfil">@foreach(['administrador_geral','diretor','financeiro','gerente_loja','atendente','cobranca'] as $perfil)<option value="{{ $perfil }}" @selected(old('perfil',$usuarioEdit?->perfil ?? 'atendente')===$perfil)>{{ \App\Support\Locx::perfil($perfil) }}</option>@endforeach</select></label>
-                    <label>Loja principal<select name="loja_id"><option value="">Central / Todas</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$usuarioEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
-                    <label>Status<select name="status"><option value="ativo" @selected(($usuarioEdit?->status ?? 'ativo')==='ativo')>ativo</option><option value="bloqueado" @selected($usuarioEdit?->status==='bloqueado')>bloqueado</option></select></label>
-                    <h3>Lojas liberadas</h3><div class="checkgrid">@foreach($lojas as $loja)<label><input type="checkbox" name="lojas[]" value="{{ $loja->id }}" @checked(in_array($loja->id,$lojasSelecionadas,true))> {{ $loja->nome }}</label>@endforeach</div>
-                    <h3>Permissões por módulo</h3><div class="perm-table"><table><tr><th>Módulo</th>@foreach($acoes as $acao)<th>{{ $acao }}</th>@endforeach</tr>
-                        @foreach($pages as $modulo=>$nome)<tr><td>{{ $nome }}</td>@foreach($acoes as $acaoKey=>$acao)<td><input type="checkbox" name="perms[{{ $modulo }}][{{ $acaoKey }}]" value="1" @checked(!empty($permissoesSelecionadas[$modulo][$acaoKey]))></td>@endforeach</tr>@endforeach
-                    </table></div><br><button type="submit">Salvar Usuário</button>
-                </form></div>
-                <div class="panel"><h2>Usuários</h2><div class="table-wrap"><table><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Loja principal</th><th>Status</th><th>Ações</th></tr>
-                    @foreach($usuarios as $usuario)<tr><td>{{ $usuario->nome }}</td><td>{{ $usuario->email }}</td><td>{{ \App\Support\Locx::perfil($usuario->perfil) }}</td><td>{{ $usuario->loja?->nome ?? 'Todas / Central' }}</td><td>{!! \App\Support\Locx::status($usuario->status) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'usuarios','edit'=>$usuario->id]) }}">Editar</a></td></tr>@endforeach
+                <div class="panel user-role-panel">
+                    <div class="section-head"><div><span class="eyebrow">USUARIOS</span><h2>{{ $usuarioEdit ? 'Editar' : 'Novo' }} Usuario</h2><p>Escolha um perfil pronto. As permissoes sao definidas pelo super admin nos perfis de acesso.</p></div></div>
+                    @if(!$podeGerenciarUsuarios)<div class="notice warn">Somente Super Admin ou Administrador Geral podem criar usuarios. Perfis e permissoes ficam somente com o Super Admin.</div>@endif
+                    <form method="post" action="{{ route('locx.usuarios.salvar') }}" class="form">@csrf
+                        <input type="hidden" name="id" value="{{ $usuarioEdit?->id }}">
+                        <label>Nome<input name="nome" required value="{{ old('nome',$usuarioEdit?->nome) }}" @disabled(!$podeGerenciarUsuarios)></label><label>E-mail<input type="email" name="email" required value="{{ old('email',$usuarioEdit?->email) }}" @disabled(!$podeGerenciarUsuarios)></label>
+                        <label>Senha<input type="password" name="senha" {{ $usuarioEdit ? '' : 'required' }} placeholder="{{ $usuarioEdit ? 'Manter senha atual' : 'Minimo de 6 caracteres' }}" @disabled(!$podeGerenciarUsuarios)></label>
+                        <label>Perfil<select name="perfil" @disabled(!$podeGerenciarUsuarios)>@foreach($perfis as $perfil)@continue(!$podeGerenciarPerfis && $perfil->codigo === 'super_admin')<option value="{{ $perfil->codigo }}" @selected(old('perfil',$usuarioEdit?->perfil ?? 'atendente')===$perfil->codigo)>{{ $perfil->nome }}</option>@endforeach</select></label>
+                        <div class="role-preset-grid" aria-label="Perfis cadastrados">@foreach($perfis as $perfil)@continue(!$podeGerenciarPerfis && $perfil->codigo === 'super_admin')<article class="{{ ($usuarioEdit?->perfil ?? 'atendente') === $perfil->codigo ? 'is-active' : '' }}"><strong>{{ $perfil->nome }}</strong><span>{{ $perfil->descricao ?: 'Perfil definido pelo super admin.' }}</span>@if($podeGerenciarPerfis)<a class="btn secondary" href="{{ route('locx.index', ['page' => 'usuarios', 'perfil_edit' => $perfil->id]) }}">Editar perfil</a>@endif</article>@endforeach</div>
+                        <label>Loja principal<select name="loja_id" @disabled(!$podeGerenciarUsuarios)><option value="">Central / Todas</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$usuarioEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                        <label>Status<select name="status" @disabled(!$podeGerenciarUsuarios)><option value="ativo" @selected(($usuarioEdit?->status ?? 'ativo')==='ativo')>ativo</option><option value="bloqueado" @selected($usuarioEdit?->status==='bloqueado')>bloqueado</option></select></label>
+                        <h3>Lojas liberadas</h3><div class="checkgrid">@foreach($lojas as $loja)<label><input type="checkbox" name="lojas[]" value="{{ $loja->id }}" @checked(in_array($loja->id,$lojasSelecionadas,true)) @disabled(!$podeGerenciarUsuarios)> {{ $loja->nome }}</label>@endforeach</div>
+                        <br><button type="submit" @disabled(!$podeGerenciarUsuarios)>Salvar Usuario</button>
+                    </form>
+                </div>
+                @if($podeGerenciarPerfis)
+                    <div class="panel user-role-panel">
+                        <div class="section-head"><div><span class="eyebrow">PERFIS DE ACESSO</span><h2>{{ $perfilEdit ? 'Editar perfil' : 'Novo perfil' }}</h2><p>Crie o perfil e marque exatamente os modulos e acoes que ele libera.</p></div></div>
+                        <form method="post" action="{{ route('locx.usuarios.perfis.salvar') }}" class="form">@csrf
+                            <input type="hidden" name="id" value="{{ $perfilEdit?->id }}">
+                            <label>Nome do perfil<input name="nome" required value="{{ old('nome',$perfilEdit?->nome) }}" placeholder="Ex.: Supervisor de patio"></label>
+                            <label>Codigo<input name="codigo" value="{{ old('codigo',$perfilEdit?->codigo) }}" placeholder="automatico pelo nome" @disabled((bool) $perfilEdit)></label>
+                            <label>Status<select name="status"><option value="ativo" @selected(($perfilEdit?->status ?? 'ativo')==='ativo')>ativo</option><option value="bloqueado" @selected($perfilEdit?->status==='bloqueado')>bloqueado</option></select></label>
+                            <label class="span-3">Descricao<textarea name="descricao" placeholder="Resumo do que este perfil pode fazer">{{ old('descricao',$perfilEdit?->descricao) }}</textarea></label>
+                            <div class="permission-head span-3"><div><h3>Permissoes por modulo</h3><small>Esta matriz so aparece para o super admin.</small></div></div>
+                            <div class="perm-table span-3"><table><tr><th>Modulo</th>@foreach($acoes as $acao)<th>{{ $acao }}</th>@endforeach</tr>@foreach($pages as $modulo=>$nome)<tr><td>{{ $nome }}</td>@foreach($acoes as $acaoKey=>$acao)<td><input type="checkbox" name="perms[{{ $modulo }}][{{ $acaoKey }}]" value="1" @checked(!empty($perfilPermissoesSelecionadas[$modulo][$acaoKey]))></td>@endforeach</tr>@endforeach</table></div>
+                            <div class="span-3"><button type="submit">Salvar perfil</button></div>
+                        </form>
+                    </div>
+                @endif
+                <div class="panel"><h2>Usuarios</h2><div class="table-wrap"><table><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Loja principal</th><th>Status</th><th>Acoes</th></tr>
+                    @foreach($usuarios as $usuario)<tr><td>{{ $usuario->nome }}</td><td>{{ $usuario->email }}</td><td>{{ $usuario->perfilAcesso?->nome ?? \App\Support\Locx::perfil($usuario->perfil) }}</td><td>{{ $usuario->loja?->nome ?? 'Todas / Central' }}</td><td>{!! \App\Support\Locx::status($usuario->status) !!}</td><td><a class="btn secondary" href="{{ route('locx.index',['page'=>'usuarios','edit'=>$usuario->id]) }}">Editar</a></td></tr>@endforeach
                 </table></div></div>
             </div>
 
@@ -585,14 +631,18 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
 
         @elseif ($page === 'whatsapp')
             <div class="panel"><h2>WhatsApp Business API</h2><p>Configure a integração oficial da Meta. No modo <strong>demo</strong>, o sistema apenas registra uma simulação e nenhuma mensagem é enviada. Versão da Graph API: <strong>{{ $graphVersion }}</strong>.</p>
-                <form method="post" action="{{ route('locx.whatsapp.salvar') }}" class="form-grid">@csrf
-                    <label>Modo<select name="modo"><option value="demo" @selected($whatsappConfig->modo==='demo')>Demo / Simulado</option><option value="oficial" @selected($whatsappConfig->modo==='oficial')>Oficial - Meta Cloud API</option><option value="evolution" @selected($whatsappConfig->modo==='evolution')>Evolution API</option></select></label><label>Status<select name="ativo"><option value="1" @selected($whatsappConfig->ativo)>Ativo</option><option value="0" @selected(!$whatsappConfig->ativo)>Inativo</option></select></label>
-                    <label>WABA ID<input name="waba_id" value="{{ $whatsappConfig->waba_id }}" placeholder="ID da conta do WhatsApp Business"></label><label>Phone Number ID<input name="phone_number_id" value="{{ $whatsappConfig->phone_number_id }}"></label><label class="span-3">Access Token permanente<input type="password" name="access_token" value="" placeholder="{{ $whatsappConfig->access_token ? 'Token salvo - deixe vazio para manter' : 'Cole o token permanente da Meta' }}"></label><label>Verify Token<input name="verify_token" value="{{ $whatsappConfig->verify_token ?: 'locx_webhook_token' }}"></label>
-                    <label class="span-2">URL Evolution<input name="evolution_base_url" value="{{ $whatsappConfig->evolution_base_url }}" placeholder="https://sua-evolution.com"></label><label>Instância Evolution<input name="evolution_instance" value="{{ $whatsappConfig->evolution_instance }}" placeholder="locx"></label><label class="span-3">API Key Evolution<input type="password" name="evolution_api_key" value="" placeholder="{{ $whatsappConfig->evolution_api_key ? 'API Key salva - deixe vazio para manter' : 'Cole a API Key da Evolution' }}"></label>
-                    <label>Template cobrança<input name="template_cobranca" value="{{ $whatsappConfig->template_cobranca }}"></label><label>Idioma do template<input name="template_language" value="{{ $whatsappConfig->template_language ?: 'pt_BR' }}" placeholder="pt_BR"></label><label>Template lembrete<input name="template_lembrete" value="{{ $whatsappConfig->template_lembrete }}"></label><label>Template bloqueio<input name="template_bloqueio" value="{{ $whatsappConfig->template_bloqueio }}"></label><div class="span-3"><button type="submit">Salvar Configuração</button></div>
-                </form>
+                @if($user->pode('whatsapp', 'editar'))
+                    <form method="post" action="{{ route('locx.whatsapp.salvar') }}" class="form-grid">@csrf
+                        <label>Modo<select name="modo"><option value="demo" @selected($whatsappConfig->modo==='demo')>Demo / Simulado</option><option value="oficial" @selected($whatsappConfig->modo==='oficial')>Oficial - Meta Cloud API</option><option value="evolution" @selected($whatsappConfig->modo==='evolution')>Evolution API</option></select></label><label>Status<select name="ativo"><option value="1" @selected($whatsappConfig->ativo)>Ativo</option><option value="0" @selected(!$whatsappConfig->ativo)>Inativo</option></select></label>
+                        <label>WABA ID<input name="waba_id" value="{{ $whatsappConfig->waba_id }}" placeholder="ID da conta do WhatsApp Business"></label><label>Phone Number ID<input name="phone_number_id" value="{{ $whatsappConfig->phone_number_id }}"></label><label class="span-3">Access Token permanente<input type="password" name="access_token" value="" placeholder="{{ $whatsappConfig->access_token ? 'Token salvo - deixe vazio para manter' : 'Cole o token permanente da Meta' }}"></label><label>Verify Token<input name="verify_token" value="{{ $whatsappConfig->verify_token ?: 'locx_webhook_token' }}"></label>
+                        <label class="span-2">URL Evolution<input name="evolution_base_url" value="{{ $whatsappConfig->evolution_base_url }}" placeholder="https://sua-evolution.com"></label><label>Instância Evolution<input name="evolution_instance" value="{{ $whatsappConfig->evolution_instance }}" placeholder="locx"></label><label class="span-3">API Key Evolution<input type="password" name="evolution_api_key" value="" placeholder="{{ $whatsappConfig->evolution_api_key ? 'API Key salva - deixe vazio para manter' : 'Cole a API Key da Evolution' }}"></label>
+                        <label>Template cobrança<input name="template_cobranca" value="{{ $whatsappConfig->template_cobranca }}"></label><label>Idioma do template<input name="template_language" value="{{ $whatsappConfig->template_language ?: 'pt_BR' }}" placeholder="pt_BR"></label><label>Template lembrete<input name="template_lembrete" value="{{ $whatsappConfig->template_lembrete }}"></label><label>Template bloqueio<input name="template_bloqueio" value="{{ $whatsappConfig->template_bloqueio }}"></label><div class="span-3"><button type="submit">Salvar Configuração</button></div>
+                    </form>
+                @else
+                    <p class="empty">Este perfil consulta a integração, mas não altera a configuração.</p>
+                @endif
             </div>
-            <div class="grid side"><div class="panel" id="testar-integracao"><h2>Testar conexão</h2><form method="post" action="{{ route('locx.whatsapp.testar') }}">@csrf<button class="btn success">Validar integração</button></form><p>No modo oficial, valida a Meta e o template. No modo Evolution, valida a URL, instância e API Key.</p><p><strong>URL do Webhook:</strong><br><code>{{ route('locx.webhook-whatsapp') }}</code></p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_whatsapp.html') }}" target="_blank">Abrir manual WhatsApp</a></p></div>
+            <div class="grid side">@if($user->pode('whatsapp', 'editar'))<div class="panel" id="testar-integracao"><h2>Testar conexão</h2><form method="post" action="{{ route('locx.whatsapp.testar') }}">@csrf<button class="btn success">Validar integração</button></form><p>No modo oficial, valida a Meta e o template. No modo Evolution, valida a URL, instância e API Key.</p><p><strong>URL do Webhook:</strong><br><code>{{ route('locx.webhook-whatsapp') }}</code></p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_whatsapp.html') }}" target="_blank">Abrir manual WhatsApp</a></p></div>@endif
                 <div class="panel"><h2>Últimos envios</h2><div class="table-wrap"><table><tr><th>Data</th><th>Cliente</th><th>Telefone</th><th>Status</th><th>HTTP</th><th>Detalhe</th></tr>@foreach($whatsappLogs as $log)<tr><td>{{ $log->criado_em?->format('d/m/Y H:i') }}</td><td>{{ $log->cliente?->nome ?? '-' }}</td><td>{{ $log->telefone }}</td><td>{!! \App\Support\Locx::status($log->status) !!}</td><td>{{ $log->http_code ?? '-' }}</td><td title="{{ $log->erro ?: $log->resposta_api }}">{{ \Illuminate\Support\Str::limit($log->erro ?: $log->resposta_api, 90) ?: '-' }}</td></tr>@endforeach</table></div></div>
             </div>
 
@@ -605,27 +655,31 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
             </div>
             <div class="grid side">
                 <div class="panel"><h2>Telegram Bot</h2><p>Configure um bot para avisos de cobrança e outro bot opcional para atendimento no CRM.</p>
-                    <form method="post" action="{{ route('locx.telegram.salvar') }}" class="form-grid">@csrf
-                        <label>Modo<select name="modo"><option value="demo" @selected($telegramConfig->modo==='demo')>Demo / Simulado</option><option value="api" @selected($telegramConfig->modo==='api')>API oficial</option></select></label>
-                        <label>Status<select name="ativo"><option value="1" @selected($telegramConfig->ativo)>Ativo</option><option value="0" @selected(!$telegramConfig->ativo)>Inativo</option></select></label>
-                        <label>Usuario do bot de avisos<input name="bot_username" value="{{ $telegramConfig->bot_username }}" placeholder="locx_avisos_bot"></label>
-                        <label class="span-3">Token do BotFather<input type="password" name="bot_token" placeholder="{{ $telegramConfig->bot_token ? 'Token salvo — deixe vazio para manter' : 'Cole o token do bot' }}"></label>
-                        <label class="span-2">Segredo do webhook<input name="webhook_secret" value="{{ $telegramConfig->webhook_secret }}"></label>
-                        <label>Usuário do bot de atendimento<input name="atendimento_bot_username" value="{{ $telegramConfig->atendimento_bot_username }}" placeholder="locx_atendimento_bot"></label>
-                        <label class="span-3">Token do BotFather - atendimento<input type="password" name="atendimento_bot_token" placeholder="{{ $telegramConfig->atendimento_bot_token ? 'Token salvo — deixe vazio para manter' : 'Cole o token do bot de atendimento' }}"></label>
-                        <label class="span-2">Segredo do webhook - atendimento<input name="atendimento_webhook_secret" value="{{ $telegramConfig->atendimento_webhook_secret }}"></label>
-                        <label>Formatação<select name="parse_mode"><option value="sem_formatacao" @selected(blank($telegramConfig->parse_mode))>Sem formatação (recomendado)</option><option value="HTML" @selected($telegramConfig->parse_mode==='HTML')>HTML</option><option value="MarkdownV2" @selected($telegramConfig->parse_mode==='MarkdownV2')>MarkdownV2</option></select></label>
-                        <label class="span-3">Modelo padrão de cobrança<textarea name="template_cobranca" rows="8">{{ $telegramConfig->template_cobranca }}</textarea></label>
-                        <label class="span-3">Modelo lembrete<textarea name="template_lembrete" rows="5">{{ $telegramConfig->template_lembrete }}</textarea></label>
-                        <label class="span-3">Modelo vencimento<textarea name="template_vencimento" rows="5">{{ $telegramConfig->template_vencimento }}</textarea></label>
-                        <label class="span-3">Modelo pagamento confirmado<textarea name="template_pagamento" rows="5">{{ $telegramConfig->template_pagamento }}</textarea></label>
-                        <label class="span-2">Chat ID do gerente<input name="gerente_chat_id" value="{{ $telegramConfig->gerente_chat_id }}" placeholder="Chat ID para alertas internos"></label>
-                        <label class="span-3">Modelo aviso gerente<textarea name="template_gerente" rows="5">{{ $telegramConfig->template_gerente }}</textarea></label>
-                        <div class="span-3"><button>Salvar Telegram</button></div>
-                    </form>
+                    @if($user->pode('telegram', 'editar'))
+                        <form method="post" action="{{ route('locx.telegram.salvar') }}" class="form-grid">@csrf
+                            <label>Modo<select name="modo"><option value="demo" @selected($telegramConfig->modo==='demo')>Demo / Simulado</option><option value="api" @selected($telegramConfig->modo==='api')>API oficial</option></select></label>
+                            <label>Status<select name="ativo"><option value="1" @selected($telegramConfig->ativo)>Ativo</option><option value="0" @selected(!$telegramConfig->ativo)>Inativo</option></select></label>
+                            <label>Usuario do bot de avisos<input name="bot_username" value="{{ $telegramConfig->bot_username }}" placeholder="locx_avisos_bot"></label>
+                            <label class="span-3">Token do BotFather<input type="password" name="bot_token" placeholder="{{ $telegramConfig->bot_token ? 'Token salvo — deixe vazio para manter' : 'Cole o token do bot' }}"></label>
+                            <label class="span-2">Segredo do webhook<input name="webhook_secret" value="{{ $telegramConfig->webhook_secret }}"></label>
+                            <label>Usuário do bot de atendimento<input name="atendimento_bot_username" value="{{ $telegramConfig->atendimento_bot_username }}" placeholder="locx_atendimento_bot"></label>
+                            <label class="span-3">Token do BotFather - atendimento<input type="password" name="atendimento_bot_token" placeholder="{{ $telegramConfig->atendimento_bot_token ? 'Token salvo — deixe vazio para manter' : 'Cole o token do bot de atendimento' }}"></label>
+                            <label class="span-2">Segredo do webhook - atendimento<input name="atendimento_webhook_secret" value="{{ $telegramConfig->atendimento_webhook_secret }}"></label>
+                            <label>Formatação<select name="parse_mode"><option value="sem_formatacao" @selected(blank($telegramConfig->parse_mode))>Sem formatação (recomendado)</option><option value="HTML" @selected($telegramConfig->parse_mode==='HTML')>HTML</option><option value="MarkdownV2" @selected($telegramConfig->parse_mode==='MarkdownV2')>MarkdownV2</option></select></label>
+                            <label class="span-3">Modelo padrão de cobrança<textarea name="template_cobranca" rows="8">{{ $telegramConfig->template_cobranca }}</textarea></label>
+                            <label class="span-3">Modelo lembrete<textarea name="template_lembrete" rows="5">{{ $telegramConfig->template_lembrete }}</textarea></label>
+                            <label class="span-3">Modelo vencimento<textarea name="template_vencimento" rows="5">{{ $telegramConfig->template_vencimento }}</textarea></label>
+                            <label class="span-3">Modelo pagamento confirmado<textarea name="template_pagamento" rows="5">{{ $telegramConfig->template_pagamento }}</textarea></label>
+                            <label class="span-2">Chat ID do gerente<input name="gerente_chat_id" value="{{ $telegramConfig->gerente_chat_id }}" placeholder="Chat ID para alertas internos"></label>
+                            <label class="span-3">Modelo aviso gerente<textarea name="template_gerente" rows="5">{{ $telegramConfig->template_gerente }}</textarea></label>
+                            <div class="span-3"><button>Salvar Telegram</button></div>
+                        </form>
+                    @else
+                        <p class="empty">Este perfil consulta a integração, mas não altera a configuração.</p>
+                    @endif
                 </div>
                 <div class="panel" id="testar-bot"><h2>Conexão e webhook</h2><p><strong>Webhook público:</strong><br><code>{{ route('locx.webhook-telegram') }}</code></p><p>Primeiro salve os tokens e usuários dos bots. Depois teste e configure o webhook.</p>
-                    <div class="actions"><form method="post" action="{{ route('locx.telegram.testar') }}">@csrf<button class="btn success">Testar bot</button></form><form method="post" action="{{ route('locx.telegram.webhook') }}">@csrf<button class="btn secondary">Configurar webhook</button></form></div>
+                    @if($user->pode('telegram', 'editar'))<div class="actions"><form method="post" action="{{ route('locx.telegram.testar') }}">@csrf<button class="btn success">Testar bot</button></form><form method="post" action="{{ route('locx.telegram.webhook') }}">@csrf<button class="btn secondary">Configurar webhook</button></form></div>@endif
                     <hr><h3>Como o cliente vincula</h3><p>No Portal do Cliente aparecerá o botão <strong>Vincular Telegram</strong>. O link identifica o cadastro com segurança e grava o chat ID após o cliente pressionar Iniciar.</p><p><a class="btn secondary" href="{{ \App\Support\Locx::asset('docs/manual_telegram.html') }}" target="_blank">Abrir manual Telegram</a></p>
                 </div>
             </div>

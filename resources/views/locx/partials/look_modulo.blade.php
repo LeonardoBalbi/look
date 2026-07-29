@@ -22,37 +22,41 @@
         <div class="panel">
             <div class="section-head">
                 <div>
-                    <h2>Novo registro</h2>
-                    <p class="crm-subtitle">Salve acompanhamentos, pendencias, valores e prazos deste modulo.</p>
+                    <h2>{{ $user->pode($page, 'criar') ? 'Novo registro' : 'Registros do modulo' }}</h2>
+                    <p class="crm-subtitle">{{ $user->pode($page, 'criar') ? 'Salve acompanhamentos, pendencias, valores e prazos deste modulo.' : 'Este perfil consulta os registros deste modulo.' }}</p>
                 </div>
             </div>
-            <form method="post" action="{{ route('locx.look-modulos.salvar') }}" class="form-grid">
-                @csrf
-                <input type="hidden" name="modulo" value="{{ $page }}">
-                <label>Loja
-                    <select name="loja_id">
-                        <option value="">Geral</option>
-                        @foreach($lojas as $loja)
-                            <option value="{{ $loja->id }}">{{ $loja->nome }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="span-2">{{ $lookModulo['form']['titulo'] }}<input name="titulo" required value="{{ old('titulo') }}"></label>
-                <label>{{ $lookModulo['form']['pessoa'] }}<input name="pessoa" value="{{ old('pessoa') }}"></label>
-                <label>{{ $lookModulo['form']['documento'] }}<input name="documento" value="{{ old('documento') }}"></label>
-                <label>{{ $lookModulo['form']['telefone'] }}<input name="telefone" value="{{ old('telefone') }}"></label>
-                <label>Valor<input type="number" step="0.01" name="valor" value="{{ old('valor', 0) }}"></label>
-                <label>Prazo / vencimento<input type="date" name="vencimento" value="{{ old('vencimento') }}"></label>
-                <label>Status
-                    <select name="status">
-                        @foreach(['aberto' => 'Aberto', 'em_andamento' => 'Em andamento', 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'concluido' => 'Concluido', 'cancelado' => 'Cancelado'] as $valor => $label)
-                            <option value="{{ $valor }}" @selected(old('status', 'aberto') === $valor)>{{ $label }}</option>
-                        @endforeach
-                    </select>
-                </label>
-                <label class="span-3">Detalhes<textarea name="descricao" placeholder="Escreva o combinado, proximo passo, responsavel ou observacao importante.">{{ old('descricao') }}</textarea></label>
-                <div class="span-3"><button type="submit">Salvar registro</button></div>
-            </form>
+            @if($user->pode($page, 'criar'))
+                <form method="post" action="{{ route('locx.look-modulos.salvar') }}" class="form-grid">
+                    @csrf
+                    <input type="hidden" name="modulo" value="{{ $page }}">
+                    <label>Loja
+                        <select name="loja_id">
+                            <option value="">Geral</option>
+                            @foreach($lojas as $loja)
+                                <option value="{{ $loja->id }}">{{ $loja->nome }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label class="span-2">{{ $lookModulo['form']['titulo'] }}<input name="titulo" required value="{{ old('titulo') }}"></label>
+                    <label>{{ $lookModulo['form']['pessoa'] }}<input name="pessoa" value="{{ old('pessoa') }}"></label>
+                    <label>{{ $lookModulo['form']['documento'] }}<input name="documento" value="{{ old('documento') }}"></label>
+                    <label>{{ $lookModulo['form']['telefone'] }}<input name="telefone" value="{{ old('telefone') }}"></label>
+                    <label>Valor<input type="number" step="0.01" name="valor" value="{{ old('valor', 0) }}"></label>
+                    <label>Prazo / vencimento<input type="date" name="vencimento" value="{{ old('vencimento') }}"></label>
+                    <label>Status
+                        <select name="status">
+                            @foreach(['aberto' => 'Aberto', 'em_andamento' => 'Em andamento', 'pendente' => 'Pendente', 'aprovado' => 'Aprovado', 'concluido' => 'Concluido', 'cancelado' => 'Cancelado'] as $valor => $label)
+                                <option value="{{ $valor }}" @selected(old('status', 'aberto') === $valor)>{{ $label }}</option>
+                            @endforeach
+                        </select>
+                    </label>
+                    <label class="span-3">Detalhes<textarea name="descricao" placeholder="Escreva o combinado, proximo passo, responsavel ou observacao importante.">{{ old('descricao') }}</textarea></label>
+                    <div class="span-3"><button type="submit">Salvar registro</button></div>
+                </form>
+            @else
+                <p class="empty">A criação de registros não está liberada para este perfil.</p>
+            @endif
         </div>
 
         <div class="panel">

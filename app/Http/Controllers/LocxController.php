@@ -22,6 +22,8 @@ use App\Models\PagbankConfig;
 use App\Models\PortalAtendimento;
 use App\Models\PortalAtendimentoMensagem;
 use App\Models\User;
+use App\Models\UsuarioPerfil;
+use App\Models\UsuarioPerfilPermissao;
 use App\Models\UsuarioPermissao;
 use App\Models\WhatsappConfig;
 use App\Models\WhatsappLog;
@@ -70,7 +72,7 @@ class LocxController extends Controller
     public function index(Request $request): View
     {
         /** @var User $user */
-        $user = $request->user()->loadMissing('permissoes', 'lojas');
+        $user = $request->user()->loadMissing('permissoes', 'lojas', 'perfilAcesso.permissoes');
         $page = array_key_exists($request->string('page')->toString(), Locx::MODULOS)
             ? $request->string('page')->toString()
             : 'dashboard';
@@ -98,7 +100,7 @@ class LocxController extends Controller
             'inadimplencia' => $this->inadimplencia($user),
             'relatorios' => $this->relatorios($user),
             'lojas' => $this->lojas(),
-            'usuarios' => $this->usuarios($request),
+            'usuarios' => $this->usuarios($request, $user),
             'bancos' => [
                 'pagbankConfig' => $this->pagBank->config(),
                 'asaasConfig' => $this->asaas->config(),
@@ -284,8 +286,10 @@ class LocxController extends Controller
 
     public function salvarMoto(Request $request): RedirectResponse
     {
+        /** @var User $user */
+        $user = $request->user();
         $moto = $request->integer('id') ? Motocicleta::findOrFail($request->integer('id')) : new Motocicleta;
-        $this->autorizar($request->user(), 'motos', $moto->exists ? 'editar' : 'criar');
+        $this->autorizar($user, 'motos', $moto->exists ? 'editar' : 'criar');
         $dados = $request->validate([
             'id' => ['nullable', 'integer'],
             'loja_id' => ['required', 'exists:lojas,id'],
@@ -301,6 +305,10 @@ class LocxController extends Controller
             'rastreador' => ['nullable', 'string', 'max:120'],
             'status_operacional' => ['required', Rule::in(['disponivel', 'alugada', 'manutencao', 'recuperacao', 'encerrada'])],
         ]);
+        $lojasPermitidas = $user->lojaIdsPermitidas();
+        abort_if($lojasPermitidas && ! in_array((int) $dados['loja_id'], $lojasPermitidas, true), 403, 'Loja fora do seu acesso.');
+        abort_if($moto->exists && $lojasPermitidas && ! in_array((int) $moto->loja_id, $lojasPermitidas, true), 403, 'Motocicleta fora do seu acesso.');
+
         unset($dados['id']);
         $moto->fill($dados);
         $moto->save();
@@ -310,6 +318,8 @@ class LocxController extends Controller
 
     public function salvarContrato(Request $request): RedirectResponse
     {
+        /** @var User $user */
+        $user = $request->user();
         $this->autorizar($request->user(), 'contratos', 'criar');
         $dados = $request->validate([
             'cliente_id' => ['required', 'exists:clientes,id'],
@@ -323,7 +333,16 @@ class LocxController extends Controller
             'status' => ['required', Rule::in(['ativo', 'suspenso', 'encerrado'])],
         ]);
         $dados['cobranca_automatica'] = $request->boolean('cobranca_automatica');
-        $dados['proxima_cobranca_em'] = $dados['proxima_cobranca_em'] ?: null;
+        $dados['proxima_cobranca_em'] = $dados['proxima_cobranca_em'] ?? null;
+        $lojasPermitidas = $user->lojaIdsPermitidas();
+        abort_if($lojasPermitidas && ! in_array((int) $dados['loja_id'], $lojasPermitidas, true), 403, 'Loja fora do seu acesso.');
+
+        $moto = Motocicleta::findOrFail($dados['motocicleta_id']);
+        abort_if((int) $moto->loja_id !== (int) $dados['loja_id'], 422, 'A moto selecionada nao pertence a loja do contrato.');
+        abort_if($lojasPermitidas && ! in_array((int) $moto->loja_id, $lojasPermitidas, true), 403, 'Moto fora do seu acesso.');
+
+        $cliente = Cliente::findOrFail($dados['cliente_id']);
+        abort_if($lojasPermitidas && $cliente->loja_id && ! in_array((int) $cliente->loja_id, $lojasPermitidas, true), 403, 'Cliente fora do seu acesso.');
 
         DB::transaction(function () use ($dados): void {
             Contrato::create($dados + ['historico_alteracoes' => 'Contrato criado em '.now()->format('d/m/Y H:i')]);
@@ -1270,32 +1289,103 @@ class LocxController extends Controller
         return $this->voltar($page, 'Gateway PIX principal atualizado.');
     }
 
+    public function salvarUsuarioPerfil(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'usuarios', 'editar');
+        abort_unless($request->user()->isSuperAdmin(), 403, 'Somente o Super Admin pode gerenciar perfis e permissoes.');
+
+        $perfil = $request->integer('id') ? UsuarioPerfil::findOrFail($request->integer('id')) : new UsuarioPerfil;
+        $codigo = $perfil->exists
+            ? $perfil->codigo
+            : Str::of($request->input('codigo') ?: $request->input('nome'))->ascii()->lower()->slug('_')->limit(60, '')->toString();
+
+        $dados = $request->validate([
+            'id' => ['nullable', 'integer'],
+            'nome' => ['required', 'string', 'max:120'],
+            'codigo' => ['nullable', 'string', 'max:60'],
+            'descricao' => ['nullable', 'string', 'max:255'],
+            'status' => ['required', Rule::in(['ativo', 'bloqueado'])],
+            'perms' => ['array'],
+        ]);
+
+        if (! $codigo) {
+            return back()->withErrors(['nome' => 'Informe um nome valido para o perfil.'])->withInput();
+        }
+
+        abort_if(
+            UsuarioPerfil::where('codigo', $codigo)->when($perfil->exists, fn ($query) => $query->where('id', '<>', $perfil->id))->exists(),
+            422,
+            'Ja existe um perfil com este codigo.'
+        );
+
+        DB::transaction(function () use ($perfil, $dados, $codigo): void {
+            $perfil->fill([
+                'codigo' => $codigo,
+                'nome' => $dados['nome'],
+                'descricao' => $dados['descricao'] ?? null,
+                'status' => $dados['status'],
+                'sistema' => (bool) ($perfil->sistema ?? false),
+            ]);
+            $perfil->save();
+            $perfil->permissoes()->delete();
+            foreach ($dados['perms'] ?? [] as $modulo => $acoes) {
+                foreach (array_keys($acoes) as $acao) {
+                    if (isset(Locx::MODULOS[$modulo], Locx::ACOES[$acao])) {
+                        UsuarioPerfilPermissao::create([
+                            'perfil_id' => $perfil->id,
+                            'modulo' => $modulo,
+                            'acao' => $acao,
+                        ]);
+                    }
+                }
+            }
+        });
+
+        return redirect()->route('locx.index', ['page' => 'usuarios', 'perfil_edit' => $perfil->id])
+            ->with('ok', 'Perfil de acesso salvo.');
+    }
+
     public function salvarUsuario(Request $request): RedirectResponse
     {
         $this->autorizar($request->user(), 'usuarios', $request->integer('id') ? 'editar' : 'criar');
+        abort_unless($request->user()->podeGerenciarUsuarios(), 403, 'Somente Super Admin ou Administrador Geral podem gerenciar usuarios.');
         $usuario = $request->integer('id') ? User::findOrFail($request->integer('id')) : new User;
+        $perfilCodigo = (string) $request->input('perfil');
         $dados = $request->validate([
             'id' => ['nullable', 'integer'],
             'nome' => ['required', 'string', 'max:140'],
             'email' => ['required', 'email', 'max:160', Rule::unique('usuarios', 'email')->ignore($usuario->id)],
             'senha' => [$usuario->exists ? 'nullable' : 'required', 'string', 'min:6'],
-            'perfil' => ['required', Rule::in(['administrador_geral', 'diretor', 'financeiro', 'gerente_loja', 'atendente', 'cobranca'])],
+            'perfil' => ['required', Rule::exists('usuario_perfis', 'codigo')->where('status', 'ativo')],
             'loja_id' => ['nullable', 'exists:lojas,id'],
             'status' => ['required', Rule::in(['ativo', 'bloqueado'])],
             'lojas' => ['array'],
             'lojas.*' => ['integer', 'exists:lojas,id'],
-            'perms' => ['array'],
         ]);
+        $perfil = UsuarioPerfil::with('permissoes')->where('codigo', $perfilCodigo)->firstOrFail();
+        if (! $request->user()->isSuperAdmin()) {
+            abort_if($dados['perfil'] === 'super_admin' || $usuario->perfil === 'super_admin', 403, 'Somente o Super Admin pode criar ou editar outro Super Admin.');
+        }
 
-        DB::transaction(function () use ($usuario, $dados): void {
-            $usuario->fill(collect($dados)->except(['id', 'senha', 'lojas', 'perms'])->all());
+        DB::transaction(function () use ($usuario, $dados, $perfil): void {
+            $usuario->fill(collect($dados)->except(['id', 'senha', 'lojas'])->all());
             if (! empty($dados['senha'])) {
                 $usuario->senha = Hash::make($dados['senha']);
             }
             $usuario->save();
-            $usuario->lojas()->sync($dados['lojas'] ?? []);
+            $lojasPermitidas = collect($dados['lojas'] ?? [])
+                ->push($dados['loja_id'] ?? null)
+                ->filter()
+                ->map(fn ($id) => (int) $id)
+                ->unique()
+                ->values()
+                ->all();
+            $usuario->lojas()->sync($lojasPermitidas);
             $usuario->permissoes()->delete();
-            foreach ($dados['perms'] ?? [] as $modulo => $acoes) {
+            $permissoes = $perfil->permissoes->groupBy('modulo')->map(
+                fn ($items) => $items->pluck('acao')->flip()->map(fn () => true)->all()
+            )->all();
+            foreach ($permissoes as $modulo => $acoes) {
                 foreach (array_keys($acoes) as $acao) {
                     if (isset(Locx::MODULOS[$modulo], Locx::ACOES[$acao])) {
                         UsuarioPermissao::create([
@@ -1804,7 +1894,9 @@ class LocxController extends Controller
         return [
             'motoEdit' => $request->integer('edit') ? Motocicleta::findOrFail($request->integer('edit')) : null,
             'motos' => $motos,
+            'lojasMoto' => $this->lojasPermitidasParaFormulario($user),
             'marcasMoto' => $motos
+                ->toBase()
                 ->map(fn (Motocicleta $moto) => $moto->marca_nome)
                 ->merge(Motocicleta::marcasConhecidas())
                 ->filter()
@@ -1812,6 +1904,7 @@ class LocxController extends Controller
                 ->sort()
                 ->values(),
             'modelosMoto' => $motos
+                ->toBase()
                 ->map(fn (Motocicleta $moto) => $moto->modelo_nome)
                 ->merge(Motocicleta::modelosConhecidos())
                 ->filter()
@@ -1819,6 +1912,7 @@ class LocxController extends Controller
                 ->sort()
                 ->values(),
             'coresMoto' => $motos
+                ->toBase()
                 ->pluck('cor')
                 ->merge(['Azul', 'Branca', 'Cinza', 'Preta', 'Prata', 'Vermelha'])
                 ->filter()
@@ -1831,8 +1925,9 @@ class LocxController extends Controller
     private function contratos(User $user): array
     {
         return [
-            'clientes' => Cliente::orderBy('nome')->get(),
+            'clientes' => $this->scope(Cliente::query(), $user)->orderBy('nome')->get(),
             'motos' => $this->scope(Motocicleta::query(), $user)->latest('id')->get(),
+            'lojasContrato' => $this->lojasPermitidasParaFormulario($user),
             'contratos' => $this->scope(Contrato::with('cliente', 'motocicleta', 'loja'), $user)->latest('id')->limit(120)->get(),
         ];
     }
@@ -1993,19 +2088,42 @@ class LocxController extends Controller
         ];
     }
 
-    private function usuarios(Request $request): array
+    private function usuarios(Request $request, User $user): array
     {
         $edit = $request->integer('edit')
             ? User::with('lojas', 'permissoes')->findOrFail($request->integer('edit'))
             : null;
+        abort_if($edit?->perfil === 'super_admin' && ! $user->isSuperAdmin(), 404);
+
+        $usuariosQuery = User::with('loja', 'perfilAcesso')->latest('id');
+        if (! $user->isSuperAdmin()) {
+            $usuariosQuery->where('perfil', '<>', 'super_admin');
+        }
+
+        $perfis = UsuarioPerfil::with('permissoes')->orderByDesc('sistema')->orderBy('nome')->get();
+        $perfilEdit = $request->integer('perfil_edit')
+            ? UsuarioPerfil::with('permissoes')->find($request->integer('perfil_edit'))
+            : null;
+        $perfilPermissoesSelecionadas = $request->old('perms');
+        if (is_array($perfilPermissoesSelecionadas)) {
+            $perfilPermissoesSelecionadas = collect($perfilPermissoesSelecionadas)->map(
+                fn ($acoes) => collect((array) $acoes)->map(fn () => true)->all()
+            )->all();
+        } else {
+            $perfilPermissoesSelecionadas = $perfilEdit?->permissoes->groupBy('modulo')->map(
+                fn ($items) => $items->pluck('acao')->flip()->map(fn () => true)->all()
+            )->all() ?? [];
+        }
 
         return [
             'usuarioEdit' => $edit,
-            'usuarios' => User::with('loja')->latest('id')->get(),
-            'lojasSelecionadas' => $edit?->lojas->pluck('id')->all() ?? [],
-            'permissoesSelecionadas' => $edit?->permissoes->groupBy('modulo')->map(
-                fn ($items) => $items->pluck('acao')->flip()->map(fn () => true)->all()
-            )->all() ?? [],
+            'usuarios' => $usuariosQuery->get(),
+            'lojasSelecionadas' => $edit?->lojaIdsPermitidas() ?? [],
+            'perfis' => $perfis,
+            'perfilEdit' => $perfilEdit,
+            'perfilPermissoesSelecionadas' => $perfilPermissoesSelecionadas,
+            'podeGerenciarUsuarios' => $user->podeGerenciarUsuarios(),
+            'podeGerenciarPerfis' => $user->isSuperAdmin(),
         ];
     }
 
@@ -2020,6 +2138,19 @@ class LocxController extends Controller
             $ids = $user->lojaIdsPermitidas();
             $ids ? $query->whereIn($coluna, $ids) : $query->whereRaw('1 = 0');
         }
+    }
+
+    private function lojasPermitidasParaFormulario(User $user)
+    {
+        if ($user->isAdmin()) {
+            return Loja::query()->orderBy('nome')->get();
+        }
+
+        $ids = $user->lojaIdsPermitidas();
+
+        return $ids
+            ? Loja::query()->whereIn('id', $ids)->orderBy('nome')->get()
+            : collect();
     }
 
     private function autorizar(User $user, string $modulo, string $acao): void

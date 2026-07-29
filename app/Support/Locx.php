@@ -51,6 +51,71 @@ class Locx
         'excluir' => 'Excluir',
     ];
 
+    public const PERFIS = [
+        'super_admin' => 'Super Admin',
+        'administrador_geral' => 'Administrador Geral',
+        'diretor' => 'Diretor',
+        'financeiro' => 'Financeiro',
+        'gerente_loja' => 'Gerente de Loja',
+        'atendente' => 'Atendente',
+        'cobranca' => 'Cobrança',
+    ];
+
+    public static function perfilPermissoesPadrao(string $perfil): array
+    {
+        $todasAcoes = array_keys(self::ACOES);
+        $ver = ['visualizar'];
+        $operar = ['visualizar', 'criar', 'editar'];
+
+        return match ($perfil) {
+            'super_admin' => self::permissoesPara(array_keys(self::MODULOS), $todasAcoes),
+            'administrador_geral' => self::permissoesPara(array_keys(self::MODULOS), $todasAcoes),
+            'diretor' => self::combinarPermissoes(
+                self::permissoesPara(['dashboard', 'relatorios', 'lojas'], $ver),
+                self::permissoesPara(['reservas', 'crm', 'clientes', 'motos', 'contratos', 'manutencao', 'estoque', 'multas'], $operar),
+                self::permissoesPara(['financeiro', 'contas', 'cobrancas', 'inadimplencia'], $operar),
+                self::permissoesPara(['bancos', 'pagbank', 'asaas', 'sicoob', 'itau', 'whatsapp', 'telegram', 'documentos', 'configuracoes'], $ver),
+            ),
+            'financeiro' => self::combinarPermissoes(
+                self::permissoesPara(['dashboard', 'clientes', 'contratos', 'relatorios'], $ver),
+                self::permissoesPara(['financeiro', 'contas', 'cobrancas', 'inadimplencia'], $operar),
+                self::permissoesPara(['bancos', 'pagbank', 'asaas', 'sicoob', 'itau'], $ver),
+                self::permissoesPara(['whatsapp', 'telegram'], ['visualizar', 'criar']),
+            ),
+            'gerente_loja' => self::combinarPermissoes(
+                self::permissoesPara(['dashboard', 'relatorios'], $ver),
+                self::permissoesPara(['reservas', 'crm', 'clientes', 'motos', 'contratos', 'manutencao', 'estoque', 'multas'], $operar),
+                self::permissoesPara(['cobrancas', 'inadimplencia'], ['visualizar', 'editar']),
+                self::permissoesPara(['whatsapp', 'telegram', 'documentos'], ['visualizar', 'criar']),
+            ),
+            'atendente' => self::combinarPermissoes(
+                self::permissoesPara(['dashboard'], $ver),
+                self::permissoesPara(['reservas', 'crm', 'clientes'], $operar),
+                self::permissoesPara(['motos', 'contratos', 'cobrancas', 'documentos'], $ver),
+                self::permissoesPara(['whatsapp', 'telegram'], ['visualizar', 'criar']),
+            ),
+            'cobranca' => self::combinarPermissoes(
+                self::permissoesPara(['dashboard', 'clientes', 'contratos', 'financeiro'], $ver),
+                self::permissoesPara(['cobrancas', 'inadimplencia'], $operar),
+                self::permissoesPara(['whatsapp', 'telegram'], ['visualizar', 'criar']),
+            ),
+            default => [],
+        };
+    }
+
+    public static function perfilDescricao(string $perfil): string
+    {
+        return [
+            'super_admin' => 'Nivel maximo do sistema. Cria perfis de acesso e define permissoes por modulo.',
+            'administrador_geral' => 'Acesso administrativo. Cria usuarios e atribui perfis prontos, sem editar permissoes.',
+            'diretor' => 'Visao ampla da operacao, financeiro e relatorios, sem administrar permissoes.',
+            'financeiro' => 'Controle de cobrancas, caixa, inadimplencia e conciliacao.',
+            'gerente_loja' => 'Operacao da loja, atendimento, frota, contratos e rotinas do dia a dia.',
+            'atendente' => 'Atendimento ao cliente, CRM, reservas e consulta operacional.',
+            'cobranca' => 'Cobrancas, inadimplencia e comunicacao de recuperacao.',
+        ][$perfil] ?? 'Perfil operacional.';
+    }
+
     public static function moeda(float|int|string|null $valor): string
     {
         return 'R$ '.number_format((float) $valor, 2, ',', '.');
@@ -59,6 +124,7 @@ class Locx
     public static function perfil(string $perfil): string
     {
         return [
+            'super_admin' => 'Super Admin',
             'administrador_geral' => 'Administrador Geral',
             'diretor' => 'Diretor',
             'financeiro' => 'Financeiro',
@@ -66,6 +132,36 @@ class Locx
             'atendente' => 'Atendente',
             'cobranca' => 'Cobrança',
         ][$perfil] ?? $perfil;
+    }
+
+    private static function permissoesPara(array $modulos, array $acoes): array
+    {
+        $permissoes = [];
+        foreach ($modulos as $modulo) {
+            if (! isset(self::MODULOS[$modulo])) {
+                continue;
+            }
+
+            foreach ($acoes as $acao) {
+                if (isset(self::ACOES[$acao])) {
+                    $permissoes[$modulo][$acao] = true;
+                }
+            }
+        }
+
+        return $permissoes;
+    }
+
+    private static function combinarPermissoes(array ...$grupos): array
+    {
+        $permissoes = [];
+        foreach ($grupos as $grupo) {
+            foreach ($grupo as $modulo => $acoes) {
+                $permissoes[$modulo] = array_replace($permissoes[$modulo] ?? [], $acoes);
+            }
+        }
+
+        return $permissoes;
     }
 
     public static function asset(string $path): string
