@@ -3,9 +3,33 @@
 use App\Services\CobrancaRecorrenteService;
 use App\Services\CobrancaCampanhaService;
 use App\Services\CrmAutomationService;
+use App\Services\LicencaService;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Schedule;
+
+Artisan::command(
+    'locx:validar-licenca {--json : Retorna o resultado em JSON}',
+    function (): int {
+        $resultado = app(LicencaService::class)->validarOnline();
+
+        if ($this->option('json')) {
+            $this->line(json_encode($resultado, JSON_UNESCAPED_UNICODE));
+        } else {
+            $ok = (bool) ($resultado['ok'] ?? false);
+            $status = (string) ($resultado['status'] ?? 'indefinido');
+            $mensagem = $resultado['erro']
+                ?? data_get($resultado, 'resposta.mensagem')
+                ?? data_get($resultado, 'resposta.message')
+                ?? 'Validacao concluida.';
+
+            $ok ? $this->info('Licenca LocX: '.$status) : $this->error('Licenca LocX: '.$status);
+            $this->line($mensagem);
+        }
+
+        return (bool) ($resultado['ok'] ?? false) ? 0 : 1;
+    }
+)->purpose('Valida a licenca LocX Cloud no portal online.');
 
 Artisan::command(
     'locx:gerar-cobrancas-recorrentes
@@ -189,3 +213,8 @@ Schedule::command('locx:conciliar-pix')
 Schedule::command('locx:processar-campanhas-cobranca')
     ->everyMinute()
     ->withoutOverlapping();
+
+Schedule::command('locx:validar-licenca')
+    ->hourly()
+    ->withoutOverlapping()
+    ->when(fn () => app(LicencaService::class)->controleAtivo());

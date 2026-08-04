@@ -2,6 +2,10 @@
 
 return [
     'license_enabled' => env('LOCX_LICENSE_ENABLED', false),
+    'licenca' => [
+        'timeout' => (int) env('LOCX_LICENCA_TIMEOUT', 10),
+        'cache_horas' => (int) env('LOCX_LICENCA_CACHE_HORAS', 12),
+    ],
     'recorrencia' => [
         'ativa' => env('LOCX_RECORRENCIA_ATIVA', false),
         'gerar_pix' => env('LOCX_RECORRENCIA_GERAR_PIX', false),

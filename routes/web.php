@@ -3,6 +3,7 @@
 use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClienteAuthController;
 use App\Http\Controllers\ClientePortalController;
+use App\Http\Controllers\LicencaPortalController;
 use App\Http\Controllers\LocxController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -27,6 +28,10 @@ Route::middleware('auth:cliente')->group(function (): void {
 
 Route::middleware('auth')->group(function (): void {
     Route::get('/', [LocxController::class, 'index'])->name('locx.index');
+    Route::get('/licencas-portal', [LicencaPortalController::class, 'index'])->name('licencas-portal.index');
+    Route::post('/licencas-portal/clientes', [LicencaPortalController::class, 'salvarCliente'])->name('licencas-portal.clientes.salvar');
+    Route::post('/licencas-portal/planos', [LicencaPortalController::class, 'salvarPlano'])->name('licencas-portal.planos.salvar');
+    Route::post('/licencas-portal/licencas', [LicencaPortalController::class, 'salvarLicenca'])->name('licencas-portal.licencas.salvar');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('locx.logout');
     Route::post('/clientes', [LocxController::class, 'salvarCliente'])->name('locx.clientes.salvar');
     Route::post('/motos', [LocxController::class, 'salvarMoto'])->name('locx.motos.salvar');
@@ -64,6 +69,8 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/configuracoes/sicoob', [LocxController::class, 'salvarSicoob'])->name('locx.sicoob.salvar');
     Route::post('/configuracoes/itau', [LocxController::class, 'salvarItau'])->name('locx.itau.salvar');
     Route::post('/configuracoes/gateway-pix', [LocxController::class, 'salvarGatewayPix'])->name('locx.gateway-pix.salvar');
+    Route::post('/configuracoes/licenca', [LocxController::class, 'salvarLicenca'])->name('locx.licenca.salvar');
+    Route::post('/configuracoes/licenca/testar', [LocxController::class, 'testarLicenca'])->name('locx.licenca.testar');
     Route::post('/look/modulos', [LocxController::class, 'salvarLookModulo'])->name('locx.look-modulos.salvar');
     Route::post('/lojas', [LocxController::class, 'salvarLoja'])->name('locx.lojas.salvar');
     Route::post('/usuarios', [LocxController::class, 'salvarUsuario'])->name('locx.usuarios.salvar');

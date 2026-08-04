@@ -699,15 +699,42 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
             <div class="panel"><h2>Últimas mensagens e envios</h2><div class="table-wrap"><table><tr><th>Data</th><th>Cliente</th><th>Chat</th><th>Tipo</th><th>Status</th><th>Detalhe</th></tr>@forelse($telegramLogs as $log)<tr><td>{{ $log->criado_em?->format('d/m/Y H:i') }}</td><td>{{ $log->cliente?->nome ?? '-' }}</td><td>{{ $log->username ? '@'.$log->username : ($log->chat_id ?: '-') }}</td><td>{{ $log->tipo }}</td><td>{!! \App\Support\Locx::status($log->status) !!}</td><td title="{{ $log->erro ?: $log->mensagem }}">{{ \Illuminate\Support\Str::limit($log->erro ?: $log->mensagem,100) }}</td></tr>@empty<tr><td colspan="6" class="empty">Nenhum registro do Telegram.</td></tr>@endforelse</table></div></div>
 
         @elseif ($page === 'configuracoes')
-            <div class="panel"><h2>Configurações e integrações</h2><div class="module-grid">
-                <a class="module-card" href="{{ route('locx.index',['page'=>'bancos']) }}"><i>{!! \App\Support\Locx::icon('bancos') !!}</i><div><strong>Integrações de pagamento</strong><br><small>Gateways Pix em uma única tela</small></div></a>
-                <a class="module-card" href="{{ route('locx.index',['page'=>'whatsapp']) }}"><i>{!! \App\Support\Locx::icon('whatsapp') !!}</i><div><strong>WhatsApp API</strong><br><small>Mensagens automáticas</small></div></a>
+            @php($licencaConfig = $licencaResumo['config'] ?? null)
+            @php($licencaStatus = $licencaResumo['status'] ?? ['codigo' => 'local', 'classe' => 'info', 'mensagem' => 'Licenca local'])
+            @php($licencaUso = $licencaResumo['uso'] ?? [])
+            <div class="panel"><h2>Configuracoes e integracoes</h2><div class="module-grid">
+                <a class="module-card" href="{{ route('locx.index',['page'=>'bancos']) }}"><i>{!! \App\Support\Locx::icon('bancos') !!}</i><div><strong>Integracoes de pagamento</strong><br><small>Gateways Pix em uma unica tela</small></div></a>
+                <a class="module-card" href="{{ route('locx.index',['page'=>'whatsapp']) }}"><i>{!! \App\Support\Locx::icon('whatsapp') !!}</i><div><strong>WhatsApp API</strong><br><small>Mensagens automaticas</small></div></a>
                 <a class="module-card" href="{{ route('locx.index',['page'=>'telegram']) }}"><i>{!! \App\Support\Locx::icon('telegram') !!}</i><div><strong>Telegram Bot</strong><br><small>Disparos e atendimento multicanal</small></div></a>
+                <a class="module-card" href="{{ route('licencas-portal.index') }}"><i>{!! \App\Support\Locx::icon('configuracoes') !!}</i><div><strong>Portal de licencas</strong><br><small>Clientes, planos e chaves LocX Cloud</small></div></a>
             </div></div>
+            <div class="grid side">
+                <div class="panel"><h2>Licenca LocX Cloud</h2>
+                    <form method="post" action="{{ route('locx.licenca.salvar') }}" class="form-grid">@csrf
+                        <label>Modo<select name="modo"><option value="local" @selected(($licencaConfig?->modo ?? 'local')==='local')>local</option><option value="online" @selected(($licencaConfig?->modo)==='online')>online</option></select></label>
+                        <label>Status<select name="ativo"><option value="1" @selected($licencaConfig?->ativo ?? true)>ativa</option><option value="0" @selected(!($licencaConfig?->ativo ?? true))>inativa</option></select></label>
+                        <label>Empresa<input name="empresa_nome" maxlength="180" value="{{ old('empresa_nome', $licencaConfig?->empresa_nome) }}"></label>
+                        <label>Documento<input name="empresa_documento" maxlength="30" value="{{ old('empresa_documento', $licencaConfig?->empresa_documento) }}"></label>
+                        <label class="span-3">URL da API<input name="api_url" value="{{ old('api_url', $licencaConfig?->api_url) }}" placeholder="{{ url('/api/licencas-portal') }}"></label>
+                        <label class="span-3">Chave da licenca<input type="password" name="licenca_chave" value="" placeholder="{{ $licencaConfig?->licenca_chave ? 'Chave salva - deixe vazio para manter' : 'Cole a chave emitida pelo portal' }}"></label>
+                        <label>Tolerancia offline<input type="number" min="1" max="30" name="tolerancia_offline_dias" value="{{ old('tolerancia_offline_dias', $licencaConfig?->tolerancia_offline_dias ?? 7) }}"></label>
+                        <div class="span-3"><button>Salvar licenca</button></div>
+                    </form>
+                    <form method="post" action="{{ route('locx.licenca.testar') }}">@csrf<button class="btn secondary">Validar agora</button></form>
+                </div>
+                <div class="panel"><h2>Status da licenca</h2>
+                    <p>{!! \App\Support\Locx::status($licencaStatus['codigo'] ?? 'local') !!}</p>
+                    <p>{{ $licencaStatus['mensagem'] ?? '-' }}</p>
+                    <p><strong>Plano:</strong> {{ $licencaConfig?->plano ?: '-' }}<br><strong>Vence em:</strong> {{ $licencaConfig?->vence_em?->format('d/m/Y') ?: '-' }}<br><strong>Ultima validacao:</strong> {{ $licencaConfig?->ultima_validacao_ok_em?->format('d/m/Y H:i') ?: '-' }}</p>
+                    <p><strong>Instancia:</strong><br><code>{{ $licencaConfig?->instancia_id ?: '-' }}</code></p>
+                    <div class="cards"><div class="metric"><span>Lojas</span><strong>{{ $licencaUso['lojas'] ?? 0 }}</strong><small>limite {{ $licencaConfig?->max_lojas ?: 'livre' }}</small></div><div class="metric"><span>Usuarios</span><strong>{{ $licencaUso['usuarios'] ?? 0 }}</strong><small>limite {{ $licencaConfig?->max_usuarios ?: 'livre' }}</small></div></div>
+                </div>
+            </div>
         @endif
     </main>
 </div>
 <script src="{{ \App\Support\Locx::asset('assets/js/app.js') }}"></script>
 </body>
 </html>
+
 

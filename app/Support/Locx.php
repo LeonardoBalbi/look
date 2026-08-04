@@ -179,11 +179,11 @@ class Locx
         $classe = [
             'ativo' => 'ok', 'ativa' => 'ok', 'disponivel' => 'ok', 'paga' => 'ok',
             'concluida' => 'ok', 'vinculado' => 'ok', 'recebido' => 'ok',
-            'alugada' => 'info', 'enviado' => 'info', 'conciliado' => 'ok', 'transferida' => 'info', 'demo' => 'info',
+            'alugada' => 'info', 'enviado' => 'info', 'conciliado' => 'ok', 'transferida' => 'info', 'demo' => 'info', 'local' => 'info',
             'aberta' => 'warn', 'parcial' => 'warn', 'pendente' => 'warn', 'agendada' => 'warn', 'processando' => 'warn', 'em_andamento' => 'warn',
             'aguardando_peca' => 'warn', 'em_recurso' => 'warn',
-            'suspenso' => 'warn', 'manutencao' => 'warn',
-            'inadimplente' => 'danger', 'atrasada' => 'danger', 'bloqueado' => 'danger', 'falha' => 'danger', 'erro' => 'danger',
+            'suspenso' => 'warn', 'manutencao' => 'warn', 'offline' => 'warn',
+            'inadimplente' => 'danger', 'atrasada' => 'danger', 'bloqueado' => 'danger', 'bloqueada' => 'danger', 'vencida' => 'danger', 'sem_validacao' => 'danger', 'falha' => 'danger', 'erro' => 'danger',
             'recuperacao' => 'danger', 'inativa' => 'danger',
             'encerrado' => 'muted', 'encerrada' => 'muted', 'cancelada' => 'muted', 'cancelado' => 'muted', 'não vinculado' => 'muted', 'ignorado' => 'muted',
         ][$status] ?? '';

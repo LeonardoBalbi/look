@@ -37,6 +37,7 @@ use App\Services\CrmAutomationService;
 use App\Services\EmailCobrancaService;
 use App\Services\EmailPagamentoService;
 use App\Services\ItauService;
+use App\Services\LicencaService;
 use App\Services\PagBankService;
 use App\Services\PixGatewayService;
 use App\Services\SicoobService;
@@ -62,6 +63,7 @@ class LocxController extends Controller
         private readonly SicoobService $sicoob,
         private readonly ItauService $itau,
         private readonly PixGatewayService $pixGateway,
+        private readonly LicencaService $licenca,
         private readonly WhatsAppService $whatsApp,
         private readonly TelegramService $telegram,
         private readonly CobrancaCampanhaService $campanhasCobranca,
@@ -78,6 +80,8 @@ class LocxController extends Controller
             ? $request->string('page')->toString()
             : 'dashboard';
         abort_unless($user->pode($page), 403, 'Acesso negado para este módulo.');
+
+        abort_if($bloqueio = $this->licenca->bloqueioParaAcao($page, 'visualizar'), 403, $bloqueio);
 
         $data = [
             'page' => $page,
@@ -107,6 +111,7 @@ class LocxController extends Controller
             'asaas' => ['asaasConfig' => $this->asaas->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'sicoob' => ['sicoobConfig' => $this->sicoob->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'itau' => ['itauConfig' => $this->itau->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
+            'configuracoes' => ['licencaResumo' => $this->licenca->resumo()],
             'whatsapp' => [
                 'whatsappConfig' => $this->whatsApp->config(),
                 'whatsappLogs' => WhatsappLog::with('cliente')->latest('id')->limit(80)->get(),
@@ -256,6 +261,9 @@ class LocxController extends Controller
     {
         $loja = $request->integer('id') ? Loja::findOrFail($request->integer('id')) : new Loja;
         $this->autorizar($request->user(), 'lojas', $loja->exists ? 'editar' : 'criar');
+        if (! $loja->exists && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('lojas'))) {
+            abort(403, $bloqueio);
+        }
 
         $dados = $request->validate([
             'id' => ['nullable', 'integer'],
@@ -1099,6 +1107,34 @@ class LocxController extends Controller
             : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida'));
     }
 
+    public function salvarLicenca(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'configuracoes', 'editar');
+        $dados = $request->validate([
+            'modo' => ['required', Rule::in(['local', 'online'])],
+            'ativo' => ['required', 'boolean'],
+            'empresa_nome' => ['nullable', 'string', 'max:180'],
+            'empresa_documento' => ['nullable', 'string', 'max:30'],
+            'licenca_chave' => ['nullable', 'string', 'max:500'],
+            'api_url' => ['nullable', 'url', 'max:500'],
+            'tolerancia_offline_dias' => ['required', 'integer', 'min:1', 'max:30'],
+        ]);
+
+        $this->licenca->salvarConfig($dados);
+
+        return $this->voltar('configuracoes', 'Configuracao de licenca salva.');
+    }
+
+    public function testarLicenca(Request $request): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'configuracoes', 'editar');
+        $resultado = $this->licenca->validarOnline();
+
+        return $this->voltar('configuracoes', ($resultado['ok'] ?? false)
+            ? 'Licenca validada pelo portal.'
+            : 'Licenca salva, mas a validacao falhou: '.($resultado['erro'] ?? 'erro desconhecido'));
+    }
+
     public function criarCampanhaCobranca(Request $request): RedirectResponse
     {
         $this->autorizar($request->user(), 'cobrancas', 'criar');
@@ -1416,6 +1452,9 @@ class LocxController extends Controller
         $this->autorizar($request->user(), 'usuarios', $request->integer('id') ? 'editar' : 'criar');
         abort_unless($request->user()->podeGerenciarUsuarios(), 403, 'Somente Super Admin ou Administrador Geral podem gerenciar usuarios.');
         $usuario = $request->integer('id') ? User::findOrFail($request->integer('id')) : new User;
+        if (! $usuario->exists && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('usuarios'))) {
+            abort(403, $bloqueio);
+        }
         $perfilCodigo = (string) $request->input('perfil');
         $dados = $request->validate([
             'id' => ['nullable', 'integer'],
@@ -2255,6 +2294,7 @@ class LocxController extends Controller
     private function autorizar(User $user, string $modulo, string $acao): void
     {
         abort_unless($user->pode($modulo, $acao), 403, 'Acesso negado para esta ação.');
+        abort_if($bloqueio = $this->licenca->bloqueioParaAcao($modulo, $acao), 403, $bloqueio);
     }
 
     private function autorizarResponderPortal(User $user): void
