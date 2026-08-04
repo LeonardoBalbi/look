@@ -1,3 +1,27 @@
+function locxApplyTheme(theme){
+  const next = theme === 'dark' ? 'dark' : 'light';
+  document.documentElement.dataset.theme = next;
+  try{ localStorage.setItem('locx-theme', next); }catch(e){}
+  document.querySelectorAll('[data-theme-toggle]').forEach(button=>{
+    const dark = next === 'dark';
+    button.textContent = dark ? 'Tema escuro' : 'Tema claro';
+    button.setAttribute('aria-label', dark ? 'Alternar para tema claro' : 'Alternar para tema escuro');
+    button.setAttribute('aria-pressed', dark ? 'true' : 'false');
+  });
+}
+(function(){
+  const saved = (()=>{ try{return localStorage.getItem('locx-theme') || 'light';}catch(e){return 'light';} })();
+  locxApplyTheme(saved);
+  document.addEventListener('DOMContentLoaded', ()=>{
+    locxApplyTheme(document.documentElement.dataset.theme || saved);
+    document.querySelectorAll('[data-theme-toggle]').forEach(button=>{
+      button.addEventListener('click', ()=>{
+        locxApplyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark');
+      });
+    });
+  });
+})();
+
 function locxBars(id, labels, values){
   const el=document.getElementById(id); if(!el) return;
   const nums = values.map(v=>Number(v||0));

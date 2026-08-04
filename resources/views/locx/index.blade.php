@@ -4,6 +4,9 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>LocX - {{ $pages[$page] }}</title>
+    <script>
+        document.documentElement.dataset.theme = localStorage.getItem('locx-theme') || 'light';
+    </script>
     <link rel="stylesheet" href="{{ \App\Support\Locx::asset('assets/css/style.css') }}">
 </head>
 <body>
@@ -71,7 +74,6 @@
             @endforeach
         </nav>
         <div class="sidebar-footer">
-            <div class="empresa-logo"><img src="{{ \App\Support\Locx::asset('assets/img/logo-locx.svg') }}" alt="LocX Aluguel de Motos"></div>
             Logado como: <strong>{{ $user->nome }}</strong><br>
             {{ $user->perfilAcesso?->nome ?? \App\Support\Locx::perfil($user->perfil) }}<br><br>
             <form method="post" action="{{ route('locx.logout') }}">@csrf<button class="btn secondary" type="submit">Sair</button></form>
@@ -114,6 +116,7 @@
                     <a class="btn" href="{{ $action['href'] }}">{{ $action['label'] }}</a>
                 @endforeach
                 <a class="btn secondary" href="{{ route('locx.index', ['page' => 'dashboard']) }}">Visão Geral</a>
+                <button type="button" class="btn secondary theme-toggle" data-theme-toggle>Tema claro</button>
             </div>
         </header>
 
