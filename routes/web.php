@@ -65,6 +65,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/configuracoes/itau', [LocxController::class, 'salvarItau'])->name('locx.itau.salvar');
     Route::post('/configuracoes/gateway-pix', [LocxController::class, 'salvarGatewayPix'])->name('locx.gateway-pix.salvar');
     Route::post('/look/modulos', [LocxController::class, 'salvarLookModulo'])->name('locx.look-modulos.salvar');
+    Route::post('/lojas', [LocxController::class, 'salvarLoja'])->name('locx.lojas.salvar');
     Route::post('/usuarios', [LocxController::class, 'salvarUsuario'])->name('locx.usuarios.salvar');
     Route::post('/usuarios/perfis', [LocxController::class, 'salvarUsuarioPerfil'])->name('locx.usuarios.perfis.salvar');
 });

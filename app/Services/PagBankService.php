@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Cobranca;
+use App\Models\ContaBancaria;
 use App\Models\Pagamento;
 use App\Models\PagbankConfig;
 use App\Models\PagbankLog;
@@ -15,17 +16,34 @@ class PagBankService
 {
     public function __construct(private readonly CobrancaCalculator $calculator) {}
 
-    public function config(): PagbankConfig
+    public function config(?int $lojaId = null)
     {
-        return PagbankConfig::query()->firstOrCreate(
+        $conta = ContaBancaria::config('pagbank', $lojaId);
+        $legado = $conta->loja_id ? null : PagbankConfig::query()->firstOrCreate(
             ['id' => 1],
             ['modo' => 'demo', 'ambiente' => 'sandbox', 'ativo' => true, 'merchant_reference' => 'LOCX']
         );
+
+        if ($legado) {
+            $conta->update([
+                'modo' => $legado->modo,
+                'ambiente' => $legado->ambiente,
+                'client_id' => $legado->client_id,
+                'client_secret' => $legado->client_secret,
+                'access_token' => $legado->access_token,
+                'webhook_url' => $legado->webhook_url,
+                'merchant_reference' => $legado->merchant_reference ?: 'LOCX',
+                'ativo' => $legado->ativo,
+                'atualizado_em' => now(),
+            ]);
+        }
+
+        return $conta->fresh();
     }
 
-    public function testar(): array
+    public function testar(?int $lojaId = null): array
     {
-        $config = $this->config();
+        $config = $this->config($lojaId);
 
         if ($config->modo === 'demo') {
             return ['ok' => true, 'demo' => true, 'mensagem' => 'Modo demo ativo. Nenhuma chamada externa foi feita.'];
@@ -37,7 +55,7 @@ class PagBankService
 
         $response = $this->request('GET', '/orders', null, [
             'charge_id' => 'CHAR_00000000-0000-0000-0000-000000000000',
-        ]);
+        ], config: $config);
 
         if (in_array($response->status(), [200, 400, 404], true)) {
             return [
@@ -53,7 +71,7 @@ class PagBankService
     public function criarPix(Cobranca $cobranca): array
     {
         $cobranca->loadMissing('cliente');
-        $config = $this->config();
+        $config = $this->config((int) $cobranca->loja_id);
         $valor = $this->calculator->valorAtualizado(
             $cobranca->valor_principal,
             $cobranca->valor_pago,
@@ -75,6 +93,8 @@ class PagBankService
                 'pagbank_order_id' => 'DEMO-'.$cobranca->id,
                 'pagbank_status' => 'DEMO',
                 'pagbank_payload' => 'PIX demo gerado pelo LocX',
+                'conta_bancaria_id' => $config->id,
+                'gateway_usado' => 'pagbank',
                 'atualizado_em' => now(),
             ]);
             $this->log($cobranca->id, 'criar_pix', 'demo', 200, 'demo', $pix);
@@ -117,7 +137,7 @@ class PagBankService
 
         $response = $this->request('POST', '/orders', $payload, [], [
             'x-idempotency-key' => hash('sha256', 'locx|'.$reference.'|'.$centavos),
-        ]);
+        ], $config);
         $this->log(
             $cobranca->id,
             'criar_pix',
@@ -143,6 +163,8 @@ class PagBankService
             'pagbank_order_id' => $json['id'] ?? null,
             'pagbank_status' => $json['status'] ?? 'CREATED',
             'pagbank_payload' => $response->body(),
+            'conta_bancaria_id' => $config->id,
+            'gateway_usado' => 'pagbank',
             'atualizado_em' => now(),
         ]);
 
@@ -202,7 +224,7 @@ class PagBankService
 
     public function conciliarCobranca(Cobranca $cobranca): array
     {
-        $config = $this->config();
+        $config = $this->config((int) $cobranca->loja_id);
         if (! $config->ativo || $config->modo !== 'api') {
             return ['ok' => false, 'erro' => 'Integracao PagBank inativa ou em modo demo.'];
         }
@@ -211,7 +233,7 @@ class PagBankService
             return ['ok' => false, 'erro' => 'Cobranca sem ID PagBank valido.'];
         }
 
-        $response = $this->request('GET', '/orders/'.$cobranca->pagbank_order_id);
+        $response = $this->request('GET', '/orders/'.$cobranca->pagbank_order_id, config: $config);
         $json = $response->json();
         $status = (string) (data_get($json, 'charges.0.status') ?: ($json['status'] ?? ''));
         $this->log(
@@ -288,9 +310,10 @@ class PagBankService
         string $path,
         ?array $payload = null,
         array $query = [],
-        array $headers = []
+        array $headers = [],
+        ?ContaBancaria $config = null
     ): Response {
-        $config = $this->config();
+        $config ??= $this->config();
         $base = $config->ambiente === 'producao'
             ? 'https://api.pagseguro.com'
             : 'https://sandbox.api.pagseguro.com';

@@ -12,4 +12,9 @@ class Loja extends BaseModel
     {
         return $this->hasMany(Motocicleta::class);
     }
+
+    public function contasBancarias(): HasMany
+    {
+        return $this->hasMany(ContaBancaria::class);
+    }
 }

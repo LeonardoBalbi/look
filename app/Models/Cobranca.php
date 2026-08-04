@@ -32,6 +32,11 @@ class Cobranca extends BaseModel
         return $this->belongsTo(Loja::class);
     }
 
+    public function contaBancaria(): BelongsTo
+    {
+        return $this->belongsTo(ContaBancaria::class);
+    }
+
     public function telegramLogs(): HasMany
     {
         return $this->hasMany(TelegramLog::class);

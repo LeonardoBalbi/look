@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Cobranca;
+use App\Models\ContaBancaria;
 use App\Models\Pagamento;
 use App\Models\SicoobConfig;
 use App\Models\SicoobLog;
@@ -22,9 +23,10 @@ class SicoobService
 
     public function __construct(private readonly CobrancaCalculator $calculator) {}
 
-    public function config(): SicoobConfig
+    public function config(?int $lojaId = null)
     {
-        return SicoobConfig::query()->firstOrCreate(
+        $conta = ContaBancaria::config('sicoob', $lojaId);
+        $legado = $conta->loja_id ? null : SicoobConfig::query()->firstOrCreate(
             ['id' => 1],
             [
                 'modo' => 'demo',
@@ -36,11 +38,33 @@ class SicoobService
                 'webhook_url' => route('locx.webhook-sicoob', ['token' => self::DEFAULT_WEBHOOK_TOKEN]),
             ]
         );
+
+        if ($legado) {
+            $conta->update([
+                'modo' => $legado->modo,
+                'ambiente' => $legado->ambiente,
+                'client_id' => $legado->client_id,
+                'client_secret' => $legado->client_secret,
+                'chave_pix' => $legado->chave_pix,
+                'api_base_url' => $legado->api_base_url ?: self::DEFAULT_API_BASE_URL,
+                'token_url' => $legado->token_url ?: self::DEFAULT_TOKEN_URL,
+                'cert_path' => $legado->cert_path,
+                'key_path' => $legado->key_path,
+                'access_token' => $legado->access_token,
+                'token_expires_at' => $legado->token_expires_at,
+                'webhook_url' => $legado->webhook_url,
+                'webhook_token' => $legado->webhook_token ?: self::DEFAULT_WEBHOOK_TOKEN,
+                'ativo' => $legado->ativo,
+                'atualizado_em' => now(),
+            ]);
+        }
+
+        return $conta->fresh();
     }
 
-    public function testar(): array
+    public function testar(?int $lojaId = null): array
     {
-        $config = $this->config();
+        $config = $this->config($lojaId);
 
         if ($config->modo === 'demo') {
             return ['ok' => true, 'demo' => true, 'mensagem' => 'Modo demo ativo. Nenhuma chamada externa foi feita.'];
@@ -51,13 +75,13 @@ class SicoobService
             return ['ok' => false, 'http_code' => 0, 'erro' => $erro];
         }
 
-        $token = $this->accessToken();
+        $token = $this->accessToken($config);
         if (! ($token['ok'] ?? false)) {
             return $token;
         }
 
         $txid = 'LOCXTESTE'.now()->format('YmdHis');
-        $response = $this->request('GET', '/cob/'.$txid);
+        $response = $this->request('GET', '/cob/'.$txid, config: $config);
 
         if (in_array($response->status(), [200, 400, 404], true)) {
             return [
@@ -73,7 +97,7 @@ class SicoobService
     public function criarPix(Cobranca $cobranca): array
     {
         $cobranca->loadMissing('cliente');
-        $config = $this->config();
+        $config = $this->config((int) $cobranca->loja_id);
         $valor = $this->calculator->valorAtualizado(
             $cobranca->valor_principal,
             $cobranca->valor_pago,
@@ -97,6 +121,8 @@ class SicoobService
                 'sicoob_txid' => 'DEMO-'.$txid,
                 'sicoob_status' => 'DEMO',
                 'sicoob_payload' => 'PIX demo gerado pelo LocX',
+                'conta_bancaria_id' => $config->id,
+                'gateway_usado' => 'sicoob',
                 'atualizado_em' => now(),
             ]);
             $this->log($cobranca->id, 'criar_pix', 'demo', 200, 'demo', $pix);
@@ -132,7 +158,7 @@ class SicoobService
             ]],
         ];
 
-        $response = $this->request('PUT', '/cob/'.$txid, $payload);
+        $response = $this->request('PUT', '/cob/'.$txid, $payload, config: $config);
         $this->log(
             $cobranca->id,
             'criar_pix',
@@ -155,6 +181,8 @@ class SicoobService
             'sicoob_txid' => $json['txid'] ?? $txid,
             'sicoob_status' => $json['status'] ?? 'ATIVA',
             'sicoob_payload' => $response->body(),
+            'conta_bancaria_id' => $config->id,
+            'gateway_usado' => 'sicoob',
             'atualizado_em' => now(),
         ]);
 
@@ -164,8 +192,17 @@ class SicoobService
     public function validarWebhook(?string $token): bool
     {
         $esperado = (string) $this->config()->webhook_token;
+        if ($esperado === '') {
+            return true;
+        }
+        if (hash_equals($esperado, (string) $token)) {
+            return true;
+        }
 
-        return $esperado === '' || hash_equals($esperado, (string) $token);
+        return ContaBancaria::query()
+            ->where('provedor', 'sicoob')
+            ->where('webhook_token', (string) $token)
+            ->exists();
     }
 
     public function processarWebhook(string $raw): array
@@ -193,7 +230,7 @@ class SicoobService
 
     public function conciliarCobranca(Cobranca $cobranca): array
     {
-        $config = $this->config();
+        $config = $this->config((int) $cobranca->loja_id);
         if (! $config->ativo || $config->modo !== 'api') {
             return ['ok' => false, 'erro' => 'Integração Sicoob inativa ou em modo demo.'];
         }
@@ -202,7 +239,7 @@ class SicoobService
             return ['ok' => false, 'erro' => 'Cobrança sem TXID Sicoob válido.'];
         }
 
-        $response = $this->request('GET', '/cob/'.$cobranca->sicoob_txid);
+        $response = $this->request('GET', '/cob/'.$cobranca->sicoob_txid, config: $config);
         $json = $response->json();
         $status = (string) ($json['status'] ?? '');
         $this->log(
@@ -231,14 +268,14 @@ class SicoobService
         return ['ok' => true, 'baixado' => false, 'status' => $status];
     }
 
-    private function accessToken(): array
+    private function accessToken(?ContaBancaria $config = null): array
     {
-        $config = $this->config();
+        $config ??= $this->config();
         if ($config->access_token && $config->token_expires_at && $config->token_expires_at->isFuture()) {
             return ['ok' => true, 'token' => $config->access_token];
         }
 
-        $request = $this->httpWithCertificate()->asForm()->acceptJson();
+        $request = $this->httpWithCertificate($config)->asForm()->acceptJson();
         if ($config->client_secret) {
             $request = $request->withBasicAuth((string) $config->client_id, (string) $config->client_secret);
         }
@@ -270,17 +307,23 @@ class SicoobService
         return ['ok' => true, 'token' => $token];
     }
 
-    private function request(string $method, string $path, ?array $payload = null, array $query = []): Response
+    private function request(
+        string $method,
+        string $path,
+        ?array $payload = null,
+        array $query = [],
+        ?ContaBancaria $config = null
+    ): Response
     {
-        $token = $this->accessToken();
+        $config ??= $this->config();
+        $token = $this->accessToken($config);
         if (! ($token['ok'] ?? false)) {
             return new Response(new \GuzzleHttp\Psr7\Response((int) (($token['http_code'] ?? 0) ?: 599), [], (string) ($token['erro'] ?? 'Falha OAuth Sicoob')));
         }
 
-        $config = $this->config();
         $base = rtrim((string) ($config->api_base_url ?: self::DEFAULT_API_BASE_URL), '/');
 
-        return $this->httpWithCertificate()
+        return $this->httpWithCertificate($config)
             ->acceptJson()
             ->withToken($token['token'])
             ->send($method, $base.'/'.ltrim($path, '/'), array_filter([
@@ -289,9 +332,9 @@ class SicoobService
             ]));
     }
 
-    private function httpWithCertificate(): PendingRequest
+    private function httpWithCertificate(?ContaBancaria $config = null): PendingRequest
     {
-        $config = $this->config();
+        $config ??= $this->config();
         $request = Http::timeout(40);
 
         $options = [];
@@ -308,7 +351,7 @@ class SicoobService
         return $options ? $request->withOptions($options) : $request;
     }
 
-    private function validarConfig(SicoobConfig $config): ?string
+    private function validarConfig($config): ?string
     {
         if (! $config->client_id) {
             return 'Client ID Sicoob não configurado.';

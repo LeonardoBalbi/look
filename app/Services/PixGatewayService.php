@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\ContaBancaria;
 use App\Models\Cobranca;
 use App\Models\PixGatewayConfig;
 use Throwable;
@@ -15,16 +16,38 @@ class PixGatewayService
         private readonly ItauService $itau,
     ) {}
 
-    public function config(): PixGatewayConfig
+    public function config(?int $lojaId = null): PixGatewayConfig
     {
-        return PixGatewayConfig::query()->firstOrCreate(
+        if ($lojaId) {
+            return new PixGatewayConfig([
+                'gateway' => $this->gatewayParaLoja($lojaId),
+                'atualizado_em' => now(),
+            ]);
+        }
+
+        $config = PixGatewayConfig::query()->firstOrCreate(
             ['id' => 1],
             ['gateway' => 'pagbank']
         );
+
+        $contaPadrao = ContaBancaria::query()->whereNull('loja_id')->where('padrao', true)->first();
+        if (! $contaPadrao || $contaPadrao->provedor !== $config->gateway) {
+            ContaBancaria::definirPadrao($config->gateway);
+        }
+
+        return $config;
     }
 
-    public function salvar(string $gateway): PixGatewayConfig
+    public function salvar(string $gateway, ?int $lojaId = null): PixGatewayConfig
     {
+        if ($lojaId) {
+            ContaBancaria::definirPadrao($gateway, $lojaId);
+
+            return $this->config($lojaId);
+        }
+
+        ContaBancaria::definirPadrao($gateway);
+
         return PixGatewayConfig::query()->updateOrCreate(
             ['id' => 1],
             ['gateway' => $gateway, 'atualizado_em' => now()]
@@ -33,22 +56,32 @@ class PixGatewayService
 
     public function criarPix(Cobranca $cobranca): array
     {
-        return match ($this->config()->gateway) {
+        $gateway = $this->gatewayParaLoja((int) $cobranca->loja_id);
+        $resultado = match ($gateway) {
             'asaas' => $this->asaas->criarPix($cobranca),
             'sicoob' => $this->sicoob->criarPix($cobranca),
             'itau' => $this->itau->criarPix($cobranca),
             default => $this->pagBank->criarPix($cobranca),
         };
+
+        $resultado['gateway'] = $gateway;
+
+        return $resultado;
     }
 
-    public function nomeGateway(): string
+    public function nomeGateway(?int $lojaId = null): string
     {
-        return match ($this->config()->gateway) {
+        return match ($this->gatewayParaLoja($lojaId)) {
             'asaas' => 'Asaas',
             'sicoob' => 'Sicoob',
             'itau' => 'Itau',
             default => 'PagBank',
         };
+    }
+
+    public function gatewayParaLoja(?int $lojaId = null): string
+    {
+        return ContaBancaria::gatewayPadrao($lojaId, $this->config()->gateway);
     }
 
     public function conciliarPendentes(int $limite = 50): array

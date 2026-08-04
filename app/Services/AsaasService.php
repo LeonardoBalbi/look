@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\AsaasConfig;
 use App\Models\AsaasLog;
 use App\Models\Cliente;
+use App\Models\ContaBancaria;
 use App\Models\Cobranca;
 use App\Models\Pagamento;
 use App\Support\PixQrCode;
@@ -18,9 +19,10 @@ class AsaasService
 
     public function __construct(private readonly CobrancaCalculator $calculator) {}
 
-    public function config(): AsaasConfig
+    public function config(?int $lojaId = null)
     {
-        return AsaasConfig::query()->firstOrCreate(
+        $conta = ContaBancaria::config('asaas', $lojaId);
+        $legado = $conta->loja_id ? null : AsaasConfig::query()->firstOrCreate(
             ['id' => 1],
             [
                 'modo' => 'demo',
@@ -30,11 +32,25 @@ class AsaasService
                 'webhook_url' => route('locx.webhook-asaas'),
             ]
         );
+
+        if ($legado) {
+            $conta->update([
+                'modo' => $legado->modo,
+                'ambiente' => $legado->ambiente,
+                'api_key' => $legado->api_key,
+                'webhook_url' => $legado->webhook_url,
+                'webhook_token' => $legado->webhook_token ?: self::DEFAULT_WEBHOOK_TOKEN,
+                'ativo' => $legado->ativo,
+                'atualizado_em' => now(),
+            ]);
+        }
+
+        return $conta->fresh();
     }
 
-    public function testar(): array
+    public function testar(?int $lojaId = null): array
     {
-        $config = $this->config();
+        $config = $this->config($lojaId);
 
         if ($config->modo === 'demo') {
             return ['ok' => true, 'demo' => true, 'mensagem' => 'Modo demo ativo. Nenhuma chamada externa foi feita.'];
@@ -44,7 +60,7 @@ class AsaasService
             return ['ok' => false, 'http_code' => 0, 'erro' => 'API Key Asaas nao configurada.'];
         }
 
-        $response = $this->request('GET', '/myAccount');
+        $response = $this->request('GET', '/myAccount', config: $config);
 
         if ($response->successful()) {
             return [
@@ -60,7 +76,7 @@ class AsaasService
     public function criarPix(Cobranca $cobranca): array
     {
         $cobranca->loadMissing('cliente');
-        $config = $this->config();
+        $config = $this->config((int) $cobranca->loja_id);
         $valor = $this->calculator->valorAtualizado(
             $cobranca->valor_principal,
             $cobranca->valor_pago,
@@ -82,6 +98,8 @@ class AsaasService
                 'asaas_id' => 'DEMO-'.$cobranca->id,
                 'asaas_status' => 'DEMO',
                 'asaas_payload' => 'PIX demo gerado pelo LocX',
+                'conta_bancaria_id' => $config->id,
+                'gateway_usado' => 'asaas',
                 'atualizado_em' => now(),
             ]);
             $this->log($cobranca->id, 'criar_pix', 'demo', 200, 'demo', $pix);
@@ -101,7 +119,7 @@ class AsaasService
             return ['ok' => false, 'erro' => 'O valor da cobranca precisa ser maior que zero.'];
         }
 
-        $cliente = $this->clienteAsaas($cobranca->cliente, $documento);
+        $cliente = $this->clienteAsaas($cobranca->cliente, $documento, $config);
         if (! ($cliente['ok'] ?? false)) {
             return $cliente;
         }
@@ -117,7 +135,7 @@ class AsaasService
             'externalReference' => $reference,
         ];
 
-        $payment = $this->request('POST', '/payments', $payload);
+        $payment = $this->request('POST', '/payments', $payload, config: $config);
         $this->log(
             $cobranca->id,
             'criar_cobranca',
@@ -138,7 +156,7 @@ class AsaasService
             return ['ok' => false, 'http_code' => $payment->status(), 'erro' => 'Asaas nao retornou o ID da cobranca.'];
         }
 
-        $qrCode = $this->request('GET', '/payments/'.$paymentId.'/pixQrCode');
+        $qrCode = $this->request('GET', '/payments/'.$paymentId.'/pixQrCode', config: $config);
         $this->log(
             $cobranca->id,
             'pix_qrcode',
@@ -163,6 +181,8 @@ class AsaasService
             'asaas_id' => $paymentId,
             'asaas_status' => $paymentJson['status'] ?? 'PENDING',
             'asaas_payload' => json_encode(['payment' => $paymentJson, 'pixQrCode' => $qrJson], JSON_UNESCAPED_UNICODE),
+            'conta_bancaria_id' => $config->id,
+            'gateway_usado' => 'asaas',
             'atualizado_em' => now(),
         ]);
 
@@ -172,8 +192,17 @@ class AsaasService
     public function validarWebhook(?string $token): bool
     {
         $esperado = (string) $this->config()->webhook_token;
+        if ($esperado === '') {
+            return true;
+        }
+        if ($esperado !== '' && hash_equals($esperado, (string) $token)) {
+            return true;
+        }
 
-        return $esperado === '' || hash_equals($esperado, (string) $token);
+        return ContaBancaria::query()
+            ->where('provedor', 'asaas')
+            ->where('webhook_token', (string) $token)
+            ->exists();
     }
 
     public function processarWebhook(string $raw): array
@@ -213,7 +242,7 @@ class AsaasService
 
     public function conciliarCobranca(Cobranca $cobranca): array
     {
-        $config = $this->config();
+        $config = $this->config((int) $cobranca->loja_id);
         if (! $config->ativo || $config->modo !== 'api') {
             return ['ok' => false, 'erro' => 'Integracao Asaas inativa ou em modo demo.'];
         }
@@ -222,7 +251,7 @@ class AsaasService
             return ['ok' => false, 'erro' => 'Cobranca sem ID Asaas valido.'];
         }
 
-        $response = $this->request('GET', '/payments/'.$cobranca->asaas_id);
+        $response = $this->request('GET', '/payments/'.$cobranca->asaas_id, config: $config);
         $json = $response->json();
         $status = (string) ($json['status'] ?? '');
         $this->log(
@@ -251,15 +280,17 @@ class AsaasService
         return ['ok' => true, 'baixado' => false, 'status' => $status];
     }
 
-    private function clienteAsaas(Cliente $cliente, string $documento): array
+    private function clienteAsaas(Cliente $cliente, string $documento, ContaBancaria $config): array
     {
-        if ($cliente->asaas_customer_id) {
+        if (! $config->loja_id && $cliente->asaas_customer_id) {
             return ['ok' => true, 'customer_id' => $cliente->asaas_customer_id];
         }
 
-        $busca = $this->request('GET', '/customers', null, ['cpfCnpj' => $documento, 'limit' => 1]);
+        $busca = $this->request('GET', '/customers', null, ['cpfCnpj' => $documento, 'limit' => 1], $config);
         if ($busca->successful() && ($customerId = data_get($busca->json(), 'data.0.id'))) {
-            $cliente->update(['asaas_customer_id' => $customerId]);
+            if (! $config->loja_id) {
+                $cliente->update(['asaas_customer_id' => $customerId]);
+            }
 
             return ['ok' => true, 'customer_id' => $customerId];
         }
@@ -274,7 +305,7 @@ class AsaasService
             'notificationDisabled' => true,
         ], fn ($valor) => $valor !== null && $valor !== '');
 
-        $response = $this->request('POST', '/customers', $payload);
+        $response = $this->request('POST', '/customers', $payload, config: $config);
         $this->log(
             null,
             'criar_cliente',
@@ -290,7 +321,9 @@ class AsaasService
         }
 
         $customerId = $response->json('id');
-        $cliente->update(['asaas_customer_id' => $customerId]);
+        if (! $config->loja_id) {
+            $cliente->update(['asaas_customer_id' => $customerId]);
+        }
 
         return ['ok' => true, 'customer_id' => $customerId];
     }
@@ -393,9 +426,15 @@ class AsaasService
         }
     }
 
-    private function request(string $method, string $path, ?array $payload = null, array $query = []): Response
+    private function request(
+        string $method,
+        string $path,
+        ?array $payload = null,
+        array $query = [],
+        ?ContaBancaria $config = null
+    ): Response
     {
-        $config = $this->config();
+        $config ??= $this->config();
         $base = $config->ambiente === 'producao'
             ? 'https://api.asaas.com/v3'
             : 'https://api-sandbox.asaas.com/v3';

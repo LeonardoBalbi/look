@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Cliente;
+use App\Models\ContaBancaria;
 use App\Models\Cobranca;
 use App\Models\CobrancaCampanha;
 use App\Models\CobrancaCampanhaItem;
@@ -99,18 +100,9 @@ class LocxController extends Controller
             'financeiro', 'cobrancas' => $this->financeiro($user),
             'inadimplencia' => $this->inadimplencia($user),
             'relatorios' => $this->relatorios($user),
-            'lojas' => $this->lojas(),
+            'lojas' => $this->lojas($request, $user),
             'usuarios' => $this->usuarios($request, $user),
-            'bancos' => [
-                'pagbankConfig' => $this->pagBank->config(),
-                'asaasConfig' => $this->asaas->config(),
-                'sicoobConfig' => $this->sicoob->config(),
-                'itauConfig' => $this->itau->config(),
-                'pixGatewayConfig' => $this->pixGateway->config(),
-                'bancoSelecionado' => in_array($request->query('banco'), ['pagbank', 'asaas', 'sicoob', 'itau'], true)
-                    ? $request->query('banco')
-                    : $this->pixGateway->config()->gateway,
-            ],
+            'bancos' => $this->bancos($request, $user),
             'pagbank' => ['pagbankConfig' => $this->pagBank->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'asaas' => ['asaasConfig' => $this->asaas->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
             'sicoob' => ['sicoobConfig' => $this->sicoob->config(), 'pixGatewayConfig' => $this->pixGateway->config()],
@@ -215,6 +207,26 @@ class LocxController extends Controller
         ];
     }
 
+    private function bancos(Request $request, User $user): array
+    {
+        $lojasBanco = $this->lojasPermitidasParaFormulario($user);
+        $lojaBancoId = $this->lojaBancoIdDaRequest($request, $user, $lojasBanco->first()?->id);
+        $gateway = $this->pixGateway->config($lojaBancoId)->gateway;
+
+        return [
+            'lojasBanco' => $lojasBanco,
+            'lojaBancoId' => $lojaBancoId,
+            'pagbankConfig' => $this->pagBank->config($lojaBancoId),
+            'asaasConfig' => $this->asaas->config($lojaBancoId),
+            'sicoobConfig' => $this->sicoob->config($lojaBancoId),
+            'itauConfig' => $this->itau->config($lojaBancoId),
+            'pixGatewayConfig' => $this->pixGateway->config($lojaBancoId),
+            'bancoSelecionado' => in_array($request->query('banco'), ['pagbank', 'asaas', 'sicoob', 'itau'], true)
+                ? $request->query('banco')
+                : $gateway,
+        ];
+    }
+
     public function salvarLookModulo(Request $request): RedirectResponse
     {
         $modulos = ['reservas', 'contas', 'documentos'];
@@ -238,6 +250,32 @@ class LocxController extends Controller
         LookModuloRegistro::create($dados);
 
         return $this->voltar($dados['modulo'], 'Registro salvo com sucesso.');
+    }
+
+    public function salvarLoja(Request $request): RedirectResponse
+    {
+        $loja = $request->integer('id') ? Loja::findOrFail($request->integer('id')) : new Loja;
+        $this->autorizar($request->user(), 'lojas', $loja->exists ? 'editar' : 'criar');
+
+        $dados = $request->validate([
+            'id' => ['nullable', 'integer'],
+            'nome' => [
+                'required',
+                'string',
+                'max:120',
+                Rule::unique('lojas', 'nome')->ignore($loja->id),
+            ],
+            'cidade' => ['nullable', 'string', 'max:120'],
+            'status' => ['required', Rule::in(['ativa', 'inativa'])],
+        ]);
+        unset($dados['id']);
+
+        $loja->fill($dados);
+        $loja->save();
+
+        return redirect()
+            ->route('locx.index', ['page' => 'lojas', 'edit' => $loja->id])
+            ->with('success', 'Loja salva com sucesso.');
     }
 
     public function salvarCliente(Request $request): RedirectResponse
@@ -823,9 +861,10 @@ class LocxController extends Controller
             'telegram_status' => 'pendente',
         ]);
         $resultado = $this->pixGateway->criarPix($cobranca);
+        $nomeGateway = $this->pixGateway->nomeGateway((int) $cobranca->loja_id);
         $mensagem = $resultado['ok'] ?? false
-            ? 'Cobrança criada e PIX '.$this->pixGateway->nomeGateway().' gerado.'
-            : 'Cobrança criada. '.$this->pixGateway->nomeGateway().': '.($resultado['erro'] ?? 'PIX não gerado');
+            ? 'Cobrança criada e PIX '.$nomeGateway.' gerado.'
+            : 'Cobrança criada. '.$nomeGateway.': '.($resultado['erro'] ?? 'PIX não gerado');
 
         if (($resultado['ok'] ?? false) && $cobranca->fresh()->pix_copia_cola) {
             $email = $this->emailCobranca->enviarCobranca($cobranca->fresh(['cliente', 'contrato.motocicleta']));
@@ -894,8 +933,9 @@ class LocxController extends Controller
         $page = $request->string('page', 'cobrancas')->toString();
         $this->autorizar($request->user(), $page === 'cobrancas' ? 'cobrancas' : 'financeiro', 'editar');
         $resultado = $this->pixGateway->criarPix($cobranca);
+        $nomeGateway = $this->pixGateway->nomeGateway((int) $cobranca->loja_id);
         $mensagem = ($resultado['ok'] ?? false)
-            ? 'PIX '.$this->pixGateway->nomeGateway().' gerado com sucesso.'
+            ? 'PIX '.$nomeGateway.' gerado com sucesso.'
             : 'Erro: '.($resultado['erro'] ?? 'falha desconhecida');
 
         if (($resultado['ok'] ?? false) && $cobranca->fresh()->pix_copia_cola) {
@@ -1119,6 +1159,7 @@ class LocxController extends Controller
     {
         $this->autorizar($request->user(), 'pagbank', 'editar');
         $dados = $request->validate([
+            'loja_id' => ['nullable', 'integer', 'exists:lojas,id'],
             'modo' => ['required', Rule::in(['demo', 'api'])],
             'ambiente' => ['required', Rule::in(['sandbox', 'producao'])],
             'ativo' => ['required', 'boolean'],
@@ -1128,21 +1169,24 @@ class LocxController extends Controller
             'webhook_url' => ['nullable', 'url', 'max:500'],
             'merchant_reference' => ['required', 'string', 'max:80'],
         ]);
+        $lojaId = $this->lojaBancoIdDaRequest($request, $request->user());
+        unset($dados['loja_id']);
         $acao = $request->string('acao')->toString();
-        PagbankConfig::query()->updateOrCreate(['id' => 1], $dados + [
-            'webhook_url' => $dados['webhook_url'] ?: route('locx.webhook-pagbank'),
-            'atualizado_em' => now(),
-        ]);
+        $dados['webhook_url'] = $dados['webhook_url'] ?: route('locx.webhook-pagbank');
+        $this->salvarContaBancaria('pagbank', $lojaId, $dados);
+        if (! $lojaId) {
+            PagbankConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);
+        }
         $mensagem = 'Configurações do PagBank salvas.';
         if ($acao === 'testar') {
-            $resultado = $this->pagBank->testar();
+            $resultado = $this->pagBank->testar($lojaId);
             $mensagem = ($resultado['ok'] ?? false)
                 ? ($resultado['mensagem'] ?? 'Conexão validada.')
                 : 'PagBank salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
         }
 
         if ($request->input('page') === 'bancos') {
-            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'pagbank'])->with('success', $mensagem);
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'pagbank', 'loja_id' => $lojaId])->with('success', $mensagem);
         }
 
         return $this->voltar('pagbank', $mensagem);
@@ -1152,6 +1196,7 @@ class LocxController extends Controller
     {
         $this->autorizar($request->user(), 'asaas', 'editar');
         $dados = $request->validate([
+            'loja_id' => ['nullable', 'integer', 'exists:lojas,id'],
             'modo' => ['required', Rule::in(['demo', 'api'])],
             'ambiente' => ['required', Rule::in(['sandbox', 'producao'])],
             'ativo' => ['required', 'boolean'],
@@ -1159,6 +1204,8 @@ class LocxController extends Controller
             'webhook_url' => ['nullable', 'url', 'max:500'],
             'webhook_token' => ['nullable', 'string', 'max:160'],
         ]);
+        $lojaId = $this->lojaBancoIdDaRequest($request, $request->user());
+        unset($dados['loja_id']);
         $acao = $request->string('acao')->toString();
         if (blank($dados['api_key'] ?? null)) {
             unset($dados['api_key']);
@@ -1166,17 +1213,20 @@ class LocxController extends Controller
         $dados['webhook_url'] = $dados['webhook_url'] ?: route('locx.webhook-asaas');
         $dados['webhook_token'] = $dados['webhook_token'] ?: AsaasService::DEFAULT_WEBHOOK_TOKEN;
 
-        \App\Models\AsaasConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);
+        $this->salvarContaBancaria('asaas', $lojaId, $dados);
+        if (! $lojaId) {
+            \App\Models\AsaasConfig::query()->updateOrCreate(['id' => 1], $dados + ['atualizado_em' => now()]);
+        }
         $mensagem = 'Configurações do Asaas salvas.';
         if ($acao === 'testar') {
-            $resultado = $this->asaas->testar();
+            $resultado = $this->asaas->testar($lojaId);
             $mensagem = ($resultado['ok'] ?? false)
                 ? ($resultado['mensagem'] ?? 'Conexão validada.')
                 : 'Asaas salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
         }
 
         if ($request->input('page') === 'bancos') {
-            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'asaas'])->with('success', $mensagem);
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'asaas', 'loja_id' => $lojaId])->with('success', $mensagem);
         }
 
         return $this->voltar('asaas', $mensagem);
@@ -1186,6 +1236,7 @@ class LocxController extends Controller
     {
         $this->autorizar($request->user(), 'sicoob', 'editar');
         $dados = $request->validate([
+            'loja_id' => ['nullable', 'integer', 'exists:lojas,id'],
             'modo' => ['required', Rule::in(['demo', 'api'])],
             'ambiente' => ['required', Rule::in(['sandbox', 'producao'])],
             'ativo' => ['required', 'boolean'],
@@ -1201,27 +1252,31 @@ class LocxController extends Controller
             'acao' => ['nullable', Rule::in(['salvar', 'testar'])],
             'page' => ['nullable', 'string'],
         ]);
+        $lojaId = $this->lojaBancoIdDaRequest($request, $request->user());
 
         $dados['api_base_url'] = $dados['api_base_url'] ?: SicoobService::DEFAULT_API_BASE_URL;
         $dados['token_url'] = $dados['token_url'] ?: SicoobService::DEFAULT_TOKEN_URL;
         $dados['webhook_token'] = $dados['webhook_token'] ?: SicoobService::DEFAULT_WEBHOOK_TOKEN;
         $dados['webhook_url'] = $dados['webhook_url'] ?: route('locx.webhook-sicoob', ['token' => $dados['webhook_token']]);
-        unset($dados['acao'], $dados['page']);
-        \App\Models\SicoobConfig::query()->updateOrCreate(
-            ['id' => 1],
-            $dados + ['access_token' => null, 'token_expires_at' => null, 'atualizado_em' => now()]
-        );
+        unset($dados['acao'], $dados['page'], $dados['loja_id']);
+        $this->salvarContaBancaria('sicoob', $lojaId, $dados + ['access_token' => null, 'token_expires_at' => null]);
+        if (! $lojaId) {
+            \App\Models\SicoobConfig::query()->updateOrCreate(
+                ['id' => 1],
+                $dados + ['access_token' => null, 'token_expires_at' => null, 'atualizado_em' => now()]
+            );
+        }
 
         $mensagem = 'Configurações do Sicoob salvas.';
         if ($request->input('acao') === 'testar') {
-            $resultado = $this->sicoob->testar();
+            $resultado = $this->sicoob->testar($lojaId);
             $mensagem = ($resultado['ok'] ?? false)
                 ? 'Sicoob salvo e conexão validada: '.($resultado['mensagem'] ?? 'ok')
                 : 'Sicoob salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
         }
 
         if ($request->input('page') === 'bancos') {
-            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'sicoob'])->with('success', $mensagem);
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'sicoob', 'loja_id' => $lojaId])->with('success', $mensagem);
         }
 
         return $this->voltar('sicoob', $mensagem);
@@ -1231,6 +1286,7 @@ class LocxController extends Controller
     {
         $this->autorizar($request->user(), 'itau', 'editar');
         $dados = $request->validate([
+            'loja_id' => ['nullable', 'integer', 'exists:lojas,id'],
             'modo' => ['required', Rule::in(['demo', 'api'])],
             'ambiente' => ['required', Rule::in(['sandbox', 'producao'])],
             'ativo' => ['required', 'boolean'],
@@ -1246,28 +1302,32 @@ class LocxController extends Controller
             'acao' => ['nullable', Rule::in(['salvar', 'testar'])],
             'page' => ['nullable', 'string'],
         ]);
+        $lojaId = $this->lojaBancoIdDaRequest($request, $request->user());
 
         $dados['api_base_url'] = $dados['api_base_url'] ?: ItauService::DEFAULT_API_BASE_URL;
         $dados['token_url'] = $dados['token_url'] ?: ItauService::DEFAULT_TOKEN_URL;
         $dados['webhook_token'] = $dados['webhook_token'] ?: ItauService::DEFAULT_WEBHOOK_TOKEN;
         $dados['webhook_url'] = $dados['webhook_url'] ?: route('locx.webhook-itau', ['token' => $dados['webhook_token']]);
-        unset($dados['acao'], $dados['page']);
+        unset($dados['acao'], $dados['page'], $dados['loja_id']);
 
-        ItauConfig::query()->updateOrCreate(
-            ['id' => 1],
-            $dados + ['access_token' => null, 'token_expires_at' => null, 'atualizado_em' => now()]
-        );
+        $this->salvarContaBancaria('itau', $lojaId, $dados + ['access_token' => null, 'token_expires_at' => null]);
+        if (! $lojaId) {
+            ItauConfig::query()->updateOrCreate(
+                ['id' => 1],
+                $dados + ['access_token' => null, 'token_expires_at' => null, 'atualizado_em' => now()]
+            );
+        }
 
         $mensagem = 'Configuracoes do Itau salvas.';
         if ($request->input('acao') === 'testar') {
-            $resultado = $this->itau->testar();
+            $resultado = $this->itau->testar($lojaId);
             $mensagem = ($resultado['ok'] ?? false)
                 ? 'Itau salvo e conexao validada: '.($resultado['mensagem'] ?? 'ok')
                 : 'Itau salvo, mas o teste falhou: '.($resultado['erro'] ?? 'erro desconhecido');
         }
 
         if ($request->input('page') === 'bancos') {
-            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'itau'])->with('success', $mensagem);
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => 'itau', 'loja_id' => $lojaId])->with('success', $mensagem);
         }
 
         return $this->voltar('itau', $mensagem);
@@ -1277,14 +1337,20 @@ class LocxController extends Controller
     {
         $this->autorizar($request->user(), 'configuracoes', 'editar');
         $dados = $request->validate([
+            'loja_id' => ['nullable', 'integer', 'exists:lojas,id'],
             'gateway' => ['required', Rule::in(['pagbank', 'asaas', 'sicoob', 'itau'])],
             'page' => ['nullable', 'string'],
         ]);
+        $lojaId = $this->lojaBancoIdDaRequest($request, $request->user());
 
-        $this->pixGateway->salvar($dados['gateway']);
+        $this->pixGateway->salvar($dados['gateway'], $lojaId);
         $page = in_array($dados['page'] ?? '', ['bancos', 'pagbank', 'asaas', 'sicoob', 'itau', 'configuracoes'], true)
             ? $dados['page']
             : 'configuracoes';
+
+        if ($page === 'bancos') {
+            return redirect()->route('locx.index', ['page' => 'bancos', 'banco' => $dados['gateway'], 'loja_id' => $lojaId])->with('success', 'Gateway PIX principal atualizado.');
+        }
 
         return $this->voltar($page, 'Gateway PIX principal atualizado.');
     }
@@ -2074,9 +2140,17 @@ class LocxController extends Controller
         ];
     }
 
-    private function lojas(): array
+    private function lojas(Request $request, User $user): array
     {
+        $lojaEdit = $request->integer('edit') ? Loja::findOrFail($request->integer('edit')) : null;
+        if ($lojaEdit) {
+            $this->autorizar($user, 'lojas', 'editar');
+        }
+
         return [
+            'lojaEdit' => $lojaEdit,
+            'podeCriarLoja' => $user->pode('lojas', 'criar'),
+            'podeEditarLoja' => $user->pode('lojas', 'editar'),
             'resumoLojas' => Loja::orderBy('nome')->get()->map(fn (Loja $loja) => [
                 'loja' => $loja,
                 'motos' => Motocicleta::where('loja_id', $loja->id)->count(),
@@ -2151,6 +2225,31 @@ class LocxController extends Controller
         return $ids
             ? Loja::query()->whereIn('id', $ids)->orderBy('nome')->get()
             : collect();
+    }
+
+    private function lojaBancoIdDaRequest(Request $request, User $user, ?int $fallback = null): ?int
+    {
+        $lojaId = $request->filled('loja_id') ? $request->integer('loja_id') : $fallback;
+        if (! $lojaId) {
+            return null;
+        }
+
+        abort_unless(Loja::query()->whereKey($lojaId)->exists(), 422, 'Loja bancaria invalida.');
+        $lojasPermitidas = $user->lojaIdsPermitidas();
+        abort_if($lojasPermitidas && ! in_array($lojaId, $lojasPermitidas, true), 403, 'Loja fora do seu acesso.');
+
+        return $lojaId;
+    }
+
+    private function salvarContaBancaria(string $provedor, ?int $lojaId, array $dados): ContaBancaria
+    {
+        return ContaBancaria::query()->updateOrCreate(
+            ['loja_id' => $lojaId, 'provedor' => $provedor],
+            $dados + [
+                'nome_conta' => ucfirst($provedor).($lojaId ? ' loja '.$lojaId : ' central'),
+                'atualizado_em' => now(),
+            ]
+        );
     }
 
     private function autorizar(User $user, string $modulo, string $acao): void

@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\Cliente;
 use App\Models\Contrato;
+use App\Models\Loja;
 use App\Models\Motocicleta;
 use App\Models\User;
 use Database\Seeders\LocxInitialSeeder;
@@ -116,6 +117,45 @@ class OperacaoModulesTest extends TestCase
             'cliente_id' => $cliente->id,
             'auto_infracao' => 'A123',
             'status' => 'aberta',
+        ]);
+    }
+
+    public function test_admin_cria_e_edita_loja_pelo_painel(): void
+    {
+        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+
+        $this->actingAs($usuario)->get('/?page=lojas')
+            ->assertOk()
+            ->assertSee('Nova loja')
+            ->assertSee('Controle por Loja');
+
+        $this->actingAs($usuario)->post('/lojas', [
+            'nome' => 'Loja Recreio',
+            'cidade' => 'Rio de Janeiro',
+            'status' => 'ativa',
+        ])->assertRedirect();
+
+        $loja = Loja::where('nome', 'Loja Recreio')->firstOrFail();
+        $this->assertSame('Rio de Janeiro', $loja->cidade);
+        $this->assertSame('ativa', $loja->status);
+
+        $this->actingAs($usuario)->get('/?page=lojas&edit='.$loja->id)
+            ->assertOk()
+            ->assertSee('Editar loja')
+            ->assertSee('Configurar bancos desta loja');
+
+        $this->actingAs($usuario)->post('/lojas', [
+            'id' => $loja->id,
+            'nome' => 'Loja Recreio Prime',
+            'cidade' => 'Rio de Janeiro',
+            'status' => 'inativa',
+        ])->assertRedirect();
+
+        $this->assertDatabaseHas('lojas', [
+            'id' => $loja->id,
+            'nome' => 'Loja Recreio Prime',
+            'cidade' => 'Rio de Janeiro',
+            'status' => 'inativa',
         ]);
     }
 }
