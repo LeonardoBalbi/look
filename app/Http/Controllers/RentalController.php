@@ -84,7 +84,9 @@ class RentalController extends Controller
             : 'dashboard';
         abort_unless($user->pode($page), 403, 'Acesso negado para este módulo.');
 
-        abort_if($bloqueio = $this->licenca->bloqueioParaAcao($page, 'visualizar'), 403, $bloqueio);
+        if (! $user->isSuperAdmin()) {
+            abort_if($bloqueio = $this->licenca->bloqueioParaAcao($page, 'visualizar'), 403, $bloqueio);
+        }
 
         $data = [
             'page' => $page,
@@ -365,7 +367,9 @@ class RentalController extends Controller
     {
         $loja = $request->integer('id') ? Loja::findOrFail($request->integer('id')) : new Loja;
         $this->autorizar($request->user(), 'lojas', $loja->exists ? 'editar' : 'criar');
-        if (! $loja->exists && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('lojas'))) {
+        if (! $request->user()->isSuperAdmin()
+            && ! $loja->exists
+            && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('lojas'))) {
             abort(403, $bloqueio);
         }
 
@@ -1576,7 +1580,9 @@ class RentalController extends Controller
         $this->autorizar($request->user(), 'usuarios', $request->integer('id') ? 'editar' : 'criar');
         abort_unless($request->user()->podeGerenciarUsuarios(), 403, 'Somente Super Admin ou Administrador Geral podem gerenciar usuarios.');
         $usuario = $request->integer('id') ? User::findOrFail($request->integer('id')) : new User;
-        if (! $usuario->exists && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('usuarios'))) {
+        if (! $request->user()->isSuperAdmin()
+            && ! $usuario->exists
+            && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('usuarios'))) {
             abort(403, $bloqueio);
         }
         $perfilCodigo = (string) $request->input('perfil');
@@ -2434,7 +2440,9 @@ class RentalController extends Controller
     private function autorizar(User $user, string $modulo, string $acao): void
     {
         abort_unless($user->pode($modulo, $acao), 403, 'Acesso negado para esta ação.');
-        abort_if($bloqueio = $this->licenca->bloqueioParaAcao($modulo, $acao), 403, $bloqueio);
+        if (! $user->isSuperAdmin()) {
+            abort_if($bloqueio = $this->licenca->bloqueioParaAcao($modulo, $acao), 403, $bloqueio);
+        }
     }
 
     private function autorizarResponderPortal(User $user): void

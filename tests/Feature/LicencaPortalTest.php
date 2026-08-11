@@ -140,6 +140,23 @@ class LicencaPortalTest extends TestCase
             ->assertForbidden();
     }
 
+    public function test_super_admin_nao_e_bloqueado_pelos_modulos_da_licenca(): void
+    {
+        $superAdmin = User::where('email', 'superadmin@example.com')->firstOrFail();
+        LicencaConfig::atual()->update([
+            'modo' => 'online',
+            'ativo' => true,
+            'status' => 'bloqueada',
+            'modulos_json' => ['pix'],
+            'mensagem' => 'Licença restrita para usuários comerciais.',
+        ]);
+
+        $this->actingAs($superAdmin)
+            ->get('/?page=whatsapp')
+            ->assertOk()
+            ->assertSee('WhatsApp API');
+    }
+
     public function test_comando_valida_licenca_online(): void
     {
         LicencaConfig::atual()->update([
