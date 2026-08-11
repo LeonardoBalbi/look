@@ -214,7 +214,8 @@ class LicencaPortalController extends Controller
     private function gerarChave(): string
     {
         do {
-            $chave = 'LOCX-'.strtoupper(Str::random(4)).'-'.strtoupper(Str::random(4)).'-'.strtoupper(Str::random(4));
+            $prefixo = preg_replace('/[^A-Z0-9]/', '', strtoupper((string) config('branding.license_prefix', 'RENTAL'))) ?: 'RENTAL';
+            $chave = $prefixo.'-'.strtoupper(Str::random(4)).'-'.strtoupper(Str::random(4)).'-'.strtoupper(Str::random(4));
         } while (LicencaPortalLicenca::query()->where('chave', $chave)->exists());
 
         return $chave;
@@ -236,6 +237,6 @@ class LicencaPortalController extends Controller
 
     private function autorizarPortal(User $user): void
     {
-        abort_unless($user->pode('configuracoes', 'visualizar'), 403, 'Acesso negado ao portal de licencas.');
+        abort_unless($user->isSuperAdmin(), 403, 'Acesso restrito à administração comercial da plataforma.');
     }
 }

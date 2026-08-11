@@ -39,7 +39,7 @@ class WebhookController extends Controller
 
     public function sicoob(Request $request, SicoobService $service): JsonResponse
     {
-        $token = $request->header('x-locx-token', $request->query('token'));
+        $token = $request->header('x-rental-token', $request->header('x-locx-token', $request->query('token')));
         if (! $service->validarWebhook($token)) {
             return response()->json(['ok' => false, 'erro' => 'Token de webhook invalido.'], 401);
         }
@@ -51,7 +51,7 @@ class WebhookController extends Controller
 
     public function itau(Request $request, ItauService $service): JsonResponse
     {
-        $token = $request->header('x-locx-token', $request->query('token'));
+        $token = $request->header('x-rental-token', $request->header('x-locx-token', $request->query('token')));
         if (! $service->validarWebhook($token)) {
             return response()->json(['ok' => false, 'erro' => 'Token de webhook invalido.'], 401);
         }

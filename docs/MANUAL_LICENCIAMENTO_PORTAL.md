@@ -1,10 +1,10 @@
-# Manual passo a passo - Licenca LocX Cloud
+# Manual passo a passo - Licenca plataforma comercial
 
-Este manual explica como ficou a estrutura de licenca no LocX e como evoluir para um portal online usando Vercel + Supabase.
+Este manual explica como ficou a estrutura de licenca no Gestor de Locações e como evoluir para um portal online usando Vercel + Supabase.
 
 ## 1. Objetivo
 
-A licenca transforma o LocX em um sistema controlado por plano.
+A licenca transforma o Gestor de Locações em um sistema controlado por plano.
 
 Com ela voce consegue:
 
@@ -15,9 +15,9 @@ Com ela voce consegue:
 - validar a licenca em um servidor online;
 - no futuro, deixar o cliente pagar e renovar sozinho.
 
-## 2. Como ficou dentro do LocX
+## 2. Como ficou dentro do Gestor de Locações
 
-O LocX agora tem uma area em `Configuracoes > Licenca LocX Cloud`.
+O Gestor de Locações agora tem uma area em `Configuracoes > Licenca plataforma comercial`.
 
 Nessa tela o administrador informa:
 
@@ -41,7 +41,7 @@ Foram criadas duas tabelas locais:
 
 `licenca_config`
 
-Guarda a configuracao principal da licenca instalada naquele LocX.
+Guarda a configuracao principal da licenca instalada naquele Gestor de Locações.
 
 Campos importantes:
 
@@ -67,7 +67,7 @@ Guarda o historico das consultas feitas ao portal online.
 
 Isso ajuda a saber:
 
-- quando o LocX consultou o portal;
+- quando o Gestor de Locações consultou o portal;
 - qual resposta recebeu;
 - se houve erro de internet;
 - se a licenca foi recusada;
@@ -75,7 +75,7 @@ Isso ajuda a saber:
 
 ## 4. Regras implantadas
 
-O LocX ficou com estas regras:
+O Gestor de Locações ficou com estas regras:
 
 - se a licenca estiver em modo local, o sistema continua funcionando como antes;
 - se a licenca estiver em modo online, o sistema consulta o portal;
@@ -92,13 +92,13 @@ Essa regra evita travar totalmente o cliente de forma brusca, mas impede novas o
 
 Foi criado o comando:
 
-`php artisan locx:validar-licenca`
+`php artisan rental:validar-licenca`
 
 Ele consulta a API online configurada na tela de licenca.
 
 Tambem existe a opcao:
 
-`php artisan locx:validar-licenca --json`
+`php artisan rental:validar-licenca --json`
 
 Ela retorna o resultado em JSON, util para diagnostico ou automacao.
 
@@ -120,18 +120,18 @@ Use assim:
 
 - Vercel hospeda o portal e a API;
 - Supabase guarda clientes, planos, licencas e pagamentos;
-- LocX consulta a API da Vercel;
+- Gestor de Locações consulta a API da Vercel;
 - a API da Vercel consulta o Supabase;
 - o Supabase responde se a licenca esta ativa ou bloqueada.
 
 Fluxo:
 
-1. Cliente abre o LocX.
-2. LocX consulta `https://seu-portal.vercel.app/api/validar-licenca`.
+1. Cliente abre o Gestor de Locações.
+2. Gestor de Locações consulta `https://seu-portal.vercel.app/api/validar-licenca`.
 3. A API verifica a chave no Supabase.
 4. A API retorna plano, status, limites e modulos.
-5. LocX salva a resposta localmente.
-6. LocX aplica as regras.
+5. Gestor de Locações salva a resposta localmente.
+6. Gestor de Locações aplica as regras.
 
 ## 8. Estrutura sugerida no Supabase
 
@@ -218,11 +218,11 @@ Status recomendados:
 
 ## 10. Passo a passo para usar no cliente
 
-1. Instale ou atualize o LocX.
+1. Instale ou atualize o Gestor de Locações.
 2. Rode as migrations.
 3. Entre como administrador.
 4. Abra `Configuracoes`.
-5. Va ate `Licenca LocX Cloud`.
+5. Va ate `Licenca plataforma comercial`.
 6. Marque o modo `online`.
 7. Informe a URL da API do portal.
 8. Informe a chave da licenca.
@@ -240,9 +240,9 @@ Status recomendados:
 3. Gere uma chave de licenca.
 4. Vincule a chave ao cliente.
 5. Configure limites e modulos do plano.
-6. Copie a URL da API e a chave para o LocX do cliente.
-7. Valide pelo botao do LocX.
-8. Acompanhe os logs de validacao no portal e no LocX.
+6. Copie a URL da API e a chave para o Gestor de Locações do cliente.
+7. Valide pelo botao do Gestor de Locações.
+8. Acompanhe os logs de validacao no portal e no Gestor de Locações.
 
 ## 12. Renovacao e pagamento
 
@@ -250,9 +250,9 @@ Nesta implementacao inicial, o portal administrativo ja pode ser acessado em:
 
 `/licencas-portal`
 
-Use o login de administrador do LocX.
+Use o login de administrador do Gestor de Locações.
 
-O endpoint para configurar na tela `Licenca LocX Cloud` e:
+O endpoint para configurar na tela `Licenca plataforma comercial` e:
 
 `/api/licencas-portal`
 
@@ -279,12 +279,12 @@ Quando o pagamento for confirmado:
 2. portal marca pagamento como pago;
 3. portal atualiza `licencas.status` para `ativa`;
 4. portal atualiza `vence_em`;
-5. LocX valida novamente e recebe a licenca liberada.
+5. Gestor de Locações valida novamente e recebe a licenca liberada.
 
 ## 13. Cuidados importantes
 
-- Nunca coloque a chave secreta do Supabase dentro do LocX do cliente.
-- O LocX deve conhecer apenas a URL publica da API e a chave da licenca.
+- Nunca coloque a chave secreta do Supabase dentro do Gestor de Locações do cliente.
+- O Gestor de Locações deve conhecer apenas a URL publica da API e a chave da licenca.
 - A API da Vercel deve usar variaveis de ambiente para acessar o Supabase.
 - Guarde logs de validacao para suporte.
 - Mantenha tolerancia offline para evitar bloquear o cliente por falha temporaria de internet.
@@ -292,7 +292,7 @@ Quando o pagamento for confirmado:
 
 ## 14. Roadmap recomendado
 
-Fase 1: licenca local e tela no LocX.
+Fase 1: licenca local e tela no Gestor de Locações.
 
 Fase 2: validacao online com Vercel + Supabase.
 
@@ -300,7 +300,7 @@ Fase 3: portal do cliente com pagamento e renovacao.
 
 Fase 4: painel administrativo para suporte, bloqueio, troca de plano e historico.
 
-Fase 5: atualizacao automatica, avisos dentro do LocX e relatorios de uso.
+Fase 5: atualizacao automatica, avisos dentro do Gestor de Locações e relatorios de uso.
 
 ## 15. Checklist final
 
@@ -308,7 +308,7 @@ Fase 5: atualizacao automatica, avisos dentro do LocX e relatorios de uso.
 - tela de licenca aparecendo em configuracoes;
 - chave salva;
 - validacao manual funcionando;
-- comando `locx:validar-licenca` funcionando;
+- comando `rental:validar-licenca` funcionando;
 - scheduler configurado;
 - limites de lojas e usuarios testados;
 - modulos por plano testados;

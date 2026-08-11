@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\Cobranca;
 use App\Models\WhatsappConfig;
 use App\Models\WhatsappLog;
-use App\Support\Locx;
+use App\Support\RentalSupport;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\Http;
@@ -21,11 +21,11 @@ class WhatsAppService
             [
                 'modo' => 'demo',
                 'ativo' => true,
-                'verify_token' => 'locx_webhook_token',
-                'template_cobranca' => 'locx_cobranca_atraso',
+                'verify_token' => RentalSupport::webhookToken('whatsapp'),
+                'template_cobranca' => 'rental_cobranca_atraso',
                 'template_language' => 'pt_BR',
-                'template_lembrete' => 'locx_lembrete_vencimento',
-                'template_bloqueio' => 'locx_aviso_bloqueio',
+                'template_lembrete' => 'rental_lembrete_vencimento',
+                'template_bloqueio' => 'rental_aviso_bloqueio',
             ]
         );
     }
@@ -96,9 +96,9 @@ class WhatsAppService
             $cobranca->vencimento
         );
         $placa = $cobranca->contrato?->motocicleta?->placa;
-        $mensagem = "Olá, {$cobranca->cliente->nome}. Identificamos uma pendência no seu contrato LocX"
+        $mensagem = "Olá, {$cobranca->cliente->nome}. Identificamos uma pendência no seu contrato com ".RentalSupport::storeName()
             .($placa ? " referente à moto {$placa}" : '')
-            .".\n\nDias em atraso: {$dias}\nSaldo atualizado: ".Locx::moeda($saldo)
+            .".\n\nDias em atraso: {$dias}\nSaldo atualizado: ".RentalSupport::moeda($saldo)
             .($cobranca->pix_copia_cola ? "\n\nPIX copia e cola:\n{$cobranca->pix_copia_cola}" : '')
             ."\n\nRegularize o pagamento para evitar bloqueio e recolhimento da motocicleta.";
 
@@ -158,7 +158,7 @@ class WhatsAppService
                         [
                             'type' => 'text',
                             'parameter_name' => 'updated_balance',
-                            'text' => Locx::moeda($saldo),
+                            'text' => RentalSupport::moeda($saldo),
                         ],
                         [
                             'type' => 'text',
@@ -400,7 +400,7 @@ class WhatsAppService
         $request = Http::acceptJson()
             ->withHeaders(['apikey' => (string) $config->evolution_api_key])
             ->timeout(max(5, (int) config('services.whatsapp.evolution_timeout', 15)));
-        if (! config('locx.gateway_verify_ssl', true)) {
+        if (! config('rental.gateway_verify_ssl', true)) {
             $request = $request->withoutVerifying();
         }
 

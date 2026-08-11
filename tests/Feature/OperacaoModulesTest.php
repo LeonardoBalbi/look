@@ -7,7 +7,7 @@ use App\Models\Contrato;
 use App\Models\Loja;
 use App\Models\Motocicleta;
 use App\Models\User;
-use Database\Seeders\LocxInitialSeeder;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
@@ -19,12 +19,12 @@ class OperacaoModulesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
     }
 
     public function test_admin_usa_manutencao_estoque_e_multas(): void
     {
-        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $usuario = User::where('email', 'admin@example.com')->firstOrFail();
         $cliente = Cliente::create([
             'loja_id' => 1,
             'nome' => 'Cliente Operacao',
@@ -122,7 +122,7 @@ class OperacaoModulesTest extends TestCase
 
     public function test_admin_cria_e_edita_loja_pelo_painel(): void
     {
-        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $usuario = User::where('email', 'admin@example.com')->firstOrFail();
 
         $this->actingAs($usuario)->get('/?page=lojas')
             ->assertOk()

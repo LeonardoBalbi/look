@@ -29,7 +29,7 @@ return new class extends Migration
             'modo' => 'demo',
             'ambiente' => 'sandbox',
             'ativo' => 1,
-            'webhook_token' => 'locx_asaas_webhook_token_2026_secure',
+            'webhook_token' => 'rental_asaas_webhook_token_2026_secure',
         ]);
 
         DB::table('pix_gateway_config')->insertOrIgnore([

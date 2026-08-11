@@ -6,7 +6,7 @@ use App\Models\LicencaPortalLicenca;
 use App\Models\LicencaPortalCliente;
 use App\Models\LicencaPortalPlano;
 use App\Models\User;
-use Database\Seeders\LocxInitialSeeder;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -17,17 +17,17 @@ class LicencaPortalAdminTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
     }
 
     public function test_admin_cria_cliente_plano_licenca_e_api_valida(): void
     {
-        $admin = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $admin = User::where('email', 'superadmin@example.com')->firstOrFail();
 
         $this->actingAs($admin)
             ->get('/licencas-portal')
             ->assertOk()
-            ->assertSee('Portal de licencas LocX')
+            ->assertSee('Administração comercial')
             ->assertSee('/api/licencas-portal');
 
         $licenca = $this->criarLicencaPeloPortal($admin);
@@ -35,7 +35,7 @@ class LicencaPortalAdminTest extends TestCase
         $this->postJson('/api/licencas-portal/validar-licenca', [
             'license_key' => $licenca->chave,
             'instance_id' => 'instancia-teste',
-            'app' => 'locx',
+            'app' => 'rental',
             'version' => 'teste',
             'uso' => [
                 'lojas' => 4,
@@ -61,19 +61,19 @@ class LicencaPortalAdminTest extends TestCase
 
     public function test_api_recusa_licenca_de_outra_instancia(): void
     {
-        $admin = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $admin = User::where('email', 'superadmin@example.com')->firstOrFail();
         $licenca = $this->criarLicencaPeloPortal($admin);
 
         $this->postJson('/api/licencas-portal/validar-licenca', [
             'license_key' => $licenca->chave,
             'instance_id' => 'instancia-teste',
-            'app' => 'locx',
+            'app' => 'rental',
         ])->assertOk();
 
         $this->postJson('/api/licencas-portal/validar-licenca', [
             'license_key' => $licenca->chave,
             'instance_id' => 'outra-instancia',
-            'app' => 'locx',
+            'app' => 'rental',
         ])
             ->assertOk()
             ->assertJsonPath('status', 'bloqueada')

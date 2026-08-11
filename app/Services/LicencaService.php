@@ -92,7 +92,7 @@ class LicencaService
 
         try {
             $response = Http::acceptJson()
-                ->timeout((int) config('locx.licenca.timeout', 10))
+                ->timeout((int) config('rental.licenca.timeout', 10))
                 ->post(rtrim((string) $config->api_url, '/').'/validar-licenca', $payload);
 
             $json = $response->json();
@@ -144,7 +144,7 @@ class LicencaService
             'tolerancia_offline_dias' => $json['tolerancia_offline_dias'] ?? $json['grace_days'] ?? $config->tolerancia_offline_dias,
             'ultima_validacao_em' => now(),
             'ultima_validacao_ok_em' => now(),
-            'proxima_validacao_em' => now()->addHours((int) config('locx.licenca.cache_horas', 12)),
+            'proxima_validacao_em' => now()->addHours((int) config('rental.licenca.cache_horas', 12)),
             'ultimo_payload' => $json,
             'mensagem' => $json['mensagem'] ?? $json['message'] ?? null,
             'atualizado_em' => now(),
@@ -213,7 +213,7 @@ class LicencaService
         return [
             'license_key' => $config->licenca_chave,
             'instance_id' => $config->instancia_id,
-            'app' => 'locx',
+            'app' => config('branding.product_id'),
             'version' => config('app.version', 'local'),
             'empresa_documento' => $config->empresa_documento,
             'uso' => $this->usoLocal(),

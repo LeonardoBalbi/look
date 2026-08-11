@@ -9,7 +9,7 @@ use App\Models\Contrato;
 use App\Models\CrmTarefa;
 use App\Models\Motocicleta;
 use App\Models\User;
-use Database\Seeders\LocxInitialSeeder;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Mail;
@@ -22,12 +22,12 @@ class CrmModuleTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
     }
 
     public function test_admin_acessa_crm_e_registra_nota_e_tarefa(): void
     {
-        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $usuario = User::where('email', 'admin@example.com')->firstOrFail();
         $cliente = Cliente::create([
             'loja_id' => 1,
             'nome' => 'Cliente CRM',
@@ -74,7 +74,7 @@ class CrmModuleTest extends TestCase
 
     public function test_tarefa_whatsapp_no_crm_dispara_quando_prazo_chega_e_nao_duplica(): void
     {
-        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $usuario = User::where('email', 'admin@example.com')->firstOrFail();
         $cobranca = $this->cobrancaVencida(2);
 
         $this->actingAs($usuario)->withSession(['_token' => 'token-teste'])->post('/crm/tarefas', [
@@ -96,8 +96,8 @@ class CrmModuleTest extends TestCase
         ]);
         $this->assertDatabaseCount('whatsapp_logs', 0);
 
-        $primeiraExecucao = Artisan::call('locx:disparar-crm-agendado');
-        $segundaExecucao = Artisan::call('locx:disparar-crm-agendado');
+        $primeiraExecucao = Artisan::call('rental:disparar-crm-agendado');
+        $segundaExecucao = Artisan::call('rental:disparar-crm-agendado');
 
         $this->assertSame(0, $primeiraExecucao);
         $this->assertSame(0, $segundaExecucao);
@@ -124,7 +124,7 @@ class CrmModuleTest extends TestCase
     {
         $cobranca = $this->cobrancaVencida(3);
 
-        Artisan::call('locx:sincronizar-crm');
+        Artisan::call('rental:sincronizar-crm');
 
         $this->assertDatabaseHas('crm_tarefas', [
             'cliente_id' => $cobranca->cliente_id,
@@ -141,7 +141,7 @@ class CrmModuleTest extends TestCase
             'status' => 'aberta',
         ]);
 
-        Artisan::call('locx:sincronizar-crm');
+        Artisan::call('rental:sincronizar-crm');
 
         $this->assertSame(2, CrmTarefa::where('cobranca_id', $cobranca->id)->count());
         $this->assertDatabaseHas('clientes', [
@@ -153,10 +153,10 @@ class CrmModuleTest extends TestCase
     public function test_pagamento_confirmado_fecha_tarefa_de_cobranca_no_crm(): void
     {
         Mail::fake();
-        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $usuario = User::where('email', 'admin@example.com')->firstOrFail();
         $cobranca = $this->cobrancaVencida(1);
 
-        Artisan::call('locx:sincronizar-crm');
+        Artisan::call('rental:sincronizar-crm');
 
         $this->actingAs($usuario)->withSession(['_token' => 'token-teste'])->post('/pagamentos', [
             '_token' => 'token-teste',

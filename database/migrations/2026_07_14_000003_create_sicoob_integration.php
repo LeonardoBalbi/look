@@ -64,7 +64,7 @@ return new class extends Migration
             'ativo' => 1,
             'api_base_url' => 'https://api.sicoob.com.br/pix/api/v2',
             'token_url' => 'https://auth.sicoob.com.br/auth/realms/cooperado/protocol/openid-connect/token',
-            'webhook_token' => 'locx_sicoob_webhook_token',
+            'webhook_token' => 'rental_sicoob_webhook_token',
         ]);
     }
 

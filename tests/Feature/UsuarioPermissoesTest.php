@@ -7,7 +7,7 @@ use App\Models\Motocicleta;
 use App\Models\User;
 use App\Models\UsuarioPerfil;
 use App\Models\UsuarioPermissao;
-use Database\Seeders\LocxInitialSeeder;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
@@ -19,13 +19,13 @@ class UsuarioPermissoesTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
     }
 
     public function test_super_admin_cria_perfil_e_administrador_geral_atribui_ao_usuario(): void
     {
-        $superAdmin = User::where('email', 'superadmin@locx.com.br')->firstOrFail();
-        $admin = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $superAdmin = User::where('email', 'superadmin@example.com')->firstOrFail();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
 
         $this->actingAs($superAdmin)->post('/usuarios/perfis', [
             'nome' => 'Supervisor de Patio',
@@ -47,7 +47,7 @@ class UsuarioPermissoesTest extends TestCase
 
         $this->actingAs($admin)->post('/usuarios', [
             'nome' => 'Super Indevido',
-            'email' => 'super.indevido@locx.test',
+            'email' => 'super.indevido@rental.test',
             'senha' => '123456',
             'perfil' => 'super_admin',
             'status' => 'ativo',
@@ -55,13 +55,13 @@ class UsuarioPermissoesTest extends TestCase
 
         $this->actingAs($admin)->post('/usuarios', [
             'nome' => 'Supervisor Padrao',
-            'email' => 'supervisor.padrao@locx.test',
+            'email' => 'supervisor.padrao@rental.test',
             'senha' => '123456',
             'perfil' => 'supervisor_patio',
             'status' => 'ativo',
         ])->assertRedirect('/?page=usuarios');
 
-        $usuario = User::where('email', 'supervisor.padrao@locx.test')->firstOrFail();
+        $usuario = User::where('email', 'supervisor.padrao@rental.test')->firstOrFail();
 
         $this->assertTrue($usuario->pode('motos', 'editar'));
         $this->assertTrue($usuario->pode('manutencao', 'criar'));
@@ -71,8 +71,8 @@ class UsuarioPermissoesTest extends TestCase
         $this->actingAs($admin)
             ->get('/?page=usuarios')
             ->assertOk()
-            ->assertDontSee('Super Admin LocX')
-            ->assertDontSee('superadmin@locx.com.br')
+            ->assertDontSee('Super Admin Rental')
+            ->assertDontSee('superadmin@example.com')
             ->assertDontSee('Permissoes por modulo')
             ->assertDontSee('Salvar perfil');
 
@@ -85,7 +85,7 @@ class UsuarioPermissoesTest extends TestCase
     {
         $diretor = User::create([
             'nome' => 'Diretor',
-            'email' => 'diretor@locx.test',
+            'email' => 'diretor@rental.test',
             'senha' => Hash::make('123456'),
             'perfil' => 'diretor',
             'status' => 'ativo',
@@ -100,7 +100,7 @@ class UsuarioPermissoesTest extends TestCase
 
         $this->actingAs($diretor)->post('/usuarios', [
             'nome' => 'Tentativa',
-            'email' => 'tentativa@locx.test',
+            'email' => 'tentativa@rental.test',
             'senha' => '123456',
             'perfil' => 'atendente',
             'status' => 'ativo',
@@ -115,7 +115,7 @@ class UsuarioPermissoesTest extends TestCase
     {
         $atendente = User::create([
             'nome' => 'Atendente',
-            'email' => 'atendente@locx.test',
+            'email' => 'atendente@rental.test',
             'senha' => Hash::make('123456'),
             'perfil' => 'atendente',
             'status' => 'ativo',
@@ -176,7 +176,7 @@ class UsuarioPermissoesTest extends TestCase
 
         $atendente = User::create([
             'nome' => 'Atendente Loja',
-            'email' => 'atendente.loja@locx.test',
+            'email' => 'atendente.loja@rental.test',
             'senha' => Hash::make('123456'),
             'perfil' => 'atendente',
             'loja_id' => 1,
@@ -225,7 +225,7 @@ class UsuarioPermissoesTest extends TestCase
 
     public function test_administrador_geral_obedece_permissoes_do_perfil(): void
     {
-        $admin = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
         $perfil = UsuarioPerfil::where('codigo', 'administrador_geral')->firstOrFail();
 
         $perfil->permissoes()->where('modulo', 'configuracoes')->delete();

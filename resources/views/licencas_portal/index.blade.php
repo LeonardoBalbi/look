@@ -3,9 +3,9 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Portal de licencas LocX</title>
+    <title>Administração comercial | {{ $branding['product_name'] }}</title>
     <script>
-        document.documentElement.dataset.theme = localStorage.getItem('locx-theme') || 'light';
+        document.documentElement.dataset.theme = localStorage.getItem('rental-theme') || 'light';
     </script>
     <style>
         :root{--bg:#f5f7fb;--panel:#fff;--ink:#162033;--muted:#667085;--line:#d7dee8;--brand:#0f766e;--brand2:#155e75;--danger:#b42318;--warn:#b54708;--ok:#047857}
@@ -24,12 +24,12 @@
 <div class="shell">
     <header class="topbar">
         <div>
-            <h1>Portal de licencas LocX</h1>
-            <p>Clientes, planos, chaves e validacoes do LocX Cloud.</p>
+            <h1>Administração comercial</h1>
+            <p>Clientes, planos, licenças e validações de {{ $branding['product_name'] }}.</p>
         </div>
         <div class="actions">
             <button type="button" class="btn secondary theme-toggle" data-theme-toggle>Tema claro</button>
-            <a class="btn secondary" href="{{ route('locx.index', ['page' => 'configuracoes']) }}">Voltar ao LocX</a>
+            <a class="btn secondary" href="{{ route('rental.index', ['page' => 'configuracoes']) }}">Voltar à aplicação</a>
         </div>
     </header>
 
@@ -39,7 +39,7 @@
 
     <div class="api-box">
         <div>
-            <strong>URL da API para usar no LocX</strong><br>
+            <strong>URL da API de licenciamento</strong><br>
             <code>{{ $apiUrl }}</code>
         </div>
         <a class="btn secondary" href="#licencas">Gerar chave</a>
@@ -176,10 +176,10 @@
     </section>
 </div>
 <script>
-    function locxApplyTheme(theme){
+    function rentalApplyTheme(theme){
         const next = theme === 'dark' ? 'dark' : 'light';
         document.documentElement.dataset.theme = next;
-        localStorage.setItem('locx-theme', next);
+        localStorage.setItem('rental-theme', next);
         document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
             const dark = next === 'dark';
             button.textContent = dark ? 'Tema escuro' : 'Tema claro';
@@ -187,9 +187,9 @@
             button.setAttribute('aria-label', dark ? 'Alternar para tema claro' : 'Alternar para tema escuro');
         });
     }
-    locxApplyTheme(document.documentElement.dataset.theme || 'light');
+    rentalApplyTheme(document.documentElement.dataset.theme || 'light');
     document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
-        button.addEventListener('click', () => locxApplyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+        button.addEventListener('click', () => rentalApplyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
     });
 </script>
 </body>

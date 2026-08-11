@@ -8,6 +8,7 @@ use App\Models\Pagamento;
 use App\Models\PagbankConfig;
 use App\Models\PagbankLog;
 use App\Support\PixQrCode;
+use App\Support\RentalSupport;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
@@ -21,7 +22,7 @@ class PagBankService
         $conta = ContaBancaria::config('pagbank', $lojaId);
         $legado = $conta->loja_id ? null : PagbankConfig::query()->firstOrCreate(
             ['id' => 1],
-            ['modo' => 'demo', 'ambiente' => 'sandbox', 'ativo' => true, 'merchant_reference' => 'LOCX']
+            ['modo' => 'demo', 'ambiente' => 'sandbox', 'ativo' => true, 'merchant_reference' => config('branding.merchant_reference')]
         );
 
         if ($legado) {
@@ -32,7 +33,7 @@ class PagBankService
                 'client_secret' => $legado->client_secret,
                 'access_token' => $legado->access_token,
                 'webhook_url' => $legado->webhook_url,
-                'merchant_reference' => $legado->merchant_reference ?: 'LOCX',
+                'merchant_reference' => $legado->merchant_reference ?: config('branding.merchant_reference'),
                 'ativo' => $legado->ativo,
                 'atualizado_em' => now(),
             ]);
@@ -83,16 +84,16 @@ class PagBankService
         }
 
         if ($config->modo === 'demo') {
-            $pix = '00020126580014BR.GOV.BCB.PIX0136LOCX-DEMO-COBRANCA-'.$cobranca->id
+            $pix = '00020126580014BR.GOV.BCB.PIX0136'.RentalSupport::integrationPrefix().'-DEMO-COBRANCA-'.$cobranca->id
                 .'520400005303986540'.number_format($valor, 2, '.', '')
-                .'5802BR5904LOCX6009MANGARATIBA62070503***6304DEMO';
+                .'5802BR5906RENTAL6009SAOPAULO62070503***6304DEMO';
 
             $cobranca->update([
                 'pix_copia_cola' => $pix,
                 'pix_qrcode' => PixQrCode::dataUri($pix),
                 'pagbank_order_id' => 'DEMO-'.$cobranca->id,
                 'pagbank_status' => 'DEMO',
-                'pagbank_payload' => 'PIX demo gerado pelo LocX',
+                'pagbank_payload' => 'PIX de demonstração gerado por '.RentalSupport::productName(),
                 'conta_bancaria_id' => $config->id,
                 'gateway_usado' => 'pagbank',
                 'atualizado_em' => now(),
@@ -113,18 +114,18 @@ class PagBankService
             return ['ok' => false, 'erro' => 'O valor da cobrança precisa ser maior que zero.'];
         }
 
-        $reference = 'LOCX-COBRANCA-'.$cobranca->id;
+        $reference = RentalSupport::billingReference($cobranca->id);
         $centavos = (int) round($valor * 100);
         $payload = [
             'reference_id' => $reference,
             'customer' => [
-                'name' => $cobranca->cliente->nome ?: 'Cliente LocX',
+                'name' => $cobranca->cliente->nome ?: 'Cliente '.RentalSupport::storeName(),
                 'email' => $cobranca->cliente->email,
                 'tax_id' => $documento,
             ],
             'items' => [[
                 'reference_id' => (string) $cobranca->id,
-                'name' => 'Cobrança LocX #'.$cobranca->id,
+                'name' => 'Cobrança '.RentalSupport::storeName().' #'.$cobranca->id,
                 'quantity' => 1,
                 'unit_amount' => $centavos,
             ]],
@@ -132,11 +133,11 @@ class PagBankService
                 'amount' => ['value' => $centavos],
                 'expiration_date' => now()->addDays(7)->toIso8601String(),
             ]],
-            'notification_urls' => [$config->webhook_url ?: route('locx.webhook-pagbank')],
+            'notification_urls' => [$config->webhook_url ?: route('rental.webhook-pagbank')],
         ];
 
         $response = $this->request('POST', '/orders', $payload, [], [
-            'x-idempotency-key' => hash('sha256', 'locx|'.$reference.'|'.$centavos),
+            'x-idempotency-key' => hash('sha256', RentalSupport::integrationPrefix().'|'.$reference.'|'.$centavos),
         ], $config);
         $this->log(
             $cobranca->id,
@@ -198,9 +199,7 @@ class PagBankService
         $reference = $json['reference_id'] ?? '';
         $orderId = $json['id'] ?? data_get($json, 'order.id', '');
         $status = $json['status'] ?? data_get($json, 'charges.0.status', '');
-        $cobrancaId = preg_match('/LOCX-COBRANCA-(\d+)/', $reference, $match)
-            ? (int) $match[1]
-            : null;
+        $cobrancaId = RentalSupport::billingReferenceId($reference);
         $cobranca = $cobrancaId
             ? Cobranca::find($cobrancaId)
             : Cobranca::where('pagbank_order_id', $orderId)->first();
@@ -318,7 +317,7 @@ class PagBankService
             ? 'https://api.pagseguro.com'
             : 'https://sandbox.api.pagseguro.com';
         $request = Http::acceptJson()->withToken($config->access_token)->withHeaders($headers)->timeout(40);
-        if (! config('locx.gateway_verify_ssl', true)) {
+        if (! config('rental.gateway_verify_ssl', true)) {
             $request = $request->withoutVerifying();
         }
 

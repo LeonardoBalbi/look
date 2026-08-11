@@ -9,14 +9,13 @@ use App\Models\ContaBancaria;
 use App\Models\Cobranca;
 use App\Models\Pagamento;
 use App\Support\PixQrCode;
+use App\Support\RentalSupport;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
 
 class AsaasService
 {
-    public const DEFAULT_WEBHOOK_TOKEN = 'locx_asaas_webhook_token_2026_secure';
-
     public function __construct(private readonly CobrancaCalculator $calculator) {}
 
     public function config(?int $lojaId = null)
@@ -28,8 +27,8 @@ class AsaasService
                 'modo' => 'demo',
                 'ambiente' => 'sandbox',
                 'ativo' => true,
-                'webhook_token' => self::DEFAULT_WEBHOOK_TOKEN,
-                'webhook_url' => route('locx.webhook-asaas'),
+                'webhook_token' => RentalSupport::webhookToken('asaas'),
+                'webhook_url' => route('rental.webhook-asaas'),
             ]
         );
 
@@ -39,7 +38,7 @@ class AsaasService
                 'ambiente' => $legado->ambiente,
                 'api_key' => $legado->api_key,
                 'webhook_url' => $legado->webhook_url,
-                'webhook_token' => $legado->webhook_token ?: self::DEFAULT_WEBHOOK_TOKEN,
+                'webhook_token' => $legado->webhook_token ?: RentalSupport::webhookToken('asaas'),
                 'ativo' => $legado->ativo,
                 'atualizado_em' => now(),
             ]);
@@ -88,16 +87,16 @@ class AsaasService
         }
 
         if ($config->modo === 'demo') {
-            $pix = '00020126580014BR.GOV.BCB.PIX0136LOCX-ASAAS-DEMO-COBRANCA-'.$cobranca->id
+            $pix = '00020126580014BR.GOV.BCB.PIX0136'.RentalSupport::integrationPrefix().'-ASAAS-DEMO-COBRANCA-'.$cobranca->id
                 .'520400005303986540'.number_format($valor, 2, '.', '')
-                .'5802BR5904LOCX6009MANGARATIBA62070503***6304DEMO';
+                .'5802BR5906RENTAL6009SAOPAULO62070503***6304DEMO';
 
             $cobranca->update([
                 'pix_copia_cola' => $pix,
                 'pix_qrcode' => PixQrCode::dataUri($pix),
                 'asaas_id' => 'DEMO-'.$cobranca->id,
                 'asaas_status' => 'DEMO',
-                'asaas_payload' => 'PIX demo gerado pelo LocX',
+                'asaas_payload' => 'PIX de demonstração gerado por '.RentalSupport::productName(),
                 'conta_bancaria_id' => $config->id,
                 'gateway_usado' => 'asaas',
                 'atualizado_em' => now(),
@@ -124,14 +123,14 @@ class AsaasService
             return $cliente;
         }
 
-        $reference = 'LOCX-COBRANCA-'.$cobranca->id;
+        $reference = RentalSupport::billingReference($cobranca->id);
         $dueDate = $cobranca->vencimento->isPast() ? today() : $cobranca->vencimento;
         $payload = [
             'customer' => $cliente['customer_id'],
             'billingType' => 'PIX',
             'value' => round($valor, 2),
             'dueDate' => $dueDate->format('Y-m-d'),
-            'description' => 'Cobranca LocX #'.$cobranca->id,
+            'description' => 'Cobrança '.RentalSupport::storeName().' #'.$cobranca->id,
             'externalReference' => $reference,
         ];
 
@@ -216,9 +215,7 @@ class AsaasService
         $paymentId = $payment['id'] ?? '';
         $status = $payment['status'] ?? $json['event'] ?? '';
         $reference = $payment['externalReference'] ?? '';
-        $cobrancaId = preg_match('/LOCX-COBRANCA-(\d+)/', $reference, $match)
-            ? (int) $match[1]
-            : null;
+        $cobrancaId = RentalSupport::billingReferenceId($reference);
         $cobranca = $cobrancaId
             ? Cobranca::find($cobrancaId)
             : Cobranca::where('asaas_id', $paymentId)->first();
@@ -296,12 +293,12 @@ class AsaasService
         }
 
         $payload = array_filter([
-            'name' => $cliente->nome ?: 'Cliente LocX',
+            'name' => $cliente->nome ?: 'Cliente '.RentalSupport::storeName(),
             'cpfCnpj' => $documento,
             'email' => $cliente->email,
             'phone' => $cliente->telefone,
             'mobilePhone' => $cliente->whatsapp ?: $cliente->telefone,
-            'externalReference' => 'LOCX-CLIENTE-'.$cliente->id,
+            'externalReference' => RentalSupport::integrationPrefix().'-CLIENTE-'.$cliente->id,
             'notificationDisabled' => true,
         ], fn ($valor) => $valor !== null && $valor !== '');
 
@@ -442,7 +439,7 @@ class AsaasService
         $request = Http::acceptJson()
             ->withHeaders(['access_token' => $config->api_key])
             ->timeout(40);
-        if (! config('locx.gateway_verify_ssl', true)) {
+        if (! config('rental.gateway_verify_ssl', true)) {
             $request = $request->withoutVerifying();
         }
 

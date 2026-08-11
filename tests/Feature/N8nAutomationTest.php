@@ -8,7 +8,7 @@ use App\Models\Cobranca;
 use App\Models\Contrato;
 use App\Models\Motocicleta;
 use App\Services\AutomacaoService;
-use Database\Seeders\LocxInitialSeeder;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -19,7 +19,7 @@ class N8nAutomationTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
         config([
             'n8n.enabled' => true,
             'n8n.token' => 'token-de-teste',

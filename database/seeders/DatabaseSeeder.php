@@ -8,6 +8,6 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
-        $this->call(LocxInitialSeeder::class);
+        $this->call(ApplicationInitialSeeder::class);
     }
 }

@@ -18,7 +18,7 @@ class CobrancaCriadaMail extends Mailable
         $this->cobranca->loadMissing('cliente', 'contrato.motocicleta');
 
         return $this
-            ->subject('Cobranca LocX #'.$this->cobranca->id)
+            ->subject('Cobrança '.config('branding.store_name').' #'.$this->cobranca->id)
             ->view('emails.cobranca_criada')
             ->with(['cobranca' => $this->cobranca]);
     }

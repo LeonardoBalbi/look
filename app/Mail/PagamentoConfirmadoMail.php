@@ -18,7 +18,7 @@ class PagamentoConfirmadoMail extends Mailable
         $this->pagamento->loadMissing('cobranca.cliente', 'cobranca.contrato.motocicleta');
 
         return $this
-            ->subject('Pagamento confirmado LocX #'.$this->pagamento->cobranca_id)
+            ->subject('Pagamento confirmado — '.config('branding.store_name').' #'.$this->pagamento->cobranca_id)
             ->view('emails.pagamento_confirmado')
             ->with(['pagamento' => $this->pagamento]);
     }

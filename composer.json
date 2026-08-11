@@ -1,11 +1,11 @@
 {
-    "name": "mangaratiba/locx-laravel",
+    "name": "rental/management-platform",
     "type": "project",
-    "description": "LOCX em Laravel mantendo o layout original, sem duplicar arquivos antigos.",
+    "description": "Plataforma comercial de gestão de locações, frota, contratos e cobranças.",
     "keywords": [
         "laravel",
-        "locx",
-        "migracao"
+        "rental-management",
+        "gestao-de-frotas"
     ],
     "license": "MIT",
     "require": {

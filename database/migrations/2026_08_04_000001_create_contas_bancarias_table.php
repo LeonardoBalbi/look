@@ -82,7 +82,7 @@ return new class extends Migration
                     'client_secret' => $config->client_secret ?? null,
                     'access_token' => $config->access_token ?? null,
                     'webhook_url' => $config->webhook_url ?? null,
-                    'merchant_reference' => $config->merchant_reference ?? 'LOCX',
+                    'merchant_reference' => $config->merchant_reference ?? 'RENTAL',
                     'ativo' => (bool) ($config->ativo ?? true),
                     'padrao' => true,
                     'atualizado_em' => now(),

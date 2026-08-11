@@ -8,7 +8,7 @@ use App\Models\Contrato;
 use App\Models\Motocicleta;
 use App\Models\WhatsappConfig;
 use App\Services\WhatsAppService;
-use Database\Seeders\LocxInitialSeeder;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -20,7 +20,7 @@ class WhatsAppServiceTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
     }
 
     public function test_modo_demo_nao_chama_a_meta_e_informa_que_o_envio_foi_simulado(): void
@@ -57,12 +57,12 @@ class WhatsAppServiceTest extends TestCase
         Http::fake([
             '*/1114788988392842*' => Http::response([
                 'id' => '1114788988392842',
-                'verified_name' => 'LocX',
+                'verified_name' => 'Rental',
             ]),
             '*/3521532264662957/message_templates*' => Http::response([
                 'data' => [[
                     'id' => 'template-id',
-                    'name' => 'locx_cobranca_atraso',
+                    'name' => 'rental_cobranca_atraso',
                     'language' => 'pt_BR',
                     'status' => 'APPROVED',
                     'category' => 'UTILITY',
@@ -89,17 +89,17 @@ class WhatsAppServiceTest extends TestCase
 
         $this->assertTrue($resultado['ok']);
         Http::assertSent(fn ($request) => $request['template']['language']['code'] === 'en_US'
-            && $request['template']['name'] === 'locx_cobranca_atraso');
+            && $request['template']['name'] === 'rental_cobranca_atraso');
     }
 
     public function test_evolution_valida_instancia_e_envia_texto(): void
     {
         $this->configurarEvolution();
         Http::fake([
-            'https://evolution.example.com/instance/connectionState/locx' => Http::response([
+            'https://evolution.example.com/instance/connectionState/rental' => Http::response([
                 'instance' => ['state' => 'open'],
             ]),
-            'https://evolution.example.com/message/sendText/locx' => Http::response([
+            'https://evolution.example.com/message/sendText/rental' => Http::response([
                 'key' => ['id' => 'msg-123'],
             ]),
         ]);
@@ -110,7 +110,7 @@ class WhatsAppServiceTest extends TestCase
         $this->assertTrue($teste['ok']);
         $this->assertStringContainsString('open', $teste['mensagem']);
         $this->assertTrue($envio['ok']);
-        Http::assertSent(fn ($request) => $request->url() === 'https://evolution.example.com/message/sendText/locx'
+        Http::assertSent(fn ($request) => $request->url() === 'https://evolution.example.com/message/sendText/rental'
             && $request->hasHeader('apikey', 'evo-key')
             && $request['number'] === '5521999999999'
             && str_contains($request['text'], 'PIX-TESTE')
@@ -125,7 +125,7 @@ class WhatsAppServiceTest extends TestCase
             'waba_id' => '3521532264662957',
             'phone_number_id' => '1114788988392842',
             'access_token' => 'token-permanente',
-            'template_cobranca' => 'locx_cobranca_atraso',
+            'template_cobranca' => 'rental_cobranca_atraso',
             'template_language' => 'pt_BR',
         ], $dados));
     }
@@ -136,7 +136,7 @@ class WhatsAppServiceTest extends TestCase
             'modo' => 'evolution',
             'ativo' => true,
             'evolution_base_url' => 'https://evolution.example.com',
-            'evolution_instance' => 'locx',
+            'evolution_instance' => 'rental',
             'evolution_api_key' => 'evo-key',
         ], $dados));
     }

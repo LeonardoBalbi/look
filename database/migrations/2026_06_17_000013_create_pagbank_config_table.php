@@ -16,7 +16,7 @@ return new class extends Migration
             $table->text('client_secret')->nullable();
             $table->text('access_token')->nullable();
             $table->string('webhook_url', 500)->nullable();
-            $table->string('merchant_reference', 80)->default('LOCX');
+            $table->string('merchant_reference', 80)->default('RENTAL');
             $table->boolean('ativo')->default(true);
             $table->dateTime('atualizado_em')->nullable();
             $table->timestamp('criado_em')->useCurrent();

@@ -8,6 +8,7 @@ use App\Models\ItauConfig;
 use App\Models\ItauLog;
 use App\Models\Pagamento;
 use App\Support\PixQrCode;
+use App\Support\RentalSupport;
 use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
@@ -18,8 +19,6 @@ class ItauService
     public const DEFAULT_TOKEN_URL = 'https://sts.itau.com.br/api/oauth/token';
 
     public const DEFAULT_API_BASE_URL = 'https://secure.api.itau/pix_recebimentos/v2';
-
-    public const DEFAULT_WEBHOOK_TOKEN = 'locx_itau_webhook_token';
 
     public function __construct(private readonly CobrancaCalculator $calculator) {}
 
@@ -34,8 +33,8 @@ class ItauService
                 'ativo' => true,
                 'api_base_url' => self::DEFAULT_API_BASE_URL,
                 'token_url' => self::DEFAULT_TOKEN_URL,
-                'webhook_token' => self::DEFAULT_WEBHOOK_TOKEN,
-                'webhook_url' => route('locx.webhook-itau', ['token' => self::DEFAULT_WEBHOOK_TOKEN]),
+                'webhook_token' => RentalSupport::webhookToken('itau'),
+                'webhook_url' => route('rental.webhook-itau', ['token' => RentalSupport::webhookToken('itau')]),
             ]
         );
 
@@ -53,7 +52,7 @@ class ItauService
                 'access_token' => $legado->access_token,
                 'token_expires_at' => $legado->token_expires_at,
                 'webhook_url' => $legado->webhook_url,
-                'webhook_token' => $legado->webhook_token ?: self::DEFAULT_WEBHOOK_TOKEN,
+                'webhook_token' => $legado->webhook_token ?: RentalSupport::webhookToken('itau'),
                 'ativo' => $legado->ativo,
                 'atualizado_em' => now(),
             ]);
@@ -80,7 +79,7 @@ class ItauService
             return $token;
         }
 
-        $txid = 'LOCXTESTE'.now()->format('YmdHis');
+        $txid = RentalSupport::integrationPrefix().'TESTE'.now()->format('YmdHis');
         $response = $this->request('GET', '/cob/'.$txid, config: $config);
 
         if (in_array($response->status(), [200, 400, 404], true)) {
@@ -111,16 +110,16 @@ class ItauService
         $txid = $this->txid($cobranca);
 
         if ($config->modo === 'demo') {
-            $pix = '00020126580014BR.GOV.BCB.PIX0136LOCX-ITAU-DEMO-COBRANCA-'.$cobranca->id
+            $pix = '00020126580014BR.GOV.BCB.PIX0136'.RentalSupport::integrationPrefix().'-ITAU-DEMO-COBRANCA-'.$cobranca->id
                 .'520400005303986540'.number_format($valor, 2, '.', '')
-                .'5802BR5904LOCX6009MANGARATIBA62070503***6304DEMO';
+                .'5802BR5906RENTAL6009SAOPAULO62070503***6304DEMO';
 
             $cobranca->update([
                 'pix_copia_cola' => $pix,
                 'pix_qrcode' => PixQrCode::dataUri($pix),
                 'itau_txid' => 'DEMO-'.$txid,
                 'itau_status' => 'DEMO',
-                'itau_payload' => 'PIX demo gerado pelo LocX',
+                'itau_payload' => 'PIX de demonstração gerado por '.RentalSupport::productName(),
                 'conta_bancaria_id' => $config->id,
                 'gateway_usado' => 'itau',
                 'atualizado_em' => now(),
@@ -147,14 +146,14 @@ class ItauService
             'calendario' => ['expiracao' => 604800],
             'devedor' => array_filter([
                 $campoDocumento => $documento,
-                'nome' => $cobranca->cliente->nome ?: 'Cliente LocX',
+                'nome' => $cobranca->cliente->nome ?: 'Cliente '.RentalSupport::storeName(),
             ]),
             'valor' => ['original' => number_format($valor, 2, '.', '')],
             'chave' => $config->chave_pix,
-            'solicitacaoPagador' => 'Cobranca LocX #'.$cobranca->id,
+            'solicitacaoPagador' => 'Cobrança '.RentalSupport::storeName().' #'.$cobranca->id,
             'infoAdicionais' => [[
                 'nome' => 'referencia',
-                'valor' => 'LOCX-COBRANCA-'.$cobranca->id,
+                'valor' => RentalSupport::billingReference($cobranca->id),
             ]],
         ];
 
@@ -342,7 +341,7 @@ class ItauService
         if ($config->key_path) {
             $options['ssl_key'] = $config->key_path;
         }
-        if (! config('locx.gateway_verify_ssl', true)) {
+        if (! config('rental.gateway_verify_ssl', true)) {
             $request = $request->withoutVerifying();
         }
 
@@ -375,7 +374,7 @@ class ItauService
 
     private function txid(Cobranca $cobranca): string
     {
-        return 'LOCX'.str_pad((string) $cobranca->id, 21, '0', STR_PAD_LEFT);
+        return RentalSupport::integrationPrefix().str_pad((string) $cobranca->id, 25 - strlen(RentalSupport::integrationPrefix()), '0', STR_PAD_LEFT);
     }
 
     private function baixar(Cobranca $cobranca, float $valor, string $statusItau): void

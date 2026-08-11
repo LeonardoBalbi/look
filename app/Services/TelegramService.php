@@ -8,7 +8,7 @@ use App\Models\PortalAtendimento;
 use App\Models\PortalAtendimentoMensagem;
 use App\Models\TelegramConfig;
 use App\Models\TelegramLog;
-use App\Support\Locx;
+use App\Support\RentalSupport;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
@@ -108,7 +108,7 @@ class TelegramService
             return ['ok' => false, 'erro' => 'Informe o token do bot e o segredo do webhook.'];
         }
 
-        $url ??= route('locx.webhook-telegram');
+        $url ??= route('rental.webhook-telegram');
 
         try {
             $response = $this->request('setWebhook', [
@@ -190,7 +190,7 @@ class TelegramService
             return null;
         }
 
-        return 'https://t.me/'.$username.'?start=locx_'.$this->garantirLinkToken($cliente);
+        return 'https://t.me/'.$username.'?start=rental_'.$this->garantirLinkToken($cliente);
     }
 
     public function garantirAtendimentoLinkToken(Cliente $cliente): string
@@ -211,7 +211,7 @@ class TelegramService
             return null;
         }
 
-        return 'https://t.me/'.$username.'?start=locx_chat_'.$this->garantirAtendimentoLinkToken($cliente);
+        return 'https://t.me/'.$username.'?start=rental_chat_'.$this->garantirAtendimentoLinkToken($cliente);
     }
 
     public function enviarCobranca(Cobranca $cobranca, ?string $mensagem = null): array
@@ -227,8 +227,8 @@ class TelegramService
             'cliente' => $cliente?->nome ?: 'cliente',
             'cobranca_id' => (string) $cobranca->id,
             'vencimento' => $cobranca->vencimento?->format('d/m/Y') ?: '-',
-            'valor' => Locx::moeda($cobranca->valor_principal),
-            'saldo' => Locx::moeda($saldo),
+            'valor' => RentalSupport::moeda($cobranca->valor_principal),
+            'saldo' => RentalSupport::moeda($saldo),
             'pix' => $pix,
             'link_portal' => route('cliente.login'),
         ]);
@@ -342,7 +342,7 @@ class TelegramService
             return $this->processarWebhookAtendimento($payload, $message, $chatId, $texto, $username, $nome);
         }
 
-        if (preg_match('/^\/start(?:@\w+)?\s+locx_([A-Za-z0-9_-]{20,64})$/', $texto, $match)) {
+        if (preg_match('/^\/start(?:@\w+)?\s+(?:rental|locx)_([A-Za-z0-9_-]{20,64})$/', $texto, $match)) {
             $cliente = Cliente::query()->where('telegram_link_token', $match[1])->first();
             if (! $this->registrarEntrada($payload, $message, $cliente, 'entrada_vinculacao')) {
                 return ['ok' => true, 'duplicado' => true];
@@ -400,7 +400,7 @@ class TelegramService
 
     private function processarWebhookAtendimento(array $payload, array $message, string $chatId, string $texto, string $username, string $nome): array
     {
-        if (preg_match('/^\/start(?:@\w+)?\s+locx_chat_([A-Za-z0-9_-]{20,64})$/', $texto, $match)) {
+        if (preg_match('/^\/start(?:@\w+)?\s+(?:rental|locx)_chat_([A-Za-z0-9_-]{20,64})$/', $texto, $match)) {
             $cliente = Cliente::query()->where('telegram_atendimento_link_token', $match[1])->first();
             if (! $this->registrarEntrada($payload, $message, $cliente, 'entrada_vinculacao_atendimento')) {
                 return ['ok' => true, 'duplicado' => true];
@@ -541,7 +541,7 @@ class TelegramService
         $config = $this->config();
         $token = $this->botToken($bot);
         $request = Http::acceptJson()->timeout(25);
-        if (! config('locx.gateway_verify_ssl', true)) {
+        if (! config('rental.gateway_verify_ssl', true)) {
             $request = $request->withoutVerifying();
         }
 

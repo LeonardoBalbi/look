@@ -14,9 +14,9 @@ return new class extends Migration
             $table->string('phone_number_id', 255)->nullable();
             $table->text('access_token')->nullable();
             $table->string('verify_token', 255)->nullable();
-            $table->string('template_cobranca', 120)->default('locx_cobranca_atraso');
-            $table->string('template_lembrete', 120)->default('locx_lembrete_vencimento');
-            $table->string('template_bloqueio', 120)->default('locx_aviso_bloqueio');
+            $table->string('template_cobranca', 120)->default('rental_cobranca_atraso');
+            $table->string('template_lembrete', 120)->default('rental_lembrete_vencimento');
+            $table->string('template_bloqueio', 120)->default('rental_aviso_bloqueio');
             $table->boolean('ativo')->default(true);
             $table->dateTime('atualizado_em')->nullable();
             $table->timestamp('criado_em')->useCurrent();

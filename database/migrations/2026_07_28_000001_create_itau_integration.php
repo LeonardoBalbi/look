@@ -64,7 +64,7 @@ return new class extends Migration
             'ativo' => 1,
             'api_base_url' => 'https://secure.api.itau/pix_recebimentos/v2',
             'token_url' => 'https://sts.itau.com.br/api/oauth/token',
-            'webhook_token' => 'locx_itau_webhook_token',
+            'webhook_token' => 'rental_itau_webhook_token',
         ]);
 
         if (Schema::hasTable('usuario_permissoes')) {

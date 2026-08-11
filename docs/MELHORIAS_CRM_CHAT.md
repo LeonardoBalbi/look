@@ -59,10 +59,10 @@ Depois, atualize o navegador com `Ctrl + F5`.
 
 ## Arquivos principais
 
-- `resources/views/locx/partials/crm.blade.php`
-- `public/locx/assets/css/style.css`
-- `public/locx/assets/js/app.js`
-- `app/Http/Controllers/LocxController.php`
+- `resources/views/rental-app/partials/crm.blade.php`
+- `public/application/assets/css/style.css`
+- `public/application/assets/js/app.js`
+- `app/Http/Controllers/RentalController.php`
 - `app/Http/Controllers/ClientePortalController.php`
 - `app/Models/PortalAtendimento.php`
 - `app/Models/PortalAtendimentoMensagem.php`

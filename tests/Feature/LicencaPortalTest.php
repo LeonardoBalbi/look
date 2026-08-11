@@ -5,7 +5,7 @@ namespace Tests\Feature;
 use App\Models\LicencaConfig;
 use App\Models\Loja;
 use App\Models\User;
-use Database\Seeders\LocxInitialSeeder;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
 use Tests\TestCase;
@@ -17,17 +17,17 @@ class LicencaPortalTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
     }
 
     public function test_admin_configura_e_valida_licenca_online(): void
     {
-        $admin = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
 
         $this->actingAs($admin)
             ->get('/?page=configuracoes')
             ->assertOk()
-            ->assertSee('Licenca LocX Cloud');
+            ->assertSee('Licença de '.config('branding.product_name'));
 
         $this->actingAs($admin)
             ->post('/configuracoes/licenca', [
@@ -36,7 +36,7 @@ class LicencaPortalTest extends TestCase
                 'empresa_nome' => 'Moto Facil',
                 'empresa_documento' => '00000000000100',
                 'api_url' => 'https://licencas.example.com/api',
-                'licenca_chave' => 'LOCX-TESTE-123',
+                'licenca_chave' => 'RENTAL-TESTE-123',
                 'tolerancia_offline_dias' => 5,
             ])
             ->assertRedirect('/?page=configuracoes');
@@ -60,8 +60,8 @@ class LicencaPortalTest extends TestCase
             ->assertRedirect('/?page=configuracoes');
 
         Http::assertSent(fn ($request) => $request->url() === 'https://licencas.example.com/api/validar-licenca'
-            && $request['license_key'] === 'LOCX-TESTE-123'
-            && $request['app'] === 'locx'
+            && $request['license_key'] === 'RENTAL-TESTE-123'
+            && $request['app'] === config('branding.product_id')
             && data_get($request->data(), 'uso.lojas') >= 4);
 
         $config = LicencaConfig::atual();
@@ -79,7 +79,7 @@ class LicencaPortalTest extends TestCase
 
     public function test_licenca_bloqueada_permite_visualizar_mas_impede_salvar(): void
     {
-        $admin = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
         LicencaConfig::atual()->update([
             'modo' => 'online',
             'ativo' => true,
@@ -102,7 +102,7 @@ class LicencaPortalTest extends TestCase
 
     public function test_limite_de_lojas_da_licenca_impede_nova_loja(): void
     {
-        $admin = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
         LicencaConfig::atual()->update([
             'modo' => 'online',
             'ativo' => true,
@@ -122,7 +122,7 @@ class LicencaPortalTest extends TestCase
 
     public function test_modulo_fora_do_plano_fica_bloqueado(): void
     {
-        $admin = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $admin = User::where('email', 'admin@example.com')->firstOrFail();
         LicencaConfig::atual()->update([
             'modo' => 'online',
             'ativo' => true,
@@ -146,7 +146,7 @@ class LicencaPortalTest extends TestCase
             'modo' => 'online',
             'ativo' => true,
             'api_url' => 'https://licencas.example.com/api',
-            'licenca_chave' => 'LOCX-COMANDO-123',
+            'licenca_chave' => 'RENTAL-COMANDO-123',
         ]);
 
         Http::fake([
@@ -157,7 +157,7 @@ class LicencaPortalTest extends TestCase
             ]),
         ]);
 
-        $this->artisan('locx:validar-licenca --json')
+        $this->artisan('rental:validar-licenca --json')
             ->assertExitCode(0);
 
         $this->assertSame('ativa', LicencaConfig::atual()->status);

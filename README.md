@@ -1,73 +1,58 @@
-# LocX — Laravel 12
+# Plataforma de Gestão de Locações
 
-Sistema de gestão financeira e operacional desenvolvido em Laravel 12.
+Aplicação web em Laravel para administrar locadoras de motocicletas: reservas, clientes, frota, contratos, cobranças, recebimentos, inadimplência, manutenção, estoque, multas, CRM e atendimento ao cliente.
 
-A interface original foi preservada, mas a aplicação agora usa rotas, controllers,
-models Eloquent, autenticação, autorização, views Blade, validação, CSRF e serviços
-Laravel. Não existem mais páginas executadas com `require`, sessões iniciadas
-manualmente, consultas PDO dentro das views ou regras de negócio em templates.
-ffffff
-## Instalação
+## Identidade configurável
 
-Manual completo para cliente, uso diario e instalacao em servidor:
+O produto e a locadora são identidades independentes:
 
-```text
-docs/MANUAL_CLIENTE_INSTALACAO.md
-```
+- `APP_NAME`: nome comercial do produto de software;
+- `STORE_NAME`: nome da locadora que utiliza a instalação;
+- `STORE_LEGAL_NAME` e `STORE_DOCUMENT`: dados jurídicos opcionais;
+- `SUPPORT_EMAIL` e `SUPPORT_PHONE`: contatos exibidos ao usuário.
+
+Os valores ficam centralizados em `config/branding.php` e são carregados do `.env`. Não altere views, e-mails ou código para trocar o nome da locadora.
+
+## Instalação resumida
 
 ```bash
+composer install --no-dev --optimize-autoloader
 cp .env.example .env
-composer install
 php artisan key:generate
-php artisan migrate --seed
-php artisan storage:link
-php artisan serve
+php artisan migrate --force
+php artisan db:seed --force
+php artisan optimize
 ```
 
-No Windows PowerShell, use `Copy-Item .env.example .env`.
+Antes do seeder em produção, defina `INITIAL_ADMIN_EMAIL`, `INITIAL_SUPER_ADMIN_EMAIL` e uma senha forte em `INITIAL_ADMIN_PASSWORD`. A aplicação não exibe nem publica credenciais iniciais.
 
-Acesse `http://127.0.0.1:8000`.
+Configure também banco de dados, e-mail, domínio HTTPS, nome do produto, nome da locadora, contatos de suporte e credenciais das integrações.
 
-Login inicial:
+## Processos em segundo plano
+
+Configure no servidor:
 
 ```text
-admin@locx.com.br
-123456
+* * * * * cd /caminho/da-aplicacao && php artisan schedule:run >> /dev/null 2>&1
 ```
 
-Troque essa senha antes de publicar o sistema.
+Quando `QUEUE_CONNECTION` não for `sync`, mantenha também um worker de filas supervisionado.
 
-## Publicação
-
-O domínio deve apontar para a pasta `public`. Configure no `.env`:
-
-```env
-APP_ENV=production
-APP_DEBUG=false
-APP_URL=https://seu-dominio.com
-FILESYSTEM_DISK=public
-```
-
-Depois execute:
-
-```bash
-php artisan optimize:clear
-php artisan migrate --force
-php artisan storage:link
-php artisan config:cache
-php artisan route:cache
-php artisan view:cache
-```
-
-Garanta permissão de escrita em `storage` e `bootstrap/cache`.
-
-## Visual
-
-O estilo aprovado permanece em `public/locx/assets`, incluindo CSS, JavaScript,
-logo e manuais.
-
-## Testes
+## Validação
 
 ```bash
 php artisan test
+php artisan view:cache
+php artisan route:cache
+php artisan config:cache
 ```
+
+## Documentação
+
+- Manual do usuário: `docs/MANUAL_DO_USUARIO.md`
+- Implantação e entrega: `docs/GUIA_IMPLANTACAO_COMERCIAL.md`
+- Manual técnico existente: `docs/MANUAL_CLIENTE_INSTALACAO.md`
+
+## Segurança
+
+Documentos novos de clientes são armazenados no disco privado e baixados somente por rota autenticada. Ações de escrita são registradas em `audit_logs`. Em produção, use HTTPS, backups externos testados, credenciais exclusivas por cliente e `APP_DEBUG=false`.

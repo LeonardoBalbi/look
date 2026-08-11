@@ -26,7 +26,7 @@ class ClientePortalTest extends TestCase
             'loja_id' => $loja->id,
             'nome' => 'Cliente Portal',
             'cpf' => '12345678900',
-            'email' => 'cliente@locx.test',
+            'email' => 'cliente@rental.test',
             'senha' => Hash::make('123456'),
             'portal_ativo' => true,
             'status' => 'ativo',
@@ -59,7 +59,7 @@ class ClientePortalTest extends TestCase
         ]);
 
         $this->post('/portal/login', [
-            'email' => 'cliente@locx.test',
+            'email' => 'cliente@rental.test',
             'senha' => '123456',
         ])->assertRedirect('/portal');
 
@@ -95,7 +95,7 @@ class ClientePortalTest extends TestCase
 
         $admin = User::create([
             'nome' => 'Admin',
-            'email' => 'admin@locx.test',
+            'email' => 'admin@rental.test',
             'senha' => Hash::make('123456'),
             'perfil' => 'administrador_geral',
             'status' => 'ativo',
@@ -103,10 +103,10 @@ class ClientePortalTest extends TestCase
         $atendimento = PortalAtendimento::where('cliente_id', $cliente->id)->firstOrFail();
 
         $this->actingAs($admin)
-            ->post(route('locx.crm.portal-atendimentos.responder', $atendimento), [
+            ->post(route('rental.crm.portal-atendimentos.responder', $atendimento), [
                 'mensagem' => 'Pagamento localizado. A baixa sera feita ainda hoje.',
             ])
-            ->assertRedirect(route('locx.index', ['page' => 'crm', 'cliente' => $cliente->id]));
+            ->assertRedirect(route('rental.index', ['page' => 'crm', 'cliente' => $cliente->id]));
 
         $this->assertDatabaseHas('portal_atendimento_mensagens', [
             'portal_atendimento_id' => $atendimento->id,
@@ -165,7 +165,7 @@ class ClientePortalTest extends TestCase
             ->assertJsonPath('mensagens.0.mensagem', 'Ainda nao apareceu como pago no portal.');
 
         $this->actingAs($admin)
-            ->getJson(route('locx.crm.portal-atendimentos.sync', [
+            ->getJson(route('rental.crm.portal-atendimentos.sync', [
                 'atendimento' => $atendimento,
                 'after_id' => $ultimaMensagemAntesDoCliente,
             ]))
@@ -176,7 +176,7 @@ class ClientePortalTest extends TestCase
             ->assertJsonPath('mensagens.0.mensagem', 'Ainda nao apareceu como pago no portal.');
 
         $this->actingAs($admin)
-            ->getJson(route('locx.crm.portal-atendimentos.cliente-sync', $cliente))
+            ->getJson(route('rental.crm.portal-atendimentos.cliente-sync', $cliente))
             ->assertOk()
             ->assertJsonPath('ok', true)
             ->assertJsonPath('atendimentos.0.id', $atendimento->id)
@@ -210,7 +210,7 @@ class ClientePortalTest extends TestCase
             ->assertJsonMissing(['remetente' => 'bot']);
 
         $this->actingAs($admin)
-            ->getJson(route('locx.crm.portal-atendimentos.sync', [
+            ->getJson(route('rental.crm.portal-atendimentos.sync', [
                 'atendimento' => $atendimento,
                 'after_id' => $ultimaMensagemAntesDoClienteSemIdComAssunto,
             ]))
@@ -264,7 +264,7 @@ class ClientePortalTest extends TestCase
         $cliente = Cliente::create([
             'loja_id' => $loja->id,
             'nome' => 'Cliente Chat',
-            'email' => 'chat@locx.test',
+            'email' => 'chat@rental.test',
             'status' => 'ativo',
         ]);
         $atendimento = PortalAtendimento::create([
@@ -278,7 +278,7 @@ class ClientePortalTest extends TestCase
         ]);
         $atendente = User::create([
             'nome' => 'Atendente',
-            'email' => 'atendente@locx.test',
+            'email' => 'atendente@rental.test',
             'senha' => Hash::make('123456'),
             'perfil' => 'atendente',
             'loja_id' => $loja->id,
@@ -297,10 +297,10 @@ class ClientePortalTest extends TestCase
         ]);
 
         $this->actingAs($atendente)
-            ->post(route('locx.crm.portal-atendimentos.responder', $atendimento), [
+            ->post(route('rental.crm.portal-atendimentos.responder', $atendimento), [
                 'mensagem' => 'Boa tarde, vou continuar seu atendimento por aqui.',
             ])
-            ->assertRedirect(route('locx.index', ['page' => 'crm', 'cliente' => $cliente->id]));
+            ->assertRedirect(route('rental.index', ['page' => 'crm', 'cliente' => $cliente->id]));
 
         $this->assertDatabaseHas('portal_atendimento_mensagens', [
             'portal_atendimento_id' => $atendimento->id,
@@ -309,7 +309,7 @@ class ClientePortalTest extends TestCase
         ]);
 
         $this->actingAs($atendente)
-            ->getJson(route('locx.crm.portal-atendimentos.sync', [
+            ->getJson(route('rental.crm.portal-atendimentos.sync', [
                 'atendimento' => $atendimento,
                 'after_id' => 0,
             ]))
@@ -319,14 +319,14 @@ class ClientePortalTest extends TestCase
             ->assertJsonPath('mensagens.0.mensagem', 'Boa tarde, vou continuar seu atendimento por aqui.');
 
         $this->actingAs($atendente)
-            ->get(route('locx.index', ['page' => 'crm']))
+            ->get(route('rental.index', ['page' => 'crm']))
             ->assertOk()
             ->assertSee('Clientes com atendimento')
             ->assertSee('Cliente Chat')
             ->assertSee('Boa tarde, vou continuar seu atendimento por aqui.');
 
         $this->actingAs($atendente)
-            ->getJson(route('locx.crm.portal-atendimentos.inbox-sync'))
+            ->getJson(route('rental.crm.portal-atendimentos.inbox-sync'))
             ->assertOk()
             ->assertJsonPath('ok', true)
             ->assertJsonStructure(['assinatura']);
@@ -338,7 +338,7 @@ class ClientePortalTest extends TestCase
         $cliente = Cliente::create([
             'loja_id' => $loja->id,
             'nome' => 'Cliente Inativo',
-            'email' => 'inativo@locx.test',
+            'email' => 'inativo@rental.test',
             'senha' => Hash::make('123456'),
             'portal_ativo' => true,
             'status' => 'ativo',
@@ -399,14 +399,14 @@ class ClientePortalTest extends TestCase
         $cliente = Cliente::create([
             'loja_id' => $loja->id,
             'nome' => 'Cliente Interacao',
-            'email' => 'interacao@locx.test',
+            'email' => 'interacao@rental.test',
             'senha' => Hash::make('123456'),
             'portal_ativo' => true,
             'status' => 'ativo',
         ]);
         $atendente = User::create([
             'nome' => 'Atendente',
-            'email' => 'resposta@locx.test',
+            'email' => 'resposta@rental.test',
             'senha' => Hash::make('123456'),
             'perfil' => 'administrador_geral',
             'status' => 'ativo',
@@ -438,7 +438,7 @@ class ClientePortalTest extends TestCase
 
         $ultimoIdAntesAtendente = $atendimento->mensagens()->max('id');
         $this->actingAs($atendente)
-            ->postJson(route('locx.crm.portal-atendimentos.responder', $atendimento), [
+            ->postJson(route('rental.crm.portal-atendimentos.responder', $atendimento), [
                 'mensagem' => 'Recebido. Pode enviar o comprovante por aqui.',
             ])
             ->assertOk()
@@ -465,7 +465,7 @@ class ClientePortalTest extends TestCase
         $cliente = Cliente::create([
             'loja_id' => $loja->id,
             'nome' => 'Cliente Moto',
-            'email' => 'moto@locx.test',
+            'email' => 'moto@rental.test',
             'senha' => Hash::make('123456'),
             'portal_ativo' => true,
             'status' => 'ativo',
@@ -521,7 +521,7 @@ class ClientePortalTest extends TestCase
     {
         $cliente = Cliente::create([
             'nome' => 'Cliente Sem Texto',
-            'email' => 'semtexto@locx.test',
+            'email' => 'semtexto@rental.test',
             'senha' => Hash::make('123456'),
             'portal_ativo' => true,
             'status' => 'ativo',
@@ -547,7 +547,7 @@ class ClientePortalTest extends TestCase
     {
         $cliente = Cliente::create([
             'nome' => 'Cliente Historico',
-            'email' => 'historico@locx.test',
+            'email' => 'historico@rental.test',
             'senha' => Hash::make('123456'),
             'portal_ativo' => true,
             'status' => 'ativo',
@@ -587,14 +587,14 @@ class ClientePortalTest extends TestCase
     {
         Cliente::create([
             'nome' => 'Cliente Bloqueado',
-            'email' => 'bloqueado@locx.test',
+            'email' => 'bloqueado@rental.test',
             'senha' => Hash::make('123456'),
             'portal_ativo' => false,
             'status' => 'ativo',
         ]);
 
         $this->post('/portal/login', [
-            'email' => 'bloqueado@locx.test',
+            'email' => 'bloqueado@rental.test',
             'senha' => '123456',
         ])->assertSessionHasErrors('email');
 

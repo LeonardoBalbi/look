@@ -6,7 +6,7 @@ use App\Models\Cobranca;
 use App\Models\CobrancaCampanha;
 use App\Models\CobrancaCampanhaItem;
 use App\Models\User;
-use App\Support\Locx;
+use App\Support\RentalSupport;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\DB;
 use Throwable;
@@ -147,8 +147,8 @@ class CobrancaCampanhaService
             'cliente' => $cobranca->cliente?->nome ?: 'cliente',
             'cobranca_id' => (string) $cobranca->id,
             'vencimento' => $cobranca->vencimento?->format('d/m/Y') ?: '-',
-            'valor' => Locx::moeda($cobranca->valor_principal),
-            'saldo' => Locx::moeda($saldo),
+            'valor' => RentalSupport::moeda($cobranca->valor_principal),
+            'saldo' => RentalSupport::moeda($saldo),
             'dias_atraso' => (string) max(0, $cobranca->vencimento?->diffInDays(today(), false) ?? 0),
             'placa' => $cobranca->contrato?->motocicleta?->placa ?: 'não informada',
             'pix' => $cobranca->pix_copia_cola ?: 'PIX ainda não disponível',
@@ -272,7 +272,7 @@ class CobrancaCampanhaService
                     'customer_name' => $cobranca->cliente?->nome ?: 'cliente',
                     'vehicle_plate' => $cobranca->contrato?->motocicleta?->placa ?: 'não informada',
                     'days_overdue' => (string) max(0, $cobranca->vencimento?->diffInDays(today(), false) ?? 0),
-                    'updated_balance' => Locx::moeda(max(0, (float) $cobranca->valor_atualizado - (float) $cobranca->valor_pago)),
+                    'updated_balance' => RentalSupport::moeda(max(0, (float) $cobranca->valor_atualizado - (float) $cobranca->valor_pago)),
                     'pix_code' => $cobranca->pix_copia_cola ?: 'não disponível',
                 ],
                 $mensagem,

@@ -1,9 +1,9 @@
 <?php return array(
     'root' => array(
-        'name' => 'mangaratiba/locx-laravel',
+        'name' => 'rental/management-platform',
         'pretty_version' => 'dev-main',
         'version' => 'dev-main',
-        'reference' => '57fb411459cbe63860a9d3ca2309cd9f27d4bfba',
+        'reference' => 'eb62b7171a78ef29b33148e0595f3dd3c0c21ca4',
         'type' => 'project',
         'install_path' => __DIR__ . '/../../',
         'aliases' => array(),
@@ -523,15 +523,6 @@
             'aliases' => array(),
             'dev_requirement' => false,
         ),
-        'mangaratiba/locx-laravel' => array(
-            'pretty_version' => 'dev-main',
-            'version' => 'dev-main',
-            'reference' => '57fb411459cbe63860a9d3ca2309cd9f27d4bfba',
-            'type' => 'project',
-            'install_path' => __DIR__ . '/../../',
-            'aliases' => array(),
-            'dev_requirement' => false,
-        ),
         'mockery/mockery' => array(
             'pretty_version' => '1.6.12',
             'version' => '1.6.12.0',
@@ -854,6 +845,15 @@
             'reference' => '8429c78ca35a09f27565311b98101e2826affde0',
             'type' => 'library',
             'install_path' => __DIR__ . '/../ramsey/uuid',
+            'aliases' => array(),
+            'dev_requirement' => false,
+        ),
+        'rental/management-platform' => array(
+            'pretty_version' => 'dev-main',
+            'version' => 'dev-main',
+            'reference' => 'eb62b7171a78ef29b33148e0595f3dd3c0c21ca4',
+            'type' => 'project',
+            'install_path' => __DIR__ . '/../../',
             'aliases' => array(),
             'dev_requirement' => false,
         ),

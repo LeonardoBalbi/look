@@ -1,0 +1,775 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>{{ $pages[$page] }} | {{ $branding['store_name'] }} — {{ $branding['product_name'] }}</title>
+    <script>
+        document.documentElement.dataset.theme = localStorage.getItem('rental-theme') || 'light';
+    </script>
+    <link rel="stylesheet" href="{{ \App\Support\RentalSupport::asset('assets/css/style.css') }}">
+</head>
+<body data-store-name="{{ $branding['store_name'] }}" data-product-name="{{ $branding['product_name'] }}">
+<header class="mobile-header">
+    <x-brand />
+    <button type="button" class="mobile-menu-toggle">☰</button>
+</header>
+<div class="mobile-menu-overlay"></div>
+<div class="app">
+    <aside class="sidebar" id="sidebarMenu">
+        <button type="button" class="mobile-menu-close">Fechar</button>
+        <x-brand />
+        <div class="nav-title">Navegação</div>
+        @php
+            $moduleDetails = [
+            'dashboard' => 'Painel executivo com indicadores de receita, cobranças, inadimplência, frota e operação por loja.',
+            'reservas' => 'Controle pedidos de reserva, disponibilidade da frota, previsão de retirada e oportunidades antes de virar contrato.',
+            'crm' => 'Centralize conversas, notas internas, tarefas de follow-up, histórico do cliente e acompanhamento comercial.',
+            'clientes' => 'Cadastre dados pessoais, documentos, contatos, portal do cliente, status e vínculos com lojas.',
+            'motos' => 'Gerencie placa, modelo, cor, ano, loja, status operacional, manutenção e histórico da frota.',
+            'contratos' => 'Crie contratos de locação, acompanhe vigência, valores, recorrência de cobrança e vínculo com moto e cliente.',
+            'manutencao' => 'Registre ordens de serviço, vistorias, custos, previsão de conclusão e indisponibilidade da moto.',
+            'estoque' => 'Controle peças, entradas, saídas e custos ligados à operação e manutenção.',
+            'multas' => 'Acompanhe infrações, vencimentos, responsáveis, valores e repasses ao cliente.',
+            'financeiro' => 'Veja recebimentos, baixas, pagamentos, saldos em aberto e movimentações financeiras.',
+            'contas' => 'Organize contas bancárias, lançamentos, conciliação e visão de caixa.',
+            'cobrancas' => 'Gere cobranças, Pix, QR Code, campanhas de cobrança e acompanhe status de pagamento.',
+            'inadimplencia' => 'Priorize clientes em atraso, calcule saldo atualizado, juros, acordos e ações de recuperação.',
+            'bancos' => 'Configure gateways Pix, credenciais, webhooks e o provedor principal de recebimento.',
+            'pagbank' => 'Configure o PagBank para gerar Pix, webhooks e conciliação de pagamentos.',
+            'asaas' => 'Configure o Asaas para emissão de cobranças Pix, API Key e webhook.',
+            'sicoob' => 'Configure o Sicoob para Pix com credenciais, certificado, chave Pix e webhook.',
+            'itau' => 'Configure o Itaú Pix com OAuth, certificado, chave privada e webhook.',
+            'whatsapp' => 'Configure envios automáticos, cobranças, testes de integração e histórico de mensagens.',
+            'telegram' => 'Configure bots de aviso e atendimento, vínculo de clientes e logs de envio.',
+            'documentos' => 'Centralize anexos, contratos, comprovantes, documentos do cliente e controle de assinatura.',
+            'relatorios' => 'Analise indicadores, faturamento por loja, clientes, frota, cobranças e resultados operacionais.',
+            'lojas' => 'Compare unidades, motos, recebidos, atrasos e desempenho por loja.',
+            'usuarios' => 'Administre usuários, perfis, permissões por módulo e lojas liberadas.',
+            'configuracoes' => 'Acesse integrações, canais, gateways e parâmetros operacionais do sistema.',
+            ];
+        @endphp
+        <nav class="menu">
+            @foreach (\App\Support\RentalSupport::MENU_GRUPOS as $grupo => $modulos)
+                @php
+                    $itens = collect($modulos)
+                        ->filter(fn ($key) => isset($pages[$key]) && $user->pode($key))
+                        ->values();
+                @endphp
+                @if ($itens->isNotEmpty())
+                    <details class="menu-group" {{ $itens->contains($page) ? 'open' : '' }}>
+                        <summary>
+                            <span>{{ $grupo }}</span>
+                            <small>{{ $itens->count() }}</small>
+                        </summary>
+                        <div class="menu-group-items">
+                            @foreach ($itens as $key)
+                                <a class="sidebar-menu-info {{ $page === $key ? 'active' : '' }}" href="{{ route('rental.index', ['page' => $key]) }}" data-menu-info="{{ $moduleDetails[$key] ?? $pages[$key] }}" title="{{ $moduleDetails[$key] ?? $pages[$key] }}" aria-label="{{ $pages[$key] }}. {{ $moduleDetails[$key] ?? $pages[$key] }}">
+                                    <span>{!! \App\Support\RentalSupport::icon($key) !!}</span>{{ $pages[$key] }}
+                                </a>
+                            @endforeach
+                        </div>
+                    </details>
+                @endif
+            @endforeach
+        </nav>
+        <div class="sidebar-footer">
+            Logado como: <strong>{{ $user->nome }}</strong><br>
+            {{ $user->perfilAcesso?->nome ?? \App\Support\RentalSupport::perfil($user->perfil) }}<br><br>
+            <form method="post" action="{{ route('rental.logout') }}">@csrf<button class="btn secondary" type="submit">Sair</button></form>
+        </div>
+    </aside>
+    <main class="main">
+        @php
+            $pageSubtitles = [
+                'dashboard' => 'Indicadores essenciais da operação, financeiro e cobrança em um só lugar.',
+                'clientes' => 'Cadastro, portal do cliente e relacionamento reunidos para consulta rápida.',
+                'motos' => 'Controle da frota por loja, placa e status operacional.',
+                'contratos' => 'Locações ativas, recorrência de cobrança e documentos de contrato.',
+                'cobrancas' => 'Geração de PIX, canais de cobrança e acompanhamento de status.',
+                'inadimplencia' => 'Clientes em atraso, saldos atualizados e prioridades de recuperação.',
+                'crm' => 'Atendimento, histórico e próximas ações com contexto do cliente.',
+                'bancos' => 'Configuração dos gateways PIX e status de integração.',
+                'whatsapp' => 'Configuração da integração oficial e histórico de envios.',
+                'telegram' => 'Bots de aviso, atendimento e logs de mensagens.',
+                'configuracoes' => 'Acessos rápidos para integrações e parâmetros operacionais.',
+            ];
+
+            $quickActions = [
+                'clientes' => [['label' => 'Novo cliente', 'href' => route('rental.index', ['page' => 'clientes'])]],
+                'motos' => $user->pode('motos', 'criar') ? [['label' => 'Nova moto', 'href' => route('rental.index', ['page' => 'motos'])]] : [],
+                'contratos' => $user->pode('contratos', 'criar') ? [['label' => 'Novo contrato', 'href' => route('rental.index', ['page' => 'contratos'])]] : [],
+                'cobrancas' => $user->pode('cobrancas', 'criar') ? [['label' => 'Nova cobrança', 'href' => '#nova-cobranca']] : [],
+                'crm' => [['label' => 'Abrir clientes', 'href' => route('rental.index', ['page' => 'clientes'])]],
+                'whatsapp' => $user->pode('whatsapp', 'editar') ? [['label' => 'Testar integração', 'href' => '#testar-integracao']] : [],
+                'telegram' => $user->pode('telegram', 'editar') ? [['label' => 'Testar bot', 'href' => '#testar-bot']] : [],
+            ][$page] ?? [];
+        @endphp
+        <header class="topbar">
+            <div class="topbar-title">
+                <span>{{ $page === 'dashboard' ? 'Painel executivo' : 'Área operacional' }}</span>
+                <h1>{{ $pages[$page] }}</h1>
+                <p>{{ $pageSubtitles[$page] ?? $branding['product_name'].' para '.$branding['store_name'].', com gestão multiunidades, operação, financeiro e cobrança.' }}</p>
+            </div>
+            <div class="toolbar">
+                @foreach ($quickActions as $action)
+                    <a class="btn" href="{{ $action['href'] }}">{{ $action['label'] }}</a>
+                @endforeach
+                <a class="btn secondary" href="{{ route('rental.index', ['page' => 'dashboard']) }}">Visão Geral</a>
+                <button type="button" class="btn secondary theme-toggle" data-theme-toggle>Tema claro</button>
+            </div>
+        </header>
+
+        @if (session('success'))<div class="notice"><strong>{{ session('success') }}</strong></div>@endif
+        @if ($errors->any())<div class="alert"><strong>{{ $errors->first() }}</strong></div>@endif
+
+        @if ($page === 'dashboard')
+            <section class="rental-today" aria-labelledby="rentalTodayTitle">
+                <div class="rental-today-head">
+                    <div>
+                        <span>OPERAÇÃO DE HOJE</span>
+                        <h2 id="rentalTodayTitle">O que precisa de atenção agora</h2>
+                        <p>Da reserva à devolução, em uma única linha de trabalho.</p>
+                    </div>
+                    <div class="rental-today-actions">
+                        @if($user->pode('reservas'))<a class="btn" href="{{ route('rental.index', ['page' => 'reservas']) }}">Nova reserva</a>@endif
+                        @if($user->pode('contratos'))<a class="btn secondary" href="{{ route('rental.index', ['page' => 'contratos']) }}">Abrir contratos</a>@endif
+                    </div>
+                </div>
+                <div class="rental-today-grid">
+                    @if($user->pode('reservas'))
+                        <a href="{{ route('rental.index', ['page' => 'reservas']) }}"><span>Reservas em preparação</span><strong>{{ $reservasEmPreparacao }}</strong><small>Confirmar dados e disponibilidade</small></a>
+                    @endif
+                    @if($user->pode('contratos'))
+                        <a href="{{ route('rental.index', ['page' => 'contratos']) }}"><span>Retiradas hoje</span><strong>{{ $retiradasHoje }}</strong><small>Contrato, caução e vistoria</small></a>
+                        <a href="{{ route('rental.index', ['page' => 'contratos']) }}"><span>Devoluções hoje</span><strong>{{ $devolucoesHoje }}</strong><small>Km, avarias e fechamento</small></a>
+                    @endif
+                    @if($user->pode('manutencao'))
+                        <a class="{{ $manutencoesAtencao > 0 ? 'needs-attention' : '' }}" href="{{ route('rental.index', ['page' => 'manutencao']) }}"><span>Manutenções pendentes</span><strong>{{ $manutencoesAtencao }}</strong><small>Vencidas ou previstas para hoje</small></a>
+                    @endif
+                </div>
+            </section>
+            <div class="cards kpi-row">
+                <div class="metric"><span>Receita recebida no mês</span><strong>{{ \App\Support\RentalSupport::moeda($recebidoMes) }}</strong><small>Pagamentos conciliados</small></div>
+                <div class="metric ok"><span>Recebido hoje</span><strong>{{ \App\Support\RentalSupport::moeda($recebidoHoje) }}</strong><small>Baixas do dia</small></div>
+                <div class="metric warn"><span>A receber</span><strong>{{ \App\Support\RentalSupport::moeda($aReceber) }}</strong><small>Cobranças abertas/parciais</small></div>
+                <div class="metric danger"><span>Inadimplência</span><strong>{{ \App\Support\RentalSupport::moeda($atraso) }}</strong><small>{{ $clientesInadimplentes }} clientes em atraso</small></div>
+            </div>
+            <div class="chart-row four">
+                <div class="panel chart-card"><div class="chart-head"><div><span>RECEITA</span><h2>Composição financeira</h2></div><strong>{{ \App\Support\RentalSupport::moeda($recebidoMes + $aReceber) }}</strong></div><div id="chartReceita" class="donut-premium"></div></div>
+                <div class="panel chart-card"><div class="chart-head"><div><span>STATUS</span><h2>Cobranças</h2></div><strong>{{ array_sum($cobrancasStatus) }}</strong></div><div id="chartStatus" class="donut-premium"></div></div>
+                <div class="panel chart-card"><div class="chart-head"><div><span>RECEBIDO</span><h2>Por loja</h2></div><strong>{{ \App\Support\RentalSupport::moeda(array_sum($lojaRecebido)) }}</strong></div><div id="chartRecebidoLojas" class="mini-bars-premium"></div></div>
+                <div class="panel chart-card"><div class="chart-head"><div><span>OPERAÇÃO</span><h2>Frota</h2></div><strong>{{ $totalMotos }} motos</strong></div><div id="chartOperacao" class="donut-premium"></div></div>
+            </div>
+            <div class="panel chart-wide-panel"><div class="chart-head"><div><span>EVOLUÇÃO</span><h2>Receita recebida - últimos 30 dias</h2></div><strong>{{ \App\Support\RentalSupport::moeda(array_sum($recebidos30)) }}</strong></div><div id="chartReceb30" class="chart-bars chart-wide clean"></div></div>
+            <div class="cards">
+                <div class="metric"><span>Total de motos</span><strong>{{ $totalMotos }}</strong></div>
+                <div class="metric ok"><span>Disponíveis</span><strong>{{ $motosDisponiveis }}</strong></div>
+                <div class="metric warn"><span>Alugadas</span><strong>{{ $motosAlugadas }}</strong></div>
+                <div class="metric danger"><span>Manutenção</span><strong>{{ $motosManutencao }}</strong></div>
+            </div>
+            <div class="grid side dashboard-tables">
+                <div class="panel"><h2>Vencimentos próximos</h2><div class="table-wrap"><table><tr><th>Cliente</th><th>Moto</th><th>Vencimento</th><th>Valor</th><th>Status</th><th>Ações</th></tr>
+                    @foreach ($vencimentosProximos as $item)<tr><td>{{ $item->cliente?->nome }}</td><td>{{ $item->contrato?->motocicleta?->placa ?? '-' }}</td><td>{{ $item->vencimento->format('d/m/Y') }}</td><td>{{ \App\Support\RentalSupport::moeda($item->valor_principal) }}</td><td>{!! \App\Support\RentalSupport::status($item->status) !!}</td></tr>@endforeach
+                </table></div></div>
+                <div class="panel"><h2>Inadimplência - Top clientes</h2><div class="table-wrap"><table><tr><th>Cliente</th><th>Moto</th><th>Dias</th><th>Saldo</th></tr>
+                    @foreach ($topInadimplentes as $item)<tr><td>{{ $item->cliente?->nome }}</td><td>{{ $item->contrato?->motocicleta?->placa ?? '-' }}</td><td>{{ app(\App\Services\CobrancaCalculator::class)->diasAtrasoAteDomingo($item->vencimento) }}</td><td>{{ \App\Support\RentalSupport::moeda($item->valor_atualizado - $item->valor_pago) }}</td></tr>@endforeach
+                </table></div></div>
+            </div>
+            <script>
+                window.addEventListener('load',()=>{rentalDonutPremium('chartReceita',[{label:'Recebido',value:@json(round($recebidoMes)),color:'#16a34a'},{label:'A receber',value:@json(round($aReceber)),color:'#2563eb'},{label:'Em atraso',value:@json(round($atraso)),color:'#ef4444'}],'R$');rentalDonutPremium('chartStatus',[{label:'Pagas',value:@json($cobrancasStatus['pagas']),color:'#16a34a'},{label:'Abertas',value:@json($cobrancasStatus['abertas']),color:'#2563eb'},{label:'Parciais',value:@json($cobrancasStatus['parciais']),color:'#f59e0b'},{label:'Atrasadas',value:@json($cobrancasStatus['atrasadas']),color:'#ef4444'}]);rentalMiniBarsPremium('chartRecebidoLojas',@json($lojaLabels),@json($lojaRecebido),'R$');rentalDonutPremium('chartOperacao',[{label:'Alugadas',value:@json($motosAlugadas),color:'#2563eb'},{label:'Disponíveis',value:@json($motosDisponiveis),color:'#16a34a'},{label:'Manutenção',value:@json($motosManutencao),color:'#f59e0b'},{label:'Outras',value:@json(max(0,$totalMotos-$motosAlugadas-$motosDisponiveis-$motosManutencao)),color:'#64748b'}]);rentalBars('chartReceb30',@json($labels30),@json($recebidos30));});
+            </script>
+
+        @elseif ($page === 'reservas')
+            @include('rental.partials.reservas')
+
+        @elseif (in_array($page, ['contas','documentos'], true))
+            @include('rental.partials.look_modulo')
+
+        @elseif ($page === 'crm')
+            @include('rental.partials.crm')
+
+        @elseif ($page === 'clientes')
+            <div class="grid side">
+                <div class="panel"><h2>{{ $clienteEdit ? 'Editar' : 'Novo' }} Cliente</h2>
+                    <form method="post" action="{{ route('rental.clientes.salvar') }}" enctype="multipart/form-data" class="form-grid">@csrf
+                        <input type="hidden" name="id" value="{{ $clienteEdit?->id }}">
+                        <label>Loja<select name="loja_id"><option value="">Selecione</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$clienteEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                        <label>Nome<input name="nome" required value="{{ old('nome',$clienteEdit?->nome) }}"></label>
+                        <label>CPF<input name="cpf" value="{{ old('cpf',$clienteEdit?->cpf) }}"></label>
+                        <label>RG<input name="rg" value="{{ old('rg',$clienteEdit?->rg) }}"></label>
+                        <label>CNH<input name="cnh" value="{{ old('cnh',$clienteEdit?->cnh) }}"></label>
+                        <label>Status<select name="status">@foreach(['ativo','inadimplente','bloqueado','encerrado'] as $status)<option @selected(old('status',$clienteEdit?->status ?? 'ativo')===$status)>{{ $status }}</option>@endforeach</select></label>
+                        <label>Telefone<input name="telefone" value="{{ old('telefone',$clienteEdit?->telefone) }}"></label>
+                        <label>WhatsApp<input name="whatsapp" value="{{ old('whatsapp',$clienteEdit?->whatsapp) }}"></label>
+                        <label>E-mail<input type="email" name="email" value="{{ old('email',$clienteEdit?->email) }}"></label>
+                        <label>Notificações Telegram<select name="telegram_notificacoes"><option value="1" @selected(old('telegram_notificacoes',$clienteEdit?->telegram_notificacoes ?? true))>permitidas</option><option value="0" @selected(!old('telegram_notificacoes',$clienteEdit?->telegram_notificacoes ?? true))>desativadas</option></select></label>
+                        <label>Portal do cliente<select name="portal_ativo"><option value="0" @selected(!old('portal_ativo',$clienteEdit?->portal_ativo ?? false))>bloqueado</option><option value="1" @selected(old('portal_ativo',$clienteEdit?->portal_ativo ?? false))>liberado</option></select></label>
+                        <label class="span-2">Senha do portal<input type="password" name="senha_portal" placeholder="{{ $clienteEdit?->senha ? 'Preencha somente para trocar' : 'Mínimo 6 caracteres' }}"></label>
+                        <label class="span-3">Endereço<textarea name="endereco">{{ old('endereco',$clienteEdit?->endereco) }}</textarea></label>
+                        <label>Foto Cliente<input type="file" name="foto_cliente"></label><label>Documento<input type="file" name="foto_documento"></label><label>Comprovante residência<input type="file" name="comprovante_residencia"></label>
+                        @if($clienteEdit && collect(['foto_cliente','foto_documento','comprovante_residencia'])->contains(fn($campo) => filled($clienteEdit->{$campo})))
+                            <div class="span-3 document-links">
+                                <strong>Documentos protegidos</strong>
+                                @foreach(['foto_cliente' => 'Foto do cliente', 'foto_documento' => 'Documento', 'comprovante_residencia' => 'Comprovante de residência'] as $campo => $label)
+                                    @if($clienteEdit->{$campo})<a class="btn secondary" href="{{ route('rental.clientes.documentos.baixar', [$clienteEdit, $campo]) }}">Baixar {{ $label }}</a>@endif
+                                @endforeach
+                            </div>
+                        @endif
+                        <div class="span-3"><button type="submit">Salvar Cliente</button></div>
+                    </form>
+                </div>
+                <div class="panel"><h2>Clientes Cadastrados</h2><div class="table-wrap"><table><tr><th>Nome</th><th>CPF</th><th>WhatsApp</th><th>Telegram</th><th>Status</th><th>Portal</th><th>Ações</th></tr>
+                    @foreach($clientes as $cliente)<tr><td>{{ $cliente->nome }}</td><td>{{ $cliente->cpf }}</td><td>{{ $cliente->whatsapp }}</td><td>{!! \App\Support\RentalSupport::status($cliente->telegram_chat_id ? 'vinculado' : 'não vinculado') !!}<br><small>{{ $cliente->telegram_username ? '@'.$cliente->telegram_username : '' }}</small></td><td>{!! \App\Support\RentalSupport::status($cliente->status) !!}</td><td>{!! \App\Support\RentalSupport::status($cliente->portal_ativo ? 'ativo' : 'bloqueado') !!}<br><small>{{ $cliente->ultimo_login_em ? 'Último acesso '.$cliente->ultimo_login_em->format('d/m/Y H:i') : 'sem acesso' }}</small></td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'clientes','edit'=>$cliente->id]) }}">Editar</a> <a class="btn secondary" href="{{ route('rental.index',['page'=>'crm','cliente'=>$cliente->id]) }}">CRM</a></td></tr>@endforeach
+                </table></div></div>
+            </div>
+
+        @elseif ($page === 'motos')
+            <div class="grid side">
+                <div class="panel">
+                    @if($user->pode('motos', $motoEdit ? 'editar' : 'criar'))
+                        <h2>{{ $motoEdit ? 'Editar' : 'Nova' }} Motocicleta</h2><form method="post" action="{{ route('rental.motos.salvar') }}" class="form-grid">@csrf
+                            <input type="hidden" name="id" value="{{ $motoEdit?->id }}">
+                            <label>Loja<select name="loja_id" required>@foreach($lojasMoto as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$motoEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                            <label>Marca<input name="marca" list="marcas-moto" value="{{ old('marca',$motoEdit?->marca_nome ?? $motoEdit?->marca) }}"></label><label>Modelo<input name="modelo" list="modelos-moto" required value="{{ old('modelo',$motoEdit?->modelo_nome ?? $motoEdit?->modelo) }}"></label>
+                            <datalist id="marcas-moto">@foreach($marcasMoto as $marca)<option value="{{ $marca }}"></option>@endforeach</datalist>
+                            <datalist id="modelos-moto">@foreach($modelosMoto as $modelo)<option value="{{ $modelo }}"></option>@endforeach</datalist>
+                            <label>Ano<input type="number" name="ano" value="{{ old('ano',$motoEdit?->ano) }}"></label><label>Placa<input name="placa" value="{{ old('placa',$motoEdit?->placa) }}"></label><label>Cor<input name="cor" list="cores-moto" value="{{ old('cor',$motoEdit?->cor) }}"></label>
+                            <datalist id="cores-moto">@foreach($coresMoto as $cor)<option value="{{ $cor }}"></option>@endforeach</datalist>
+                            <label>Renavam<input name="renavam" value="{{ old('renavam',$motoEdit?->renavam) }}"></label>
+                            <label>Chassi<input name="chassi" value="{{ old('chassi',$motoEdit?->chassi) }}"></label><label>Data aquisição<input type="date" name="data_aquisicao" value="{{ old('data_aquisicao',$motoEdit?->data_aquisicao?->format('Y-m-d')) }}"></label>
+                            <label>Status<select name="status_operacional">@foreach(['disponivel','alugada','manutencao','recuperacao','encerrada'] as $status)<option value="{{ $status }}" @selected(old('status_operacional',$motoEdit?->status_operacional ?? 'disponivel')===$status)>{{ $status }}</option>@endforeach</select></label>
+                            <label>Seguro<input name="seguro" value="{{ old('seguro',$motoEdit?->seguro) }}"></label><label>Rastreador<input name="rastreador" value="{{ old('rastreador',$motoEdit?->rastreador) }}"></label><div class="span-3"><button type="submit">Salvar Moto</button></div>
+                        </form>
+                    @else
+                        <h2>Motocicletas</h2>
+                        <p class="empty">Este perfil consulta a frota, mas não altera motocicletas.</p>
+                    @endif
+                </div>
+                <div class="panel"><h2>Frota Cadastrada</h2><div class="table-wrap"><table><tr><th>Loja</th><th>Placa</th><th>Modelo</th><th>Cor</th><th>Ano</th><th>Status</th><th>Ações</th></tr>
+                    @foreach($motos as $moto)<tr><td>{{ $moto->loja?->nome }}</td><td>{{ $moto->placa }}</td><td>{{ $moto->modelo_nome }}</td><td>{{ $moto->cor ?: '-' }}</td><td>{{ $moto->ano }}</td><td>{!! \App\Support\RentalSupport::status($moto->status_operacional) !!}</td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'motos','edit'=>$moto->id]) }}">Editar</a></td></tr>@endforeach
+                </table></div></div>
+            </div>
+
+        @elseif ($page === 'contratos')
+            <div class="grid side">
+                <div class="panel">
+                    @if($user->pode('contratos', 'criar'))
+                        <h2>Novo Contrato</h2><form method="post" action="{{ route('rental.contratos.salvar') }}" class="form-grid">@csrf
+                            <label>Cliente<select name="cliente_id">@foreach($clientes as $cliente)<option value="{{ $cliente->id }}">{{ $cliente->nome }}</option>@endforeach</select></label>
+                            <label>Moto<select name="motocicleta_id">@foreach($motos as $moto)<option value="{{ $moto->id }}">{{ $moto->placa }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
+                            <label>Loja<select name="loja_id">@foreach($lojasContrato as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>
+                            <label>Data início<input type="date" name="data_inicio" value="{{ old('data_inicio',today()->format('Y-m-d')) }}"></label><label>Valor contratado<input type="number" step="0.01" name="valor_contratado" value="{{ old('valor_contratado','500.00') }}"></label>
+                            <label>Forma<select name="forma_cobranca"><option>semanal</option><option>quinzenal</option><option>mensal</option></select></label><label>Status<select name="status"><option>ativo</option><option>suspenso</option><option>encerrado</option></select></label>
+                            <label>Próxima cobrança<input type="date" name="proxima_cobranca_em" value="{{ old('proxima_cobranca_em', today()->format('Y-m-d')) }}"></label>
+                            <label><input type="checkbox" name="cobranca_automatica" value="1" @checked(old('cobranca_automatica', true))> Cobrança automática</label>
+                            <div class="span-3"><button type="submit">Criar Contrato</button></div>
+                        </form>
+                    @else
+                        <h2>Contratos</h2>
+                        <p class="empty">Este perfil consulta contratos, mas não cria novas locações.</p>
+                    @endif
+                </div>
+                <div class="panel"><h2>Contratos</h2><div class="table-wrap"><table><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Loja</th><th>Valor</th><th>Recorrência</th><th>Status</th><th>Ações</th></tr>
+                    @foreach($contratos as $contrato)<tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->cliente?->nome }}</td><td>{{ $contrato->motocicleta?->placa }}</td><td>{{ $contrato->loja?->nome }}</td><td>{{ \App\Support\RentalSupport::moeda($contrato->valor_contratado) }}</td><td>{{ $contrato->cobranca_automatica ? $contrato->forma_cobranca : 'manual' }}<br><small>{{ $contrato->proxima_cobranca_em ? 'Próx. '.$contrato->proxima_cobranca_em->format('d/m/Y') : 'sem data' }}</small></td><td>{!! \App\Support\RentalSupport::status($contrato->status) !!}</td><td><button type="button" class="btn contract-generate-btn" data-contract-open="contrato-preview-{{ $contrato->id }}">Gerar contrato</button></td></tr>@endforeach
+                </table></div></div>
+            </div>
+            @foreach($contratos as $contrato)
+                @php($clienteContrato = $contrato->cliente)
+                @php($motoContrato = $contrato->motocicleta)
+                @php($lojaContrato = $contrato->loja)
+                <div class="contract-modal" id="contrato-preview-{{ $contrato->id }}" aria-hidden="true">
+                    <div class="contract-modal-backdrop" data-contract-close></div>
+                    <div class="contract-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="contrato-title-{{ $contrato->id }}">
+                        <div class="contract-modal-head">
+                            <div><h2 id="contrato-title-{{ $contrato->id }}">Contrato de Locação</h2><p>Pré-visualização para impressão ou PDF</p></div>
+                            <button type="button" class="contract-modal-close" data-contract-close aria-label="Fechar">&times;</button>
+                        </div>
+                        <div class="contract-document" id="contrato-doc-{{ $contrato->id }}">
+                            <div class="contract-brand"><strong>{{ $branding['store_name'] }}</strong><small>{{ $branding['product_name'] }}</small></div>
+                            <h1>CONTRATO DE LOCAÇÃO DE MOTOCICLETA</h1>
+                            <h3>Contrato nº #{{ $contrato->id }}</h3>
+                            <p>Pelo presente instrumento particular, as partes abaixo identificadas ajustam a locação da motocicleta descrita neste documento, conforme as condições comerciais cadastradas pela locadora.</p>
+                            <h2>1. CONTRATANTE</h2>
+                            <p><strong>Nome:</strong> {{ $clienteContrato?->nome ?: '-' }}</p>
+                            <p><strong>CPF:</strong> {{ $clienteContrato?->cpf ?: '-' }}</p>
+                            <p><strong>RG:</strong> {{ $clienteContrato?->rg ?: '-' }}</p>
+                            <p><strong>CNH:</strong> {{ $clienteContrato?->cnh ?: '-' }}</p>
+                            <p><strong>Telefone:</strong> {{ $clienteContrato?->telefone ?: '-' }}</p>
+                            <p><strong>WhatsApp:</strong> {{ $clienteContrato?->whatsapp ?: '-' }}</p>
+                            <p><strong>E-mail:</strong> {{ $clienteContrato?->email ?: '-' }}</p>
+                            <p><strong>Endereço:</strong> {{ $clienteContrato?->endereco ?: '-' }}</p>
+                            <h2>2. CONTRATADA</h2>
+                            <p>{{ $branding['store_name'] }}, unidade {{ $lojaContrato?->nome ?: 'Central' }}, responsável pela operação, gestão financeira e acompanhamento da locação.</p>
+                            <h2>3. MOTOCICLETA LOCADA</h2>
+                            <p><strong>Moto:</strong> {{ $motoContrato?->modelo_nome ?: '-' }}</p>
+                            <p><strong>Placa:</strong> {{ $motoContrato?->placa ?: '-' }}</p>
+                            <p><strong>Ano:</strong> {{ $motoContrato?->ano ?: '-' }}</p>
+                            <p><strong>Renavam:</strong> {{ $motoContrato?->renavam ?: '-' }}</p>
+                            <p><strong>Chassi:</strong> {{ $motoContrato?->chassi ?: '-' }}</p>
+                            <h2>4. CONDIÇÕES DA LOCAÇÃO</h2>
+                            <p><strong>Data de início:</strong> {{ $contrato->data_inicio?->format('d/m/Y') ?: '-' }}</p>
+                            <p><strong>Data de fim:</strong> {{ $contrato->data_fim?->format('d/m/Y') ?: 'Indeterminado' }}</p>
+                            <p><strong>Valor contratado:</strong> {{ \App\Support\RentalSupport::moeda($contrato->valor_contratado) }}</p>
+                            <p><strong>Forma de cobrança:</strong> {{ strtoupper($contrato->forma_cobranca) }}</p>
+                            <p><strong>Status:</strong> {{ strtoupper($contrato->status) }}</p>
+                            <p><strong>Loja:</strong> {{ $lojaContrato?->nome ?: '-' }}</p>
+                            <h2>5. CLÁUSULAS GERAIS</h2>
+                            <p>O contratante declara receber a motocicleta em condições de uso, obrigando-se a zelar pelo bem, cumprir os prazos de pagamento e devolver o veículo nas mesmas condições recebidas, salvo desgaste natural.</p>
+                            <p>A inadimplência poderá gerar cobrança de encargos, bloqueio operacional e demais medidas administrativas previstas nas regras internas da contratada.</p>
+                            <p>Este contrato foi gerado automaticamente por {{ $branding['product_name'] }} com base nos dados cadastrados no módulo de contratos.</p>
+                            <p class="contract-date">{{ $lojaContrato?->nome ?: $branding['store_name'] }}, {{ ($contrato->data_inicio ?: today())->translatedFormat('d \d\e F \d\e Y') }}.</p>
+                            <div class="contract-signatures"><div><span></span><strong>CONTRATANTE</strong></div><div><span></span><strong>{{ mb_strtoupper($branding['store_name']) }}</strong></div></div>
+                        </div>
+                        <div class="contract-modal-actions"><button type="button" class="btn secondary" data-contract-close>Fechar</button><button type="button" class="btn success" data-contract-print="contrato-doc-{{ $contrato->id }}">Imprimir / PDF</button></div>
+                    </div>
+                </div>
+            @endforeach
+
+        @elseif ($page === 'manutencao')
+            @include('rental.partials.manutencao')
+
+        @elseif ($page === 'estoque')
+            @include('rental.partials.estoque')
+
+        @elseif ($page === 'multas')
+            @include('rental.partials.multas')
+
+        @elseif (in_array($page, ['financeiro','cobrancas'], true))
+            <div class="cards"><div class="metric"><span>Total aberto</span><strong>{{ \App\Support\RentalSupport::moeda($financeiroResumo['aberto']) }}</strong></div><div class="metric ok"><span>Pago mês</span><strong>{{ \App\Support\RentalSupport::moeda($financeiroResumo['pagoMes']) }}</strong></div><div class="metric warn"><span>Parciais</span><strong>{{ $financeiroResumo['parciais'] }}</strong></div><div class="metric danger"><span>Atrasadas</span><strong>{{ $financeiroResumo['atrasadas'] }}</strong></div></div>
+            <div class="grid side">
+                <div class="panel" id="{{ $page === 'cobrancas' ? 'nova-cobranca' : 'registrar-pagamento' }}">
+                    @if ($page === 'cobrancas')
+                        @if($user->pode('cobrancas', 'criar'))
+                            <h2>Nova Cobrança</h2>
+                            <form method="post" action="{{ route('rental.cobrancas.salvar') }}" class="form-grid">@csrf
+                                <label class="span-2">Contrato<select name="contrato_id">@foreach($contratos as $contrato)<option value="{{ $contrato->id }}">#{{ $contrato->id }} - {{ $contrato->cliente?->nome }} / {{ $contrato->motocicleta?->placa }} - {{ \App\Support\RentalSupport::moeda($contrato->valor_contratado) }}</option>@endforeach</select></label>
+                                <label>Vencimento<input type="date" name="vencimento" value="{{ today()->format('Y-m-d') }}"></label>
+                                <label>Valor<input type="number" step="0.01" name="valor_principal" value="500.00"></label>
+                                <div class="span-3"><button type="submit">Gerar cobrança + PIX</button></div>
+                            </form>
+                        @else
+                            <h2>Cobranças</h2>
+                            <p class="empty">Este perfil consulta cobranças, mas não cria novos títulos.</p>
+                        @endif
+                    @else
+                        @if($user->pode('financeiro', 'editar'))
+                            <h2>Registrar Pagamento</h2>
+                            <form method="post" action="{{ route('rental.pagamentos.salvar') }}" class="form-grid">@csrf
+                                <label class="span-2">Cobrança<select name="cobranca_id">@foreach($cobrancasAbertas as $cobranca)<option value="{{ $cobranca->id }}">#{{ $cobranca->id }} - {{ $cobranca->cliente?->nome }} - {{ \App\Support\RentalSupport::moeda($cobranca->valor_atualizado-$cobranca->valor_pago) }}</option>@endforeach</select></label>
+                                <label>Valor pago<input type="number" step="0.01" name="valor" required></label>
+                                <label>Forma<select name="forma"><option>pix</option><option>dinheiro</option><option>cartao</option><option>transferencia</option></select></label>
+                                <div class="span-3"><button class="btn success" type="submit">Registrar pagamento</button></div>
+                            </form>
+                            <hr>
+                            <form method="post" action="{{ route('rental.pix.conciliar') }}" class="toolbar">
+                                @csrf
+                                <input type="hidden" name="page" value="financeiro">
+                                <button class="btn secondary" type="submit">Conciliar PIX</button>
+                            </form>
+                        @else
+                            <h2>Financeiro</h2>
+                            <p class="empty">Este perfil consulta o financeiro, mas não registra pagamentos.</p>
+                        @endif
+                    @endif
+                </div>
+                <div class="panel"><h2>{{ $page === 'cobrancas' ? 'Cobranças e envios' : 'Títulos e recebimentos' }}</h2>
+                    <div class="billing-tools" data-billing-tools>
+                        <label class="billing-search">
+                            <span>Buscar</span>
+                            <input type="search" placeholder="Cliente, ID, placa, status ou gateway" data-billing-search>
+                        </label>
+                        <div class="billing-filter-row" role="tablist" aria-label="Filtrar cobranças">
+                            <button type="button" class="is-active" data-billing-filter="all">Todas</button>
+                            <button type="button" data-billing-filter="overdue">Atrasadas</button>
+                            <button type="button" data-billing-filter="today">Vencem hoje</button>
+                            <button type="button" data-billing-filter="open">Em aberto</button>
+                            <button type="button" data-billing-filter="without-pix">Sem PIX</button>
+                            <button type="button" data-billing-filter="with-pix">PIX gerado</button>
+                            <button type="button" data-billing-filter="whatsapp-sent">WhatsApp enviado</button>
+                            <button type="button" data-billing-filter="telegram-sent">Telegram enviado</button>
+                        </div>
+                        <small><strong data-billing-visible-count>{{ $cobrancas->count() }}</strong> cobranças visíveis</small>
+                    </div>
+                    @include('rental.partials.cobrancas_qr')
+                </div>
+            </div>
+
+            @if ($page === 'cobrancas' && ($user->pode('cobrancas', 'criar') || $user->pode('cobrancas', 'editar')))
+                <section class="campaign-section">
+                    <div class="campaign-head">
+                        <div><span>CENTRAL MULTICANAL</span><h2>Campanhas de cobrança</h2><p>Envie por WhatsApp, e-mail e Telegram sem duplicar a mesma cobrança dentro da campanha.</p></div>
+                        <div class="campaign-kpis"><b>{{ $campanhasResumo['agendadas'] }}</b><small>agendadas</small><b>{{ $campanhasResumo['concluidas'] }}</b><small>concluídas</small><b>{{ $campanhasResumo['falhas'] }}</b><small>com falhas</small></div>
+                    </div>
+                    <div class="grid side campaign-grid">
+                        @if($user->pode('cobrancas', 'criar'))
+                            <div class="panel">
+                                <h2>Nova campanha</h2>
+                                <form method="post" action="{{ route('rental.cobrancas.campanhas.criar') }}" class="form-grid campaign-form">@csrf
+                                <label class="span-2">Nome da campanha<input name="nome" required value="{{ old('nome','Cobranças '.now()->format('d/m/Y H:i')) }}"></label>
+                                <label>Público<select name="publico" id="campaignAudience"><option value="todos_abertos">Todas em aberto</option><option value="vence_hoje">Vencem hoje</option><option value="vencidas_7">Vencidas há 7 dias ou mais</option><option value="vencidas_15">Vencidas há 15 dias ou mais</option><option value="vencidas_30">Vencidas há 30 dias ou mais</option><option value="selecionadas">Somente selecionadas abaixo</option></select></label>
+                                <label>Estratégia<select name="estrategia"><option value="todos">Enviar em todos os canais marcados</option><option value="prioridade">Tentar canais em prioridade até um funcionar</option></select></label>
+                                <label>Agendar para<input type="datetime-local" name="agendado_para" value="{{ old('agendado_para') }}"><small>Deixe vazio para enviar agora.</small></label>
+                                <fieldset class="span-3 campaign-channels"><legend>Canais</legend><label><input type="checkbox" name="canais[]" value="whatsapp" checked> WhatsApp</label><label><input type="checkbox" name="canais[]" value="email" checked> E-mail</label><label><input type="checkbox" name="canais[]" value="telegram" checked> Telegram</label></fieldset>
+                                <label class="span-3">Mensagem<textarea name="mensagem" rows="8" required>{{ old('mensagem', "Olá, {cliente}.
+
+Identificamos a cobrança #{cobranca_id}, com vencimento em {vencimento} e saldo atualizado de {saldo}.
+
+PIX: {pix}
+
+Consulte com segurança: {link_portal}
+
+Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variáveis: {cliente}, {cobranca_id}, {vencimento}, {valor}, {saldo}, {dias_atraso}, {placa}, {pix}, {link_portal}.</small></label>
+                                <div class="span-3 campaign-select-list">
+                                    <strong>Cobranças para seleção manual</strong>
+                                    <div class="campaign-checks">
+                                        @foreach($cobrancasAbertas->take(80) as $item)
+                                            <label><input type="checkbox" name="cobrancas[]" value="{{ $item->id }}"> #{{ $item->id }} · {{ $item->cliente?->nome }} · {{ $item->vencimento?->format('d/m/Y') }} · {{ \App\Support\RentalSupport::moeda(max(0,(float)$item->valor_atualizado-(float)$item->valor_pago)) }}</label>
+                                        @endforeach
+                                    </div>
+                                </div>
+                                <div class="span-3"><button type="submit">Criar e processar campanha</button></div>
+                                </form>
+                            </div>
+                        @endif
+                        <div class="panel">
+                            <h2>Últimas campanhas</h2>
+                            <div class="campaign-list">
+                                @forelse($campanhasCobranca as $campanha)
+                                    <article class="campaign-item">
+                                        <div><strong>#{{ $campanha->id }} · {{ $campanha->nome }}</strong><span>{{ strtoupper(implode(' + ', $campanha->canais_json ?: [])) }} · {{ $campanha->criado_em?->format('d/m/Y H:i') }}</span></div>
+                                        <div>{!! \App\Support\RentalSupport::status($campanha->status) !!}</div>
+                                        <div class="campaign-progress"><span style="width: {{ $campanha->total_destinatarios ? min(100, round(($campanha->total_processados/$campanha->total_destinatarios)*100)) : 0 }}%"></span></div>
+                                        <small>{{ $campanha->total_processados }}/{{ $campanha->total_destinatarios }} processados · {{ $campanha->total_enviados }} enviados · {{ $campanha->total_falhas }} falhas</small>
+                                        <div class="actions">
+                                            @if($user->pode('cobrancas', 'editar') && !in_array($campanha->status,['concluida','cancelada'],true))
+                                                <form method="post" action="{{ route('rental.cobrancas.campanhas.executar',$campanha) }}">@csrf<button class="btn secondary">Processar agora</button></form>
+                                                <form method="post" action="{{ route('rental.cobrancas.campanhas.cancelar',$campanha) }}">@csrf<button class="btn danger">Cancelar</button></form>
+                                            @endif
+                                        </div>
+                                    </article>
+                                @empty
+                                    <p class="empty">Nenhuma campanha criada.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    </div>
+                    <div class="panel campaign-report">
+                        <h2>Relatório recente de destinatários</h2>
+                        <p>Mostra o resultado por cliente e evita que falhas fiquem escondidas apenas no total da campanha.</p>
+                        <div class="table-wrap"><table><tr><th>Campanha</th><th>Cliente</th><th>Cobrança</th><th>Canais tentados</th><th>Status</th><th>Processado</th><th>Detalhe</th></tr>
+                            @forelse($campanhaItensRecentes as $item)
+                                <tr>
+                                    <td>#{{ $item->campanha_id }} · {{ $item->campanha?->nome }}</td>
+                                    <td>{{ $item->cliente?->nome ?: '-' }}</td>
+                                    <td>#{{ $item->cobranca_id }}</td>
+                                    <td>{{ strtoupper(implode(' + ', array_keys((array) $item->resultados_json))) ?: strtoupper(implode(' + ', (array) $item->canais_json)) }}</td>
+                                    <td>{!! \App\Support\RentalSupport::status($item->status) !!}</td>
+                                    <td>{{ $item->processado_em?->format('d/m/Y H:i') ?: '-' }}</td>
+                                    <td title="{{ $item->erro }}">{{ $item->erro ? \Illuminate\Support\Str::limit($item->erro, 120) : 'Sem erro registrado' }}</td>
+                                </tr>
+                            @empty
+                                <tr><td colspan="7" class="empty">Nenhum disparo de campanha processado.</td></tr>
+                            @endforelse
+                        </table></div>
+                    </div>
+                </section>
+            @endif
+
+        @elseif ($page === 'inadimplencia')
+            <div class="panel"><h2>Motor de inadimplência — regra configurada</h2><p>Sem pagamento: 10% simples ao dia sobre o valor principal até domingo. Pagamento parcial: 10% composto ao dia sobre o saldo restante até domingo.</p>
+                <div class="table-wrap"><table><tr><th>Cliente</th><th>Moto</th><th>Dias</th><th>Saldo Original</th><th>Pago</th><th>Atualizado</th><th>Canais</th></tr>
+                    @foreach($inadimplentes as $item)
+                        @php($atualizado=app(\App\Services\CobrancaCalculator::class)->valorAtualizado($item->valor_principal,$item->valor_pago,$item->vencimento))
+                        <tr><td>{{ $item->cliente?->nome }}</td><td>{{ $item->contrato?->motocicleta?->placa }}</td><td>{{ app(\App\Services\CobrancaCalculator::class)->diasAtrasoAteDomingo($item->vencimento) }}</td><td>{{ \App\Support\RentalSupport::moeda($item->valor_principal) }}</td><td>{{ \App\Support\RentalSupport::moeda($item->valor_pago) }}</td><td>{{ \App\Support\RentalSupport::moeda($atualizado) }}</td><td><div class="actions"><a class="btn secondary" target="_blank" href="https://wa.me/55{{ preg_replace('/\D/','',$item->cliente?->whatsapp) }}">Abrir WhatsApp</a><form method="post" action="{{ route('rental.cobrancas.whatsapp',$item) }}">@csrf<button class="btn success" type="submit">Enviar WhatsApp</button></form><form method="post" action="{{ route('rental.cobrancas.telegram',$item) }}">@csrf<button class="btn secondary" type="submit">Enviar Telegram</button></form></div></td></tr>
+                    @endforeach
+                </table></div>
+            </div>
+
+        @elseif ($page === 'relatorios')
+            <div class="grid report-charts"><div class="panel report-chart-card"><h2>Faturamento por loja</h2><div id="chartLojas" class="chart-bars report-bars"></div></div><div class="panel report-chart-card"><h2>Clientes por status</h2><div id="donutClientes" class="donut-box report-donut"></div></div></div>
+            <div class="panel"><h2>Relatório financeiro detalhado</h2>@include('rental.partials.cobrancas_qr')</div>
+            <script>window.addEventListener('load',()=>{rentalBars('chartLojas',@json($relatorioLojas->pluck('label')),@json($relatorioLojas->pluck('value')));rentalDonut('donutClientes',[{label:'Ativos',value:@json($clientesStatus['ativo'])},{label:'Inadimplentes',value:@json($clientesStatus['inadimplente'])},{label:'Bloqueados',value:@json($clientesStatus['bloqueado'])},{label:'Encerrados',value:@json($clientesStatus['encerrado'])}]);});</script>
+
+        @elseif ($page === 'lojas')
+            <div class="grid side">
+                <div class="panel"><h2>{{ $lojaEdit ? 'Editar loja' : 'Nova loja' }}</h2>@if(!$podeCriarLoja && !$lojaEdit)<div class="notice warn">Seu perfil pode visualizar lojas, mas nao criar novas unidades.</div>@endif
+                    <form method="post" action="{{ route('rental.lojas.salvar') }}" class="form-grid">@csrf
+                        <input type="hidden" name="id" value="{{ $lojaEdit?->id }}">
+                        <label>Nome<input name="nome" required maxlength="120" value="{{ old('nome', $lojaEdit?->nome) }}" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)></label>
+                        <label>Cidade<input name="cidade" maxlength="120" value="{{ old('cidade', $lojaEdit?->cidade) }}" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)></label>
+                        <label>Status<select name="status" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)><option value="ativa" @selected(old('status', $lojaEdit?->status ?? 'ativa')==='ativa')>ativa</option><option value="inativa" @selected(old('status', $lojaEdit?->status)==='inativa')>inativa</option></select></label>
+                        <div><button @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)>Salvar loja</button></div>
+                    </form>
+                    @if($lojaEdit)<p><a class="btn secondary" href="{{ route('rental.index', ['page' => 'bancos', 'loja_id' => $lojaEdit->id]) }}">Configurar bancos desta loja</a></p>@endif
+                </div>
+                <div class="panel"><h2>Controle por Loja</h2><div class="table-wrap"><table><tr><th>Loja</th><th>Status</th><th>Motos</th><th>Alugadas</th><th>Disponiveis</th><th>Recebido</th><th>Em atraso</th><th>Acoes</th></tr>
+                    @foreach($resumoLojas as $item)<tr><td>{{ $item['loja']->nome }}<br><small>{{ $item['loja']->cidade ?: '-' }}</small></td><td>{!! \App\Support\RentalSupport::status($item['loja']->status) !!}</td><td>{{ $item['motos'] }}</td><td>{{ $item['alugadas'] }}</td><td>{{ $item['disponiveis'] }}</td><td>{{ \App\Support\RentalSupport::moeda($item['recebido']) }}</td><td>{{ \App\Support\RentalSupport::moeda($item['atraso']) }}</td><td><a class="btn secondary" href="{{ route('rental.index', ['page' => 'lojas', 'edit' => $item['loja']->id]) }}">Editar</a> <a class="btn secondary" href="{{ route('rental.index', ['page' => 'bancos', 'loja_id' => $item['loja']->id]) }}">Bancos</a></td></tr>@endforeach
+                </table></div></div>
+            </div>
+
+        @elseif ($page === 'usuarios')
+            <div class="grid side">
+                <div class="panel user-role-panel">
+                    <div class="section-head"><div><span class="eyebrow">USUARIOS</span><h2>{{ $usuarioEdit ? 'Editar' : 'Novo' }} Usuario</h2><p>Escolha um perfil pronto. As permissoes sao definidas pelo super admin nos perfis de acesso.</p></div></div>
+                    @if(!$podeGerenciarUsuarios)<div class="notice warn">Somente Super Admin ou Administrador Geral podem criar usuarios. Perfis e permissoes ficam somente com o Super Admin.</div>@endif
+                    <form method="post" action="{{ route('rental.usuarios.salvar') }}" class="form">@csrf
+                        <input type="hidden" name="id" value="{{ $usuarioEdit?->id }}">
+                        <label>Nome<input name="nome" required value="{{ old('nome',$usuarioEdit?->nome) }}" @disabled(!$podeGerenciarUsuarios)></label><label>E-mail<input type="email" name="email" required value="{{ old('email',$usuarioEdit?->email) }}" @disabled(!$podeGerenciarUsuarios)></label>
+                        <label>Senha<input type="password" name="senha" {{ $usuarioEdit ? '' : 'required' }} placeholder="{{ $usuarioEdit ? 'Manter senha atual' : 'Minimo de 6 caracteres' }}" @disabled(!$podeGerenciarUsuarios)></label>
+                        <label>Perfil<select name="perfil" @disabled(!$podeGerenciarUsuarios)>@foreach($perfis as $perfil)@continue(!$podeGerenciarPerfis && $perfil->codigo === 'super_admin')<option value="{{ $perfil->codigo }}" @selected(old('perfil',$usuarioEdit?->perfil ?? 'atendente')===$perfil->codigo)>{{ $perfil->nome }}</option>@endforeach</select></label>
+                        <div class="role-preset-grid" aria-label="Perfis cadastrados">@foreach($perfis as $perfil)@continue(!$podeGerenciarPerfis && $perfil->codigo === 'super_admin')<article class="{{ ($usuarioEdit?->perfil ?? 'atendente') === $perfil->codigo ? 'is-active' : '' }}"><strong>{{ $perfil->nome }}</strong><span>{{ $perfil->descricao ?: 'Perfil definido pelo super admin.' }}</span>@if($podeGerenciarPerfis)<a class="btn secondary" href="{{ route('rental.index', ['page' => 'usuarios', 'perfil_edit' => $perfil->id]) }}">Editar perfil</a>@endif</article>@endforeach</div>
+                        <label>Loja principal<select name="loja_id" @disabled(!$podeGerenciarUsuarios)><option value="">Central / Todas</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$usuarioEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                        <label>Status<select name="status" @disabled(!$podeGerenciarUsuarios)><option value="ativo" @selected(($usuarioEdit?->status ?? 'ativo')==='ativo')>ativo</option><option value="bloqueado" @selected($usuarioEdit?->status==='bloqueado')>bloqueado</option></select></label>
+                        <h3>Lojas liberadas</h3><div class="checkgrid">@foreach($lojas as $loja)<label><input type="checkbox" name="lojas[]" value="{{ $loja->id }}" @checked(in_array($loja->id,$lojasSelecionadas,true)) @disabled(!$podeGerenciarUsuarios)> {{ $loja->nome }}</label>@endforeach</div>
+                        <br><button type="submit" @disabled(!$podeGerenciarUsuarios)>Salvar Usuario</button>
+                    </form>
+                </div>
+                @if($podeGerenciarPerfis)
+                    <div class="panel user-role-panel">
+                        <div class="section-head"><div><span class="eyebrow">PERFIS DE ACESSO</span><h2>{{ $perfilEdit ? 'Editar perfil' : 'Novo perfil' }}</h2><p>Crie o perfil e marque exatamente os modulos e acoes que ele libera.</p></div></div>
+                        <form method="post" action="{{ route('rental.usuarios.perfis.salvar') }}" class="form">@csrf
+                            <input type="hidden" name="id" value="{{ $perfilEdit?->id }}">
+                            <label>Nome do perfil<input name="nome" required value="{{ old('nome',$perfilEdit?->nome) }}" placeholder="Ex.: Supervisor de patio"></label>
+                            <label>Codigo<input name="codigo" value="{{ old('codigo',$perfilEdit?->codigo) }}" placeholder="automatico pelo nome" @disabled((bool) $perfilEdit)></label>
+                            <label>Status<select name="status"><option value="ativo" @selected(($perfilEdit?->status ?? 'ativo')==='ativo')>ativo</option><option value="bloqueado" @selected($perfilEdit?->status==='bloqueado')>bloqueado</option></select></label>
+                            <label class="span-3">Descricao<textarea name="descricao" placeholder="Resumo do que este perfil pode fazer">{{ old('descricao',$perfilEdit?->descricao) }}</textarea></label>
+                            <div class="permission-head span-3"><div><h3>Permissoes por modulo</h3><small>Esta matriz so aparece para o super admin.</small></div></div>
+                            <div class="perm-table span-3"><table><tr><th>Modulo</th>@foreach($acoes as $acao)<th>{{ $acao }}</th>@endforeach</tr>@foreach($pages as $modulo=>$nome)<tr><td>{{ $nome }}</td>@foreach($acoes as $acaoKey=>$acao)<td><input type="checkbox" name="perms[{{ $modulo }}][{{ $acaoKey }}]" value="1" @checked(!empty($perfilPermissoesSelecionadas[$modulo][$acaoKey]))></td>@endforeach</tr>@endforeach</table></div>
+                            <div class="span-3"><button type="submit">Salvar perfil</button></div>
+                        </form>
+                    </div>
+                @endif
+                <div class="panel"><h2>Usuarios</h2><div class="table-wrap"><table><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Loja principal</th><th>Status</th><th>Acoes</th></tr>
+                    @foreach($usuarios as $usuario)<tr><td>{{ $usuario->nome }}</td><td>{{ $usuario->email }}</td><td>{{ $usuario->perfilAcesso?->nome ?? \App\Support\RentalSupport::perfil($usuario->perfil) }}</td><td>{{ $usuario->loja?->nome ?? 'Todas / Central' }}</td><td>{!! \App\Support\RentalSupport::status($usuario->status) !!}</td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'usuarios','edit'=>$usuario->id]) }}">Editar</a></td></tr>@endforeach
+                </table></div></div>
+            </div>
+
+        @elseif ($page === 'bancos')
+            @php($bancoSelecionado = $bancoSelecionado ?? 'pagbank')
+            <div class="panel">
+                <h2>Integrações de pagamento</h2>
+                <form method="get" action="{{ route('rental.index') }}" class="form-grid">
+                    <input type="hidden" name="page" value="bancos">
+                    <label>Loja<select name="loja_id" onchange="this.form.submit()">@if($user->isAdmin())<option value="">Central / fallback</option>@endif @foreach(($lojasBanco ?? $lojas) as $loja)<option value="{{ $loja->id }}" @selected(($lojaBancoId ?? null)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                    <label>Selecionar integração<select name="banco" onchange="this.form.submit()"><option value="pagbank" @selected($bancoSelecionado==='pagbank')>PagBank</option><option value="asaas" @selected($bancoSelecionado==='asaas')>Asaas</option><option value="sicoob" @selected($bancoSelecionado==='sicoob')>Sicoob</option><option value="itau" @selected($bancoSelecionado==='itau')>Itau</option></select></label>
+                    <div><button class="btn secondary" type="submit">Abrir integração</button></div>
+                </form>
+            </div>
+
+            @if ($bancoSelecionado === 'pagbank')
+                <div class="grid side">
+                    <div class="panel"><h2>Configuração PagBank / PIX</h2><form method="post" action="{{ route('rental.pagbank.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><input type="hidden" name="loja_id" value="{{ $lojaBancoId ?? '' }}">
+                        <label>Modo<select name="modo"><option value="demo" @selected($pagbankConfig->modo==='demo')>demo</option><option value="api" @selected($pagbankConfig->modo==='api')>api oficial</option></select></label>
+                        <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($pagbankConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($pagbankConfig->ambiente==='producao')>produção</option></select></label>
+                        <label>Ativo<select name="ativo"><option value="1" @selected($pagbankConfig->ativo)>sim</option><option value="0" @selected(!$pagbankConfig->ativo)>não</option></select></label>
+                        <label>Client ID<input name="client_id" value="{{ $pagbankConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $pagbankConfig->client_secret }}"></label>
+                        <label class="span-3">Access Token PagBank<input type="password" name="access_token" value="{{ $pagbankConfig->access_token }}"></label><label class="span-2">URL Webhook<input name="webhook_url" value="{{ $pagbankConfig->webhook_url ?: route('rental.webhook-pagbank') }}"></label><label>Referência<input name="merchant_reference" value="{{ $pagbankConfig->merchant_reference ?: config('branding.merchant_reference') }}"></label>
+                        <div class="span-3"><button name="acao" value="salvar">Salvar PagBank</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                    </form></div>
+                    <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $pagbankConfig->webhook_url ?: route('rental.webhook-pagbank') }}</code></p><p><strong>Ambiente:</strong> {{ $pagbankConfig->ambiente }} · <strong>Modo:</strong> {{ $pagbankConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('rental.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><input type="hidden" name="loja_id" value="{{ $lojaBancoId ?? '' }}"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>Use <strong>demo</strong> para testar sem credenciais.</p><p><a class="btn secondary" href="{{ \App\Support\RentalSupport::asset('docs/manual_pagbank.html') }}" target="_blank">Abrir manual PagBank</a></p></div>
+                </div>
+            @elseif ($bancoSelecionado === 'asaas')
+                <div class="grid side">
+                    <div class="panel"><h2>Configuração Asaas / PIX</h2><form method="post" action="{{ route('rental.asaas.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><input type="hidden" name="loja_id" value="{{ $lojaBancoId ?? '' }}">
+                        <label>Modo<select name="modo"><option value="demo" @selected($asaasConfig->modo==='demo')>demo</option><option value="api" @selected($asaasConfig->modo==='api')>api oficial</option></select></label>
+                        <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($asaasConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($asaasConfig->ambiente==='producao')>produção</option></select></label>
+                        <label>Ativo<select name="ativo"><option value="1" @selected($asaasConfig->ativo)>sim</option><option value="0" @selected(!$asaasConfig->ativo)>não</option></select></label>
+                        <label class="span-3">API Key Asaas<input type="password" name="api_key" value="" placeholder="{{ $asaasConfig->api_key ? 'Chave salva - deixe vazio para manter' : 'Cole a API Key do Asaas' }}"></label>
+                        <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $asaasConfig->webhook_url ?: route('rental.webhook-asaas') }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $asaasConfig->webhook_token ?: \App\Support\RentalSupport::webhookToken('asaas') }}"></label>
+                        <div class="span-3"><button name="acao" value="salvar">Salvar Asaas</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                    </form></div>
+                    <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $asaasConfig->webhook_url ?: route('rental.webhook-asaas') }}</code></p><p><strong>Ambiente:</strong> {{ $asaasConfig->ambiente }} · <strong>Modo:</strong> {{ $asaasConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('rental.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><input type="hidden" name="loja_id" value="{{ $lojaBancoId ?? '' }}"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>Cadastre a API Key, configure o webhook no painel Asaas e gere uma cobrança de teste.</p><p><a class="btn secondary" href="{{ \App\Support\RentalSupport::asset('docs/manual_asaas.html') }}" target="_blank">Abrir manual Asaas</a></p></div>
+                </div>
+            @elseif ($bancoSelecionado === 'sicoob')
+                <div class="grid side">
+                    <div class="panel"><h2>Configuração Sicoob / PIX</h2><form method="post" action="{{ route('rental.sicoob.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><input type="hidden" name="loja_id" value="{{ $lojaBancoId ?? '' }}">
+                        <label>Modo<select name="modo"><option value="demo" @selected($sicoobConfig->modo==='demo')>demo</option><option value="api" @selected($sicoobConfig->modo==='api')>api oficial</option></select></label>
+                        <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($sicoobConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($sicoobConfig->ambiente==='producao')>produção</option></select></label>
+                        <label>Ativo<select name="ativo"><option value="1" @selected($sicoobConfig->ativo)>sim</option><option value="0" @selected(!$sicoobConfig->ativo)>não</option></select></label>
+                        <label class="span-2">Client ID<input name="client_id" value="{{ $sicoobConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $sicoobConfig->client_secret }}"></label>
+                        <label class="span-3">Chave PIX<input name="chave_pix" value="{{ $sicoobConfig->chave_pix }}" placeholder="CPF/CNPJ, e-mail, telefone ou chave aleatória"></label>
+                        <label class="span-3">URL Token OAuth<input name="token_url" value="{{ $sicoobConfig->token_url ?: \App\Services\SicoobService::DEFAULT_TOKEN_URL }}"></label>
+                        <label class="span-3">URL Base API PIX<input name="api_base_url" value="{{ $sicoobConfig->api_base_url ?: \App\Services\SicoobService::DEFAULT_API_BASE_URL }}"></label>
+                        <label class="span-2">Certificado PEM<input name="cert_path" value="{{ $sicoobConfig->cert_path }}" placeholder="C:\certificados\sicoob-cert.pem"></label><label>Chave PEM<input name="key_path" value="{{ $sicoobConfig->key_path }}" placeholder="C:\certificados\sicoob-key.pem"></label>
+                        <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $sicoobConfig->webhook_url ?: route('rental.webhook-sicoob', ['token' => $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN]) }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN }}"></label>
+                        <div class="span-3"><button name="acao" value="salvar">Salvar Sicoob</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                    </form></div>
+                    <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $sicoobConfig->webhook_url ?: route('rental.webhook-sicoob', ['token' => $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN]) }}</code></p><p><strong>Ambiente:</strong> {{ $sicoobConfig->ambiente }} · <strong>Modo:</strong> {{ $sicoobConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('rental.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><input type="hidden" name="loja_id" value="{{ $lojaBancoId ?? '' }}"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p><a class="btn secondary" href="https://developers.sicoob.com.br/portal/apis" target="_blank" rel="noopener">Abrir portal Sicoob</a></p></div>
+                </div>
+            @else
+                <div class="grid side">
+                    <div class="panel"><h2>Configuracao Itau / PIX</h2><form method="post" action="{{ route('rental.itau.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><input type="hidden" name="loja_id" value="{{ $lojaBancoId ?? '' }}">
+                        <label>Modo<select name="modo"><option value="demo" @selected($itauConfig->modo==='demo')>demo</option><option value="api" @selected($itauConfig->modo==='api')>api oficial</option></select></label>
+                        <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($itauConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($itauConfig->ambiente==='producao')>producao</option></select></label>
+                        <label>Ativo<select name="ativo"><option value="1" @selected($itauConfig->ativo)>sim</option><option value="0" @selected(!$itauConfig->ativo)>nao</option></select></label>
+                        <label class="span-2">Client ID<input name="client_id" value="{{ $itauConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $itauConfig->client_secret }}"></label>
+                        <label class="span-3">Chave PIX<input name="chave_pix" value="{{ $itauConfig->chave_pix }}" placeholder="CPF/CNPJ, e-mail, telefone ou chave aleatoria"></label>
+                        <label class="span-3">URL Token OAuth<input name="token_url" value="{{ $itauConfig->token_url ?: \App\Services\ItauService::DEFAULT_TOKEN_URL }}"></label>
+                        <label class="span-3">URL Base API PIX<input name="api_base_url" value="{{ $itauConfig->api_base_url ?: \App\Services\ItauService::DEFAULT_API_BASE_URL }}"></label>
+                        <label class="span-2">Certificado .crt<input name="cert_path" value="{{ $itauConfig->cert_path }}" placeholder="C:\certificados\itau-cert.crt"></label><label>Chave privada .key<input name="key_path" value="{{ $itauConfig->key_path }}" placeholder="C:\certificados\itau-key.key"></label>
+                        <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $itauConfig->webhook_url ?: route('rental.webhook-itau', ['token' => $itauConfig->webhook_token ?: \App\Services\ItauService::DEFAULT_WEBHOOK_TOKEN]) }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $itauConfig->webhook_token ?: \App\Services\ItauService::DEFAULT_WEBHOOK_TOKEN }}"></label>
+                        <div class="span-3"><button name="acao" value="salvar">Salvar Itau</button> <button class="btn secondary" name="acao" value="testar">Testar conexao</button></div>
+                    </form></div>
+                    <div class="panel"><h2>Status da integracao</h2><p><strong>Webhook:</strong><br><code>{{ $itauConfig->webhook_url ?: route('rental.webhook-itau', ['token' => $itauConfig->webhook_token ?: \App\Services\ItauService::DEFAULT_WEBHOOK_TOKEN]) }}</code></p><p><strong>Ambiente:</strong> {{ $itauConfig->ambiente }} · <strong>Modo:</strong> {{ $itauConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob', 'itau' => 'Itau'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('rental.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="bancos"><input type="hidden" name="loja_id" value="{{ $lojaBancoId ?? '' }}"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option><option value="itau" @selected($pixGatewayConfig->gateway==='itau')>Itau</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>O Itau exige token OAuth2 com mTLS. Configure o .crt emitido pelo Itau, a .key privada correspondente e confirme a URL base da API contratada no portal.</p><p><a class="btn secondary" href="{{ \App\Support\RentalSupport::asset('docs/manual_itau.html') }}" target="_blank">Abrir manual Itau</a></p><p><a class="btn secondary" href="https://devportal.itau.com.br/certificado-dinamico" target="_blank" rel="noopener">Portal de certificado</a></p></div>
+                </div>
+            @endif
+
+        @elseif ($page === 'pagbank')
+            <div class="grid side">
+                <div class="panel"><h2>Configuração PagBank / PIX</h2><form method="post" action="{{ route('rental.pagbank.salvar') }}" class="form-grid">@csrf
+                    <label>Modo<select name="modo"><option value="demo" @selected($pagbankConfig->modo==='demo')>demo</option><option value="api" @selected($pagbankConfig->modo==='api')>api oficial</option></select></label>
+                    <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($pagbankConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($pagbankConfig->ambiente==='producao')>produção</option></select></label>
+                    <label>Ativo<select name="ativo"><option value="1" @selected($pagbankConfig->ativo)>sim</option><option value="0" @selected(!$pagbankConfig->ativo)>não</option></select></label>
+                    <label>Client ID<input name="client_id" value="{{ $pagbankConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $pagbankConfig->client_secret }}"></label>
+                    <label class="span-3">Access Token PagBank<input type="password" name="access_token" value="{{ $pagbankConfig->access_token }}"></label><label class="span-2">URL Webhook<input name="webhook_url" value="{{ $pagbankConfig->webhook_url ?: route('rental.webhook-pagbank') }}"></label><label>Referência<input name="merchant_reference" value="{{ $pagbankConfig->merchant_reference ?: config('branding.merchant_reference') }}"></label>
+                    <div class="span-3"><button name="acao" value="salvar">Salvar PagBank</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                </form></div>
+                <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $pagbankConfig->webhook_url ?: route('rental.webhook-pagbank') }}</code></p><p><strong>Ambiente:</strong> {{ $pagbankConfig->ambiente }} · <strong>Modo:</strong> {{ $pagbankConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ $pixGatewayConfig->gateway === 'asaas' ? 'Asaas' : 'PagBank' }}</p><form method="post" action="{{ route('rental.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="pagbank"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>Use <strong>demo</strong> para testar sem credenciais.</p><p><a class="btn secondary" href="{{ \App\Support\RentalSupport::asset('docs/manual_pagbank.html') }}" target="_blank">Abrir manual PagBank</a></p></div>
+            </div>
+
+        @elseif ($page === 'asaas')
+            <div class="grid side">
+                <div class="panel"><h2>Configuração Asaas / PIX</h2><form method="post" action="{{ route('rental.asaas.salvar') }}" class="form-grid">@csrf
+                    <label>Modo<select name="modo"><option value="demo" @selected($asaasConfig->modo==='demo')>demo</option><option value="api" @selected($asaasConfig->modo==='api')>api oficial</option></select></label>
+                    <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($asaasConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($asaasConfig->ambiente==='producao')>produção</option></select></label>
+                    <label>Ativo<select name="ativo"><option value="1" @selected($asaasConfig->ativo)>sim</option><option value="0" @selected(!$asaasConfig->ativo)>não</option></select></label>
+                    <label class="span-3">API Key Asaas<input type="password" name="api_key" value="" placeholder="{{ $asaasConfig->api_key ? 'Chave salva - deixe vazio para manter' : 'Cole a API Key do Asaas' }}"></label>
+                    <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $asaasConfig->webhook_url ?: route('rental.webhook-asaas') }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $asaasConfig->webhook_token ?: \App\Support\RentalSupport::webhookToken('asaas') }}"></label>
+                    <div class="span-3"><button name="acao" value="salvar">Salvar Asaas</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                </form></div>
+                <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $asaasConfig->webhook_url ?: route('rental.webhook-asaas') }}</code></p><p><strong>Ambiente:</strong> {{ $asaasConfig->ambiente }} · <strong>Modo:</strong> {{ $asaasConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ $pixGatewayConfig->gateway === 'asaas' ? 'Asaas' : 'PagBank' }}</p><form method="post" action="{{ route('rental.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="asaas"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>Cadastre a API Key, configure o webhook no painel Asaas e gere uma cobrança de teste.</p><p><a class="btn secondary" href="{{ \App\Support\RentalSupport::asset('docs/manual_asaas.html') }}" target="_blank">Abrir manual Asaas</a></p></div>
+            </div>
+
+        @elseif ($page === 'sicoob')
+            <div class="grid side">
+                <div class="panel"><h2>Configuração Sicoob / PIX</h2><form method="post" action="{{ route('rental.sicoob.salvar') }}" class="form-grid">@csrf
+                    <label>Modo<select name="modo"><option value="demo" @selected($sicoobConfig->modo==='demo')>demo</option><option value="api" @selected($sicoobConfig->modo==='api')>api oficial</option></select></label>
+                    <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($sicoobConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($sicoobConfig->ambiente==='producao')>produção</option></select></label>
+                    <label>Ativo<select name="ativo"><option value="1" @selected($sicoobConfig->ativo)>sim</option><option value="0" @selected(!$sicoobConfig->ativo)>não</option></select></label>
+                    <label class="span-2">Client ID<input name="client_id" value="{{ $sicoobConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $sicoobConfig->client_secret }}"></label>
+                    <label class="span-3">Chave PIX<input name="chave_pix" value="{{ $sicoobConfig->chave_pix }}"></label>
+                    <label class="span-3">URL Token OAuth<input name="token_url" value="{{ $sicoobConfig->token_url ?: \App\Services\SicoobService::DEFAULT_TOKEN_URL }}"></label>
+                    <label class="span-3">URL Base API PIX<input name="api_base_url" value="{{ $sicoobConfig->api_base_url ?: \App\Services\SicoobService::DEFAULT_API_BASE_URL }}"></label>
+                    <label class="span-2">Certificado PEM<input name="cert_path" value="{{ $sicoobConfig->cert_path }}"></label><label>Chave PEM<input name="key_path" value="{{ $sicoobConfig->key_path }}"></label>
+                    <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $sicoobConfig->webhook_url ?: route('rental.webhook-sicoob', ['token' => $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN]) }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN }}"></label>
+                    <div class="span-3"><button name="acao" value="salvar">Salvar Sicoob</button> <button class="btn secondary" name="acao" value="testar">Testar conexão</button></div>
+                </form></div>
+                <div class="panel"><h2>Status da integração</h2><p><strong>Webhook:</strong><br><code>{{ $sicoobConfig->webhook_url ?: route('rental.webhook-sicoob', ['token' => $sicoobConfig->webhook_token ?: \App\Services\SicoobService::DEFAULT_WEBHOOK_TOKEN]) }}</code></p><p><strong>Ambiente:</strong> {{ $sicoobConfig->ambiente }} · <strong>Modo:</strong> {{ $sicoobConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('rental.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="sicoob"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p><a class="btn secondary" href="https://developers.sicoob.com.br/portal/apis" target="_blank" rel="noopener">Abrir portal Sicoob</a></p></div>
+            </div>
+
+        @elseif ($page === 'itau')
+            <div class="grid side">
+                <div class="panel"><h2>Configuracao Itau / PIX</h2><form method="post" action="{{ route('rental.itau.salvar') }}" class="form-grid">@csrf
+                    <label>Modo<select name="modo"><option value="demo" @selected($itauConfig->modo==='demo')>demo</option><option value="api" @selected($itauConfig->modo==='api')>api oficial</option></select></label>
+                    <label>Ambiente<select name="ambiente"><option value="sandbox" @selected($itauConfig->ambiente==='sandbox')>sandbox</option><option value="producao" @selected($itauConfig->ambiente==='producao')>producao</option></select></label>
+                    <label>Ativo<select name="ativo"><option value="1" @selected($itauConfig->ativo)>sim</option><option value="0" @selected(!$itauConfig->ativo)>nao</option></select></label>
+                    <label class="span-2">Client ID<input name="client_id" value="{{ $itauConfig->client_id }}"></label><label>Client Secret<input type="password" name="client_secret" value="{{ $itauConfig->client_secret }}"></label>
+                    <label class="span-3">Chave PIX<input name="chave_pix" value="{{ $itauConfig->chave_pix }}"></label>
+                    <label class="span-3">URL Token OAuth<input name="token_url" value="{{ $itauConfig->token_url ?: \App\Services\ItauService::DEFAULT_TOKEN_URL }}"></label>
+                    <label class="span-3">URL Base API PIX<input name="api_base_url" value="{{ $itauConfig->api_base_url ?: \App\Services\ItauService::DEFAULT_API_BASE_URL }}"></label>
+                    <label class="span-2">Certificado .crt<input name="cert_path" value="{{ $itauConfig->cert_path }}"></label><label>Chave privada .key<input name="key_path" value="{{ $itauConfig->key_path }}"></label>
+                    <label class="span-2">URL Webhook<input name="webhook_url" value="{{ $itauConfig->webhook_url ?: route('rental.webhook-itau', ['token' => $itauConfig->webhook_token ?: \App\Services\ItauService::DEFAULT_WEBHOOK_TOKEN]) }}"></label><label>Token Webhook<input name="webhook_token" value="{{ $itauConfig->webhook_token ?: \App\Services\ItauService::DEFAULT_WEBHOOK_TOKEN }}"></label>
+                    <div class="span-3"><button name="acao" value="salvar">Salvar Itau</button> <button class="btn secondary" name="acao" value="testar">Testar conexao</button></div>
+                </form></div>
+                <div class="panel"><h2>Status da integracao</h2><p><strong>Webhook:</strong><br><code>{{ $itauConfig->webhook_url ?: route('rental.webhook-itau', ['token' => $itauConfig->webhook_token ?: \App\Services\ItauService::DEFAULT_WEBHOOK_TOKEN]) }}</code></p><p><strong>Ambiente:</strong> {{ $itauConfig->ambiente }} · <strong>Modo:</strong> {{ $itauConfig->modo === 'api' ? 'api oficial' : 'demo' }}</p><p><strong>Gateway PIX principal:</strong> {{ ['asaas' => 'Asaas', 'sicoob' => 'Sicoob', 'itau' => 'Itau'][$pixGatewayConfig->gateway] ?? 'PagBank' }}</p><form method="post" action="{{ route('rental.gateway-pix.salvar') }}" class="form-grid">@csrf<input type="hidden" name="page" value="itau"><label>Usar para gerar PIX<select name="gateway"><option value="pagbank" @selected($pixGatewayConfig->gateway==='pagbank')>PagBank</option><option value="asaas" @selected($pixGatewayConfig->gateway==='asaas')>Asaas</option><option value="sicoob" @selected($pixGatewayConfig->gateway==='sicoob')>Sicoob</option><option value="itau" @selected($pixGatewayConfig->gateway==='itau')>Itau</option></select></label><div><button class="btn secondary">Atualizar gateway</button></div></form><p>Use modo demo ate concluir o certificado dinamico. Depois preencha Client ID, Client Secret, chave PIX, .crt e .key.</p><p><a class="btn secondary" href="{{ \App\Support\RentalSupport::asset('docs/manual_itau.html') }}" target="_blank">Abrir manual Itau</a></p></div>
+            </div>
+
+        @elseif ($page === 'whatsapp')
+            <div class="panel"><h2>WhatsApp Business API</h2><p>Configure a integração oficial da Meta. No modo <strong>demo</strong>, o sistema apenas registra uma simulação e nenhuma mensagem é enviada. Versão da Graph API: <strong>{{ $graphVersion }}</strong>.</p>
+                @if($user->pode('whatsapp', 'editar'))
+                    <form method="post" action="{{ route('rental.whatsapp.salvar') }}" class="form-grid">@csrf
+                        <label>Modo<select name="modo"><option value="demo" @selected($whatsappConfig->modo==='demo')>Demo / Simulado</option><option value="oficial" @selected($whatsappConfig->modo==='oficial')>Oficial - Meta Cloud API</option><option value="evolution" @selected($whatsappConfig->modo==='evolution')>Evolution API</option></select></label><label>Status<select name="ativo"><option value="1" @selected($whatsappConfig->ativo)>Ativo</option><option value="0" @selected(!$whatsappConfig->ativo)>Inativo</option></select></label>
+                        <label>WABA ID<input name="waba_id" value="{{ $whatsappConfig->waba_id }}" placeholder="ID da conta do WhatsApp Business"></label><label>Phone Number ID<input name="phone_number_id" value="{{ $whatsappConfig->phone_number_id }}"></label><label class="span-3">Access Token permanente<input type="password" name="access_token" value="" placeholder="{{ $whatsappConfig->access_token ? 'Token salvo - deixe vazio para manter' : 'Cole o token permanente da Meta' }}"></label><label>Verify Token<input name="verify_token" value="{{ $whatsappConfig->verify_token ?: \App\Support\RentalSupport::webhookToken('whatsapp') }}"></label>
+                        <label class="span-2">URL Evolution<input name="evolution_base_url" value="{{ $whatsappConfig->evolution_base_url }}" placeholder="https://sua-evolution.com"></label><label>Instância Evolution<input name="evolution_instance" value="{{ $whatsappConfig->evolution_instance }}" placeholder="minha-locadora"></label><label class="span-3">API Key Evolution<input type="password" name="evolution_api_key" value="" placeholder="{{ $whatsappConfig->evolution_api_key ? 'API Key salva - deixe vazio para manter' : 'Cole a API Key da Evolution' }}"></label>
+                        <label>Template cobrança<input name="template_cobranca" value="{{ $whatsappConfig->template_cobranca }}"></label><label>Idioma do template<input name="template_language" value="{{ $whatsappConfig->template_language ?: 'pt_BR' }}" placeholder="pt_BR"></label><label>Template lembrete<input name="template_lembrete" value="{{ $whatsappConfig->template_lembrete }}"></label><label>Template bloqueio<input name="template_bloqueio" value="{{ $whatsappConfig->template_bloqueio }}"></label><div class="span-3"><button type="submit">Salvar Configuração</button></div>
+                    </form>
+                @else
+                    <p class="empty">Este perfil consulta a integração, mas não altera a configuração.</p>
+                @endif
+            </div>
+            <div class="grid side">@if($user->pode('whatsapp', 'editar'))<div class="panel" id="testar-integracao"><h2>Testar conexão</h2><form method="post" action="{{ route('rental.whatsapp.testar') }}">@csrf<button class="btn success">Validar integração</button></form><p>No modo oficial, valida a Meta e o template. No modo Evolution, valida a URL, instância e API Key.</p><p><strong>URL do Webhook:</strong><br><code>{{ route('rental.webhook-whatsapp') }}</code></p><p><a class="btn secondary" href="{{ \App\Support\RentalSupport::asset('docs/manual_whatsapp.html') }}" target="_blank">Abrir manual WhatsApp</a></p></div>@endif
+                <div class="panel"><h2>Últimos envios</h2><div class="table-wrap"><table><tr><th>Data</th><th>Cliente</th><th>Telefone</th><th>Status</th><th>HTTP</th><th>Detalhe</th></tr>@foreach($whatsappLogs as $log)<tr><td>{{ $log->criado_em?->format('d/m/Y H:i') }}</td><td>{{ $log->cliente?->nome ?? '-' }}</td><td>{{ $log->telefone }}</td><td>{!! \App\Support\RentalSupport::status($log->status) !!}</td><td>{{ $log->http_code ?? '-' }}</td><td title="{{ $log->erro ?: $log->resposta_api }}">{{ \Illuminate\Support\Str::limit($log->erro ?: $log->resposta_api, 90) ?: '-' }}</td></tr>@endforeach</table></div></div>
+            </div>
+
+        @elseif ($page === 'telegram')
+            <div class="cards">
+                <div class="metric info"><span>Clientes vinculados</span><strong>{{ $telegramVinculados }}</strong><small>aptos a receber mensagens</small></div>
+                <div class="metric {{ $telegramConfig->ativo ? 'ok' : 'danger' }}"><span>Integração</span><strong>{{ $telegramConfig->modo === 'api' ? 'API' : 'DEMO' }}</strong><small>{{ $telegramConfig->ativo ? 'ativa' : 'inativa' }}</small></div>
+                <div class="metric"><span>Bot avisos</span><strong>{{ $telegramConfig->bot_username ? '@'.$telegramConfig->bot_username : '-' }}</strong><small>cobranças e lembretes</small></div>
+                <div class="metric"><span>Bot atendimento</span><strong>{{ $telegramConfig->atendimento_bot_username ? '@'.$telegramConfig->atendimento_bot_username : '-' }}</strong><small>chat no CRM</small></div>
+            </div>
+            <div class="grid side">
+                <div class="panel"><h2>Telegram Bot</h2><p>Configure um bot para avisos de cobrança e outro bot opcional para atendimento no CRM.</p>
+                    @if($user->pode('telegram', 'editar'))
+                        <form method="post" action="{{ route('rental.telegram.salvar') }}" class="form-grid">@csrf
+                            <label>Modo<select name="modo"><option value="demo" @selected($telegramConfig->modo==='demo')>Demo / Simulado</option><option value="api" @selected($telegramConfig->modo==='api')>API oficial</option></select></label>
+                            <label>Status<select name="ativo"><option value="1" @selected($telegramConfig->ativo)>Ativo</option><option value="0" @selected(!$telegramConfig->ativo)>Inativo</option></select></label>
+                            <label>Usuario do bot de avisos<input name="bot_username" value="{{ $telegramConfig->bot_username }}" placeholder="minha_locadora_avisos_bot"></label>
+                            <label class="span-3">Token do BotFather<input type="password" name="bot_token" placeholder="{{ $telegramConfig->bot_token ? 'Token salvo — deixe vazio para manter' : 'Cole o token do bot' }}"></label>
+                            <label class="span-2">Segredo do webhook<input name="webhook_secret" value="{{ $telegramConfig->webhook_secret }}"></label>
+                            <label>Usuário do bot de atendimento<input name="atendimento_bot_username" value="{{ $telegramConfig->atendimento_bot_username }}" placeholder="minha_locadora_atendimento_bot"></label>
+                            <label class="span-3">Token do BotFather - atendimento<input type="password" name="atendimento_bot_token" placeholder="{{ $telegramConfig->atendimento_bot_token ? 'Token salvo — deixe vazio para manter' : 'Cole o token do bot de atendimento' }}"></label>
+                            <label class="span-2">Segredo do webhook - atendimento<input name="atendimento_webhook_secret" value="{{ $telegramConfig->atendimento_webhook_secret }}"></label>
+                            <label>Formatação<select name="parse_mode"><option value="sem_formatacao" @selected(blank($telegramConfig->parse_mode))>Sem formatação (recomendado)</option><option value="HTML" @selected($telegramConfig->parse_mode==='HTML')>HTML</option><option value="MarkdownV2" @selected($telegramConfig->parse_mode==='MarkdownV2')>MarkdownV2</option></select></label>
+                            <label class="span-3">Modelo padrão de cobrança<textarea name="template_cobranca" rows="8">{{ $telegramConfig->template_cobranca }}</textarea></label>
+                            <label class="span-3">Modelo lembrete<textarea name="template_lembrete" rows="5">{{ $telegramConfig->template_lembrete }}</textarea></label>
+                            <label class="span-3">Modelo vencimento<textarea name="template_vencimento" rows="5">{{ $telegramConfig->template_vencimento }}</textarea></label>
+                            <label class="span-3">Modelo pagamento confirmado<textarea name="template_pagamento" rows="5">{{ $telegramConfig->template_pagamento }}</textarea></label>
+                            <label class="span-2">Chat ID do gerente<input name="gerente_chat_id" value="{{ $telegramConfig->gerente_chat_id }}" placeholder="Chat ID para alertas internos"></label>
+                            <label class="span-3">Modelo aviso gerente<textarea name="template_gerente" rows="5">{{ $telegramConfig->template_gerente }}</textarea></label>
+                            <div class="span-3"><button>Salvar Telegram</button></div>
+                        </form>
+                    @else
+                        <p class="empty">Este perfil consulta a integração, mas não altera a configuração.</p>
+                    @endif
+                </div>
+                <div class="panel" id="testar-bot"><h2>Conexão e webhook</h2><p><strong>Webhook público:</strong><br><code>{{ route('rental.webhook-telegram') }}</code></p><p>Primeiro salve os tokens e usuários dos bots. Depois teste e configure o webhook.</p>
+                    @if($user->pode('telegram', 'editar'))<div class="actions"><form method="post" action="{{ route('rental.telegram.testar') }}">@csrf<button class="btn success">Testar bot</button></form><form method="post" action="{{ route('rental.telegram.webhook') }}">@csrf<button class="btn secondary">Configurar webhook</button></form></div>@endif
+                    <hr><h3>Como o cliente vincula</h3><p>No Portal do Cliente aparecerá o botão <strong>Vincular Telegram</strong>. O link identifica o cadastro com segurança e grava o chat ID após o cliente pressionar Iniciar.</p><p><a class="btn secondary" href="{{ \App\Support\RentalSupport::asset('docs/manual_telegram.html') }}" target="_blank">Abrir manual Telegram</a></p>
+                </div>
+            </div>
+            <div class="panel"><h2>Últimas mensagens e envios</h2><div class="table-wrap"><table><tr><th>Data</th><th>Cliente</th><th>Chat</th><th>Tipo</th><th>Status</th><th>Detalhe</th></tr>@forelse($telegramLogs as $log)<tr><td>{{ $log->criado_em?->format('d/m/Y H:i') }}</td><td>{{ $log->cliente?->nome ?? '-' }}</td><td>{{ $log->username ? '@'.$log->username : ($log->chat_id ?: '-') }}</td><td>{{ $log->tipo }}</td><td>{!! \App\Support\RentalSupport::status($log->status) !!}</td><td title="{{ $log->erro ?: $log->mensagem }}">{{ \Illuminate\Support\Str::limit($log->erro ?: $log->mensagem,100) }}</td></tr>@empty<tr><td colspan="6" class="empty">Nenhum registro do Telegram.</td></tr>@endforelse</table></div></div>
+
+        @elseif ($page === 'configuracoes')
+            @php($licencaConfig = $licencaResumo['config'] ?? null)
+            @php($licencaStatus = $licencaResumo['status'] ?? ['codigo' => 'local', 'classe' => 'info', 'mensagem' => 'Licenca local'])
+            @php($licencaUso = $licencaResumo['uso'] ?? [])
+            <div class="panel"><h2>Configuracoes e integracoes</h2><div class="module-grid">
+                <a class="module-card" href="{{ route('rental.index',['page'=>'bancos']) }}"><i>{!! \App\Support\RentalSupport::icon('bancos') !!}</i><div><strong>Integracoes de pagamento</strong><br><small>Gateways Pix em uma unica tela</small></div></a>
+                <a class="module-card" href="{{ route('rental.index',['page'=>'whatsapp']) }}"><i>{!! \App\Support\RentalSupport::icon('whatsapp') !!}</i><div><strong>WhatsApp API</strong><br><small>Mensagens automaticas</small></div></a>
+                <a class="module-card" href="{{ route('rental.index',['page'=>'telegram']) }}"><i>{!! \App\Support\RentalSupport::icon('telegram') !!}</i><div><strong>Telegram Bot</strong><br><small>Disparos e atendimento multicanal</small></div></a>
+                @if($user->isSuperAdmin())
+                    <a class="module-card" href="{{ route('licencas-portal.index') }}"><i>{!! \App\Support\RentalSupport::icon('configuracoes') !!}</i><div><strong>Administração comercial</strong><br><small>Clientes, planos e chaves de {{ $branding['product_name'] }}</small></div></a>
+                @endif
+            </div></div>
+            <div class="grid side">
+                <div class="panel"><h2>Licença de {{ $branding['product_name'] }}</h2>
+                    <form method="post" action="{{ route('rental.licenca.salvar') }}" class="form-grid">@csrf
+                        <label>Modo<select name="modo"><option value="local" @selected(($licencaConfig?->modo ?? 'local')==='local')>local</option><option value="online" @selected(($licencaConfig?->modo)==='online')>online</option></select></label>
+                        <label>Status<select name="ativo"><option value="1" @selected($licencaConfig?->ativo ?? true)>ativa</option><option value="0" @selected(!($licencaConfig?->ativo ?? true))>inativa</option></select></label>
+                        <label>Empresa<input name="empresa_nome" maxlength="180" value="{{ old('empresa_nome', $licencaConfig?->empresa_nome) }}"></label>
+                        <label>Documento<input name="empresa_documento" maxlength="30" value="{{ old('empresa_documento', $licencaConfig?->empresa_documento) }}"></label>
+                        <label class="span-3">URL da API<input name="api_url" value="{{ old('api_url', $licencaConfig?->api_url) }}" placeholder="{{ url('/api/licencas-portal') }}"></label>
+                        <label class="span-3">Chave da licenca<input type="password" name="licenca_chave" value="" placeholder="{{ $licencaConfig?->licenca_chave ? 'Chave salva - deixe vazio para manter' : 'Cole a chave emitida pelo portal' }}"></label>
+                        <label>Tolerancia offline<input type="number" min="1" max="30" name="tolerancia_offline_dias" value="{{ old('tolerancia_offline_dias', $licencaConfig?->tolerancia_offline_dias ?? 7) }}"></label>
+                        <div class="span-3"><button>Salvar licenca</button></div>
+                    </form>
+                    <form method="post" action="{{ route('rental.licenca.testar') }}">@csrf<button class="btn secondary">Validar agora</button></form>
+                </div>
+                <div class="panel"><h2>Status da licenca</h2>
+                    <p>{!! \App\Support\RentalSupport::status($licencaStatus['codigo'] ?? 'local') !!}</p>
+                    <p>{{ $licencaStatus['mensagem'] ?? '-' }}</p>
+                    <p><strong>Plano:</strong> {{ $licencaConfig?->plano ?: '-' }}<br><strong>Vence em:</strong> {{ $licencaConfig?->vence_em?->format('d/m/Y') ?: '-' }}<br><strong>Ultima validacao:</strong> {{ $licencaConfig?->ultima_validacao_ok_em?->format('d/m/Y H:i') ?: '-' }}</p>
+                    <p><strong>Instancia:</strong><br><code>{{ $licencaConfig?->instancia_id ?: '-' }}</code></p>
+                    <div class="cards"><div class="metric"><span>Lojas</span><strong>{{ $licencaUso['lojas'] ?? 0 }}</strong><small>limite {{ $licencaConfig?->max_lojas ?: 'livre' }}</small></div><div class="metric"><span>Usuarios</span><strong>{{ $licencaUso['usuarios'] ?? 0 }}</strong><small>limite {{ $licencaConfig?->max_usuarios ?: 'livre' }}</small></div></div>
+                </div>
+            </div>
+        @endif
+    </main>
+</div>
+<script src="{{ \App\Support\RentalSupport::asset('assets/js/app.js') }}"></script>
+</body>
+</html>
+
+

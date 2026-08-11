@@ -1,0 +1,54 @@
+<div class="table-wrap">
+    <table>
+        <thead><tr><th>ID</th><th>Cliente</th><th>Vencimento</th><th>Principal</th><th>Pago</th><th>Atualizado</th><th>PIX/Canais</th><th>Gateway PIX</th><th>Status</th></tr></thead>
+        <tbody>
+        @forelse ($cobrancas as $cobranca)
+            <tr>
+                <td>#{{ $cobranca->id }}</td>
+                <td>{{ $cobranca->cliente?->nome }}</td>
+                <td>{{ $cobranca->vencimento?->format('d/m/Y') }}</td>
+                <td>{{ \App\Support\RentalSupport::moeda($cobranca->valor_principal) }}</td>
+                <td>{{ \App\Support\RentalSupport::moeda($cobranca->valor_pago) }}</td>
+                <td>{{ \App\Support\RentalSupport::moeda($cobranca->valor_atualizado) }}</td>
+                <td>
+                    <div class="pix-cell">
+                        <div>{{ $cobranca->pix_copia_cola ? 'PIX gerado' : 'Sem PIX' }}</div>
+                        <small>WhatsApp: {!! \App\Support\RentalSupport::status($cobranca->whatsapp_status) !!}</small><br>
+                        <small>Telegram: {!! \App\Support\RentalSupport::status($cobranca->telegram_status ?? 'pendente') !!}</small>
+                        @if ($cobranca->pix_copia_cola)
+                            @php($qrImagem = \App\Support\PixQrCode::dataUri($cobranca->pix_copia_cola, $cobranca->pix_qrcode))
+                            <div class="pix-tools">
+                                <button type="button" class="btn secondary pix-copy-btn" data-pix="{{ e($cobranca->pix_copia_cola) }}">Copiar PIX</button>
+                                @if ($qrImagem)
+                                    <img class="pix-qr" src="{{ $qrImagem }}" alt="QR Code PIX da cobrança #{{ $cobranca->id }}">
+                                @endif
+                            </div>
+                            <code class="pix-code">{{ \Illuminate\Support\Str::limit($cobranca->pix_copia_cola, 52) }}</code>
+                        @endif
+                    </div>
+                </td>
+                <td>
+                    <form method="post" action="{{ route('rental.cobrancas.pix', $cobranca) }}">
+                        @csrf
+                        <input type="hidden" name="page" value="{{ $page }}">
+                        <button class="btn secondary" type="submit">Gerar PIX</button>
+                    </form>
+                    <br>
+                    @if ($cobranca->asaas_status)
+                        <small>Asaas</small><br>{!! \App\Support\RentalSupport::status($cobranca->asaas_status) !!}
+                    @elseif ($cobranca->sicoob_status)
+                        <small>Sicoob</small><br>{!! \App\Support\RentalSupport::status($cobranca->sicoob_status) !!}
+                    @elseif ($cobranca->pagbank_status)
+                        <small>PagBank</small><br>{!! \App\Support\RentalSupport::status($cobranca->pagbank_status) !!}
+                    @else
+                        <span class="tag muted">não gerado</span>
+                    @endif
+                </td>
+                <td>{!! \App\Support\RentalSupport::status($cobranca->status) !!}</td>
+            </tr>
+        @empty
+            <tr><td colspan="9" class="empty">Nenhuma cobrança encontrada.</td></tr>
+        @endforelse
+        </tbody>
+    </table>
+</div>

@@ -18,7 +18,7 @@ return [
         ],
     ],
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'locx@example.com'),
-        'name' => env('MAIL_FROM_NAME', 'LOCX'),
+        'address' => env('MAIL_FROM_ADDRESS', 'noreply@example.com'),
+        'name' => env('MAIL_FROM_NAME', env('STORE_NAME', env('APP_NAME', 'Gestor de Locações'))),
     ],
 ];

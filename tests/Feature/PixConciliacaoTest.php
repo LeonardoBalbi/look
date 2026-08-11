@@ -13,7 +13,8 @@ use App\Models\PixGatewayConfig;
 use App\Models\User;
 use App\Services\AutomacaoService;
 use App\Services\PixGatewayService;
-use Database\Seeders\LocxInitialSeeder;
+use App\Support\RentalSupport;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
@@ -27,7 +28,7 @@ class PixConciliacaoTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
         Mail::fake();
     }
 
@@ -53,8 +54,8 @@ class PixConciliacaoTest extends TestCase
             ]),
         ]);
 
-        $primeiraExecucao = Artisan::call('locx:conciliar-pix');
-        $segundaExecucao = Artisan::call('locx:conciliar-pix');
+        $primeiraExecucao = Artisan::call('rental:conciliar-pix');
+        $segundaExecucao = Artisan::call('rental:conciliar-pix');
 
         $this->assertSame(0, $primeiraExecucao);
         $this->assertSame(0, $segundaExecucao);
@@ -102,7 +103,7 @@ class PixConciliacaoTest extends TestCase
             ]),
         ]);
 
-        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $usuario = User::where('email', 'admin@example.com')->firstOrFail();
 
         $this->actingAs($usuario)
             ->withSession(['_token' => 'token-teste'])
@@ -131,7 +132,7 @@ class PixConciliacaoTest extends TestCase
             'modo' => 'api',
             'ambiente' => 'producao',
             'ativo' => true,
-            'webhook_token' => 'locx_asaas_webhook_token_2026_secure',
+            'webhook_token' => 'rental_asaas_webhook_token_2026_secure',
         ]);
 
         $this->postJson('/webhooks/asaas', [
@@ -139,10 +140,10 @@ class PixConciliacaoTest extends TestCase
             'payment' => [
                 'id' => 'pay_inexistente',
                 'status' => 'RECEIVED',
-                'externalReference' => 'LOCX-COBRANCA-999999',
+                'externalReference' => 'RENTAL-COBRANCA-999999',
                 'value' => 50.00,
             ],
-        ], ['asaas-access-token' => 'locx_asaas_webhook_token_2026_secure'])
+        ], ['asaas-access-token' => 'rental_asaas_webhook_token_2026_secure'])
             ->assertOk()
             ->assertJsonPath('ok', true)
             ->assertJsonPath('ignorado', true);
@@ -173,7 +174,12 @@ class PixConciliacaoTest extends TestCase
         $this->assertTrue($resultado['demo']);
         $this->assertDatabaseHas('cobrancas', [
             'id' => $cobranca->id,
-            'itau_txid' => 'DEMO-LOCX'.str_pad((string) $cobranca->id, 21, '0', STR_PAD_LEFT),
+            'itau_txid' => 'DEMO-'.RentalSupport::integrationPrefix().str_pad(
+                (string) $cobranca->id,
+                25 - strlen(RentalSupport::integrationPrefix()),
+                '0',
+                STR_PAD_LEFT
+            ),
             'itau_status' => 'DEMO',
         ]);
     }
@@ -188,13 +194,13 @@ class PixConciliacaoTest extends TestCase
         ]);
         $cobranca = $this->cobranca([
             'asaas_status' => null,
-            'itau_txid' => 'LOCX000000000000000000123',
+            'itau_txid' => 'RENTAL000000000000000000123',
             'itau_status' => 'ATIVA',
         ]);
 
         $this->postJson('/webhooks/itau?token=token-itau', [
             'pix' => [[
-                'txid' => 'LOCX000000000000000000123',
+                'txid' => 'RENTAL000000000000000000123',
                 'valor' => '50.00',
                 'endToEndId' => 'E123',
             ]],

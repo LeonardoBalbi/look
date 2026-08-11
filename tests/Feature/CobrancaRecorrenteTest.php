@@ -11,7 +11,7 @@ use App\Models\Motocicleta;
 use App\Models\PixGatewayConfig;
 use App\Models\User;
 use App\Services\EmailCobrancaService;
-use Database\Seeders\LocxInitialSeeder;
+use Database\Seeders\ApplicationInitialSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Http;
@@ -26,7 +26,7 @@ class CobrancaRecorrenteTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
-        $this->seed(LocxInitialSeeder::class);
+        $this->seed(ApplicationInitialSeeder::class);
     }
 
     public function test_dry_run_nao_cria_cobranca_nem_chama_api(): void
@@ -34,7 +34,7 @@ class CobrancaRecorrenteTest extends TestCase
         Http::fake();
         $this->contrato();
 
-        $code = Artisan::call('locx:gerar-cobrancas-recorrentes', [
+        $code = Artisan::call('rental:gerar-cobrancas-recorrentes', [
             '--dry-run' => true,
         ]);
 
@@ -48,8 +48,8 @@ class CobrancaRecorrenteTest extends TestCase
     {
         $contrato = $this->contrato(['forma_cobranca' => 'semanal']);
 
-        $primeiraExecucao = Artisan::call('locx:gerar-cobrancas-recorrentes');
-        $segundaExecucao = Artisan::call('locx:gerar-cobrancas-recorrentes');
+        $primeiraExecucao = Artisan::call('rental:gerar-cobrancas-recorrentes');
+        $segundaExecucao = Artisan::call('rental:gerar-cobrancas-recorrentes');
 
         $this->assertSame(0, $primeiraExecucao);
         $this->assertSame(0, $segundaExecucao);
@@ -75,13 +75,13 @@ class CobrancaRecorrenteTest extends TestCase
         ]);
         $contrato = $this->contrato();
 
-        $code = Artisan::call('locx:gerar-cobrancas-recorrentes', [
+        $code = Artisan::call('rental:gerar-cobrancas-recorrentes', [
             '--gerar-pix' => true,
         ]);
 
         $this->assertSame(0, $code);
         $cobranca = Cobranca::query()->where('contrato_id', $contrato->id)->firstOrFail();
-        $this->assertStringContainsString('LOCX-ASAAS-DEMO-COBRANCA-'.$cobranca->id, $cobranca->pix_copia_cola);
+        $this->assertStringContainsString('RENTAL-ASAAS-DEMO-COBRANCA-'.$cobranca->id, $cobranca->pix_copia_cola);
         $this->assertSame('DEMO-'.$cobranca->id, $cobranca->asaas_id);
         Http::assertNothingSent();
     }
@@ -91,7 +91,7 @@ class CobrancaRecorrenteTest extends TestCase
         Mail::fake();
         $contrato = $this->contrato();
 
-        $code = Artisan::call('locx:gerar-cobrancas-recorrentes', [
+        $code = Artisan::call('rental:gerar-cobrancas-recorrentes', [
             '--enviar-email' => true,
         ]);
 
@@ -112,7 +112,7 @@ class CobrancaRecorrenteTest extends TestCase
             'ativo' => true,
         ]);
         $contrato = $this->contrato();
-        $usuario = User::where('email', 'admin@locx.com.br')->firstOrFail();
+        $usuario = User::where('email', 'admin@example.com')->firstOrFail();
 
         $this->actingAs($usuario)
             ->withSession(['_token' => 'token-teste'])
@@ -125,7 +125,7 @@ class CobrancaRecorrenteTest extends TestCase
             ->assertRedirect('/?page=financeiro');
 
         $cobranca = Cobranca::query()->where('contrato_id', $contrato->id)->firstOrFail();
-        $this->assertStringContainsString('LOCX-ASAAS-DEMO-COBRANCA-'.$cobranca->id, $cobranca->pix_copia_cola);
+        $this->assertStringContainsString('RENTAL-ASAAS-DEMO-COBRANCA-'.$cobranca->id, $cobranca->pix_copia_cola);
         Mail::assertSent(CobrancaCriadaMail::class, fn (CobrancaCriadaMail $mail) => $mail->hasTo('cliente@example.com')
             && $mail->cobranca->is($cobranca));
     }

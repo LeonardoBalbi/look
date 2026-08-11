@@ -3,13 +3,13 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Minha Area - LocX</title>
-    <link rel="stylesheet" href="{{ \App\Support\Locx::asset('assets/css/style.css') }}">
+    <title>Minha área | {{ $branding['store_name'] }}</title>
+    <link rel="stylesheet" href="{{ \App\Support\RentalSupport::asset('assets/css/style.css') }}">
 </head>
-<body>
+<body data-store-name="{{ $branding['store_name'] }}" data-product-name="{{ $branding['product_name'] }}">
 <div class="client-shell">
     <header class="client-header">
-        <div class="brand brand-logo"><img src="{{ \App\Support\Locx::asset('assets/img/logo-locx.svg') }}" alt="LocX Aluguel de Motos"></div>
+        <x-brand />
         <div class="client-header-user">
             <strong>{{ $cliente->nome }}</strong>
             <span>{{ $cliente->email }}</span>
@@ -27,8 +27,8 @@
         </section>
 
         <section class="cards">
-            <div class="metric {{ $saldoAberto > 0 ? 'warn' : 'ok' }}"><span>Saldo em aberto</span><strong>{{ \App\Support\Locx::moeda($saldoAberto) }}</strong><small>{{ $cobrancasAbertas->count() }} faturas pendentes</small></div>
-            <div class="metric {{ $saldoAtrasado > 0 ? 'danger' : 'ok' }}"><span>Debito atrasado</span><strong>{{ \App\Support\Locx::moeda($saldoAtrasado) }}</strong><small>{{ $saldoAtrasado > 0 ? 'Regularize para evitar bloqueios' : 'Sem atraso' }}</small></div>
+            <div class="metric {{ $saldoAberto > 0 ? 'warn' : 'ok' }}"><span>Saldo em aberto</span><strong>{{ \App\Support\RentalSupport::moeda($saldoAberto) }}</strong><small>{{ $cobrancasAbertas->count() }} faturas pendentes</small></div>
+            <div class="metric {{ $saldoAtrasado > 0 ? 'danger' : 'ok' }}"><span>Debito atrasado</span><strong>{{ \App\Support\RentalSupport::moeda($saldoAtrasado) }}</strong><small>{{ $saldoAtrasado > 0 ? 'Regularize para evitar bloqueios' : 'Sem atraso' }}</small></div>
             <div class="metric"><span>Contratos</span><strong>{{ $contratos->count() }}</strong><small>{{ $contratos->where('status', 'ativo')->count() }} ativos</small></div>
             <div class="metric ok"><span>Pagamentos</span><strong>{{ $cobrancasPagas->count() }}</strong><small>Faturas quitadas</small></div>
         </section>
@@ -47,13 +47,13 @@
                                     <strong>Fatura #{{ $cobranca->id }}</strong>
                                     <span>{{ $cobranca->contrato?->motocicleta?->placa ?: 'Contrato #'.$cobranca->contrato_id }}</span>
                                 </div>
-                                {!! \App\Support\Locx::status($cobranca->status) !!}
+                                {!! \App\Support\RentalSupport::status($cobranca->status) !!}
                             </div>
                             <div class="invoice-values">
                                 <span>Vencimento <b>{{ $cobranca->vencimento?->format('d/m/Y') }}</b></span>
-                                <span>Valor <b>{{ \App\Support\Locx::moeda($cobranca->valor_principal) }}</b></span>
-                                <span>Pago <b>{{ \App\Support\Locx::moeda($cobranca->valor_pago) }}</b></span>
-                                <span>Saldo <b>{{ \App\Support\Locx::moeda($saldo) }}</b></span>
+                                <span>Valor <b>{{ \App\Support\RentalSupport::moeda($cobranca->valor_principal) }}</b></span>
+                                <span>Pago <b>{{ \App\Support\RentalSupport::moeda($cobranca->valor_pago) }}</b></span>
+                                <span>Saldo <b>{{ \App\Support\RentalSupport::moeda($saldo) }}</b></span>
                             </div>
                             @if ($cobranca->status !== 'paga')
                                 @if ($cobranca->pix_copia_cola)
@@ -98,7 +98,7 @@
                         <span>Telegram atendimento <b>{{ $cliente->telegram_atendimento_chat_id ? ('@'.($cliente->telegram_atendimento_username ?: 'vinculado')) : 'nao vinculado' }}</b></span>
                         <span>Telegram <b>{{ $cliente->telegram_chat_id ? ('@'.($cliente->telegram_username ?: 'vinculado')) : 'não vinculado' }}</b></span>
                         <span>Loja <b>{{ $cliente->loja?->nome ?: '-' }}</b></span>
-                        <span>Status <b>{!! \App\Support\Locx::status($cliente->status) !!}</b></span>
+                        <span>Status <b>{!! \App\Support\RentalSupport::status($cliente->status) !!}</b></span>
                     </div>
                     <div class="telegram-link-card">
                         <strong>Receber avisos pelo Telegram</strong>
@@ -133,7 +133,7 @@
                 <h2>Contratos</h2>
                 <div class="table-wrap"><table><tr><th>ID</th><th>Moto</th><th>Inicio</th><th>Valor</th><th>Status</th></tr>
                     @forelse ($contratos as $contrato)
-                        <tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->motocicleta?->placa }} - {{ $contrato->motocicleta?->modelo_nome }}</td><td>{{ $contrato->data_inicio?->format('d/m/Y') }}</td><td>{{ \App\Support\Locx::moeda($contrato->valor_contratado) }}</td><td>{!! \App\Support\Locx::status($contrato->status) !!}</td></tr>
+                        <tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->motocicleta?->placa }} - {{ $contrato->motocicleta?->modelo_nome }}</td><td>{{ $contrato->data_inicio?->format('d/m/Y') }}</td><td>{{ \App\Support\RentalSupport::moeda($contrato->valor_contratado) }}</td><td>{!! \App\Support\RentalSupport::status($contrato->status) !!}</td></tr>
                     @empty
                         <tr><td colspan="5" class="empty">Nenhum contrato encontrado.</td></tr>
                     @endforelse
@@ -143,7 +143,7 @@
                 <h2>Ultimos pagamentos</h2>
                 <div class="table-wrap"><table><tr><th>Data</th><th>Fatura</th><th>Forma</th><th>Valor</th></tr>
                     @forelse ($pagamentos as $pagamento)
-                        <tr><td>{{ \Carbon\Carbon::parse($pagamento->pago_em)->format('d/m/Y H:i') }}</td><td>#{{ $pagamento->cobranca_numero }}</td><td>{{ $pagamento->forma }}</td><td>{{ \App\Support\Locx::moeda($pagamento->valor) }}</td></tr>
+                        <tr><td>{{ \Carbon\Carbon::parse($pagamento->pago_em)->format('d/m/Y H:i') }}</td><td>#{{ $pagamento->cobranca_numero }}</td><td>{{ $pagamento->forma }}</td><td>{{ \App\Support\RentalSupport::moeda($pagamento->valor) }}</td></tr>
                     @empty
                         <tr><td colspan="4" class="empty">Nenhum pagamento registrado.</td></tr>
                     @endforelse
@@ -153,7 +153,7 @@
     </main>
     <div class="client-chat-widget" id="chat">
         <button type="button" class="chat-fab" data-chat-toggle aria-expanded="{{ session('chat_success') || $errors->has('assunto') || $errors->has('mensagem') ? 'true' : 'false' }}" aria-controls="clientChatPopup">
-            <span class="chat-avatar image"><img src="{{ \App\Support\Locx::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></span>
+            <span class="chat-avatar image"><img src="{{ \App\Support\RentalSupport::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></span>
             <span><strong>Lau</strong><small>Atendimento</small></span>
         </button>
         @php($chatAtivo = $chatAtendimento && in_array($chatAtendimento->status, ['novo', 'em_atendimento', 'aguardando_humano', 'respondido'], true))
@@ -162,7 +162,7 @@
         @php($mostrarOpcoesChat = ! $mostrarRetomadaChat && (! $chatAtivo || (! $chatComLoja && ($chatAtendimento?->status === 'novo' || $chatAtendimento?->assunto === 'outro'))))
         <section class="client-chat-popup {{ session('chat_success') || $errors->has('assunto') || $errors->has('mensagem') ? 'is-open' : '' }}" id="clientChatPopup" role="dialog" aria-modal="false" aria-labelledby="clientChatTitle" aria-label="Chat do Lau" data-chat-greeting="Ola, {{ \Illuminate\Support\Str::before($cliente->nome, ' ') }}. Como posso ajudar?" data-chat-sync-url="{{ route('cliente.chat.sync') }}" data-chat-close-url="{{ route('cliente.chat.close') }}" data-chat-human="{{ $chatComLoja ? '1' : '0' }}" data-chat-show-options="{{ $mostrarOpcoesChat ? '1' : '0' }}">
             <div class="chat-head">
-                <div class="chat-avatar image"><img src="{{ \App\Support\Locx::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></div>
+                <div class="chat-avatar image"><img src="{{ \App\Support\RentalSupport::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></div>
                 <div>
                     <h2 id="clientChatTitle">Lau</h2>
                     <p data-chat-status>{{ $chatComLoja ? 'Aguardando a loja' : 'Online' }}</p>
@@ -172,15 +172,15 @@
             <div class="chat-thread" data-chat-thread role="log" aria-live="polite" aria-relevant="additions text" aria-label="Mensagens do atendimento">
                 @if ($chatMensagens->isEmpty())
                     <article class="chat-row bot" role="article" aria-label="Lau disse" data-chat-message-id="0">
-                        <span class="chat-mini-avatar"><img src="{{ \App\Support\Locx::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></span>
+                        <span class="chat-mini-avatar"><img src="{{ \App\Support\RentalSupport::asset('assets/img/atendente-lauro.png') }}" alt="Lau"></span>
                         <div class="chat-bubble"><span class="chat-sender">Lau</span>Ola, {{ \Illuminate\Support\Str::before($cliente->nome, ' ') }}. Como posso ajudar?</div>
                     </article>
                 @else
                     @foreach ($chatMensagens as $mensagem)
-                        @php($nomeRemetente = $mensagem->remetente === 'cliente' ? 'Voce' : ($mensagem->remetente === 'humano' ? ($mensagem->remetente_nome ?: 'Equipe LOCX') : 'Lau'))
+                        @php($nomeRemetente = $mensagem->remetente === 'cliente' ? 'Você' : ($mensagem->remetente === 'humano' ? ($mensagem->remetente_nome ?: 'Equipe '.$branding['store_name']) : 'Lau'))
                         <article class="chat-row {{ $mensagem->remetente }}" role="article" aria-label="{{ $nomeRemetente }} disse as {{ $mensagem->criado_em?->format('H:i') }}" data-chat-message-id="{{ $mensagem->id }}" data-chat-client-token="{{ $mensagem->client_token ?: '' }}">
                             @if ($mensagem->remetente !== 'cliente')
-                                <span class="chat-mini-avatar"><img src="{{ \App\Support\Locx::asset('assets/img/atendente-lauro.png') }}" alt="{{ $nomeRemetente }}"></span>
+                                <span class="chat-mini-avatar"><img src="{{ \App\Support\RentalSupport::asset('assets/img/atendente-lauro.png') }}" alt="{{ $nomeRemetente }}"></span>
                             @endif
                             <div class="chat-bubble">
                                 @if ($mensagem->remetente !== 'cliente')
@@ -243,6 +243,6 @@
         </section>
     </div>
 </div>
-<script src="{{ \App\Support\Locx::asset('assets/js/app.js') }}"></script>
+<script src="{{ \App\Support\RentalSupport::asset('assets/js/app.js') }}"></script>
 </body>
 </html>

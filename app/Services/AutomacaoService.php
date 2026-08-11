@@ -5,7 +5,7 @@ namespace App\Services;
 use App\Models\AutomacaoLog;
 use App\Models\Cobranca;
 use App\Models\Pagamento;
-use App\Support\Locx;
+use App\Support\RentalSupport;
 use Illuminate\Support\Collection;
 use Throwable;
 
@@ -260,7 +260,7 @@ class AutomacaoService
         $config = $this->whatsApp->config();
         $parametros = [
             'customer_name' => $cobranca->cliente->nome,
-            'amount_paid' => Locx::moeda($pagamento->valor),
+            'amount_paid' => RentalSupport::moeda($pagamento->valor),
             'payment_method' => $pagamento->forma,
             'payment_date' => $pagamento->pago_em->format('d/m/Y H:i'),
             'charge_id' => (string) $cobranca->id,
@@ -272,14 +272,14 @@ class AutomacaoService
                 $cobranca->cliente->whatsapp,
                 $config->template_pagamento,
                 $parametros,
-                "Pagamento confirmado para {$cobranca->cliente->nome}: ".Locx::moeda($pagamento->valor).'.',
+                "Pagamento confirmado para {$cobranca->cliente->nome}: ".RentalSupport::moeda($pagamento->valor).'.',
                 self::PAGAMENTO_CONFIRMADO,
                 $cobranca,
             ),
             'template_pagamento',
             [
                 'cliente' => $cobranca->cliente->nome,
-                'valor_pago' => Locx::moeda($pagamento->valor),
+                'valor_pago' => RentalSupport::moeda($pagamento->valor),
                 'forma_pagamento' => $pagamento->forma,
                 'data_pagamento' => $pagamento->pago_em->format('d/m/Y H:i'),
                 'cobranca_id' => (string) $cobranca->id,
@@ -305,7 +305,7 @@ class AutomacaoService
             'cliente' => $cobranca->cliente->nome,
             'placa' => $cobranca->contrato?->motocicleta?->placa ?: 'nao informada',
             'vencimento' => $cobranca->vencimento->format('d/m/Y'),
-            'saldo' => Locx::moeda($saldo),
+            'saldo' => RentalSupport::moeda($saldo),
             'pix' => $cobranca->pix_copia_cola ?: 'nao disponivel',
         ];
     }
@@ -317,7 +317,7 @@ class AutomacaoService
             'placa' => $dados['placa'],
             'vencimento' => $dados['vencimento'],
             'saldo' => $dados['saldo'],
-            'valor' => Locx::moeda($cobranca->valor_principal),
+            'valor' => RentalSupport::moeda($cobranca->valor_principal),
             'pix' => $cobranca->pix_copia_cola ? "PIX copia e cola:\n".$cobranca->pix_copia_cola : 'PIX ainda nao disponivel.',
             'cobranca_id' => (string) $cobranca->id,
             'link_portal' => route('cliente.login'),
@@ -400,7 +400,7 @@ class AutomacaoService
 
     private function espelharTelegram(): bool
     {
-        return (bool) config('locx.telegram.espelhar_automacoes_whatsapp', true);
+        return (bool) config('rental.telegram.espelhar_automacoes_whatsapp', true);
     }
 
     private function resultadoMulticanal(array $resultados): array

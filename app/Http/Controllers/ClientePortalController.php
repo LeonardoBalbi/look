@@ -83,7 +83,7 @@ class ClientePortalController extends Controller
             $notificacoes->push([
                 'tipo' => $cobranca->vencimento->isPast() ? 'danger' : 'warn',
                 'titulo' => $cobranca->vencimento->isPast() ? 'Debito em atraso' : 'Fatura em aberto',
-                'texto' => 'Cobranca #'.$cobranca->id.' com saldo de '.\App\Support\Locx::moeda($saldo).' e vencimento em '.$cobranca->vencimento->format('d/m/Y').'.',
+                'texto' => 'Cobranca #'.$cobranca->id.' com saldo de '.\App\Support\RentalSupport::moeda($saldo).' e vencimento em '.$cobranca->vencimento->format('d/m/Y').'.',
             ]);
         });
 
@@ -93,7 +93,7 @@ class ClientePortalController extends Controller
             ->each(fn ($multa) => $notificacoes->push([
                 'tipo' => 'warn',
                 'titulo' => 'Multa pendente',
-                'texto' => ($multa->motocicleta?->placa ?: 'Moto').' - '.\App\Support\Locx::moeda($multa->valor).' - vencimento '.($multa->vencimento?->format('d/m/Y') ?: 'sem data').'.',
+                'texto' => ($multa->motocicleta?->placa ?: 'Moto').' - '.\App\Support\RentalSupport::moeda($multa->valor).' - vencimento '.($multa->vencimento?->format('d/m/Y') ?: 'sem data').'.',
             ]));
 
         if ($notificacoes->isEmpty()) {
@@ -762,7 +762,7 @@ class ClientePortalController extends Controller
                 'humano' => true,
                 'mostrar_opcoes' => false,
                 'encerrar' => false,
-                'texto' => "Entendi, {$primeiroNome}. Vou chamar um atendente para verificar as opcoes de negociacao do saldo de ".\App\Support\Locx::moeda($saldoAberto).'.',
+                'texto' => "Entendi, {$primeiroNome}. Vou chamar um atendente para verificar as opcoes de negociacao do saldo de ".\App\Support\RentalSupport::moeda($saldoAberto).'.',
             ];
         }
 
@@ -783,7 +783,7 @@ class ClientePortalController extends Controller
                 'mostrar_opcoes' => false,
                 'encerrar' => false,
                 'texto' => $proxima
-                    ? "Para pagar, abra a fatura #{$proxima->id} no portal e use o botao de copiar PIX. O saldo atual e ".\App\Support\Locx::moeda($saldoAberto).'.'
+                    ? "Para pagar, abra a fatura #{$proxima->id} no portal e use o botao de copiar PIX. O saldo atual e ".\App\Support\RentalSupport::moeda($saldoAberto).'.'
                     : 'Nao encontrei uma fatura aberta para gerar o pagamento agora.',
             ];
         }
@@ -793,7 +793,7 @@ class ClientePortalController extends Controller
                 'humano' => false,
                 'mostrar_opcoes' => false,
                 'encerrar' => false,
-                'texto' => "Seu saldo em aberto neste momento e ".\App\Support\Locx::moeda($saldoAberto).'.',
+                'texto' => "Seu saldo em aberto neste momento e ".\App\Support\RentalSupport::moeda($saldoAberto).'.',
             ];
         }
 
@@ -802,7 +802,7 @@ class ClientePortalController extends Controller
             'mostrar_opcoes' => false,
             'encerrar' => false,
             'texto' => $quantidadeRespostasBot === 0
-                ? "Vi aqui, {$primeiroNome}: seu saldo em aberto e ".\App\Support\Locx::moeda($saldoAberto).".\nFatura: #".$proxima?->id."\nVencimento: ".$proxima?->vencimento?->format('d/m/Y')."\nVoce quer saber o valor, o vencimento, como pagar ou falar sobre negociacao?"
+                ? "Vi aqui, {$primeiroNome}: seu saldo em aberto e ".\App\Support\RentalSupport::moeda($saldoAberto).".\nFatura: #".$proxima?->id."\nVencimento: ".$proxima?->vencimento?->format('d/m/Y')."\nVoce quer saber o valor, o vencimento, como pagar ou falar sobre negociacao?"
                 : 'Posso detalhar o valor, o vencimento, o PIX ou chamar a loja para negociar. Qual desses pontos voce precisa?',
         ];
     }

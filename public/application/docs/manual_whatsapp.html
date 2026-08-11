@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="pt-br">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Manual WhatsApp - Gestor de Locações</title>
+  <style>
+    body{font-family:Arial,sans-serif;max-width:850px;margin:40px auto;padding:0 20px;color:#172033;line-height:1.6}
+    h1,h2{color:#0b6b55} code{background:#eef3f6;padding:3px 6px;border-radius:5px;word-break:break-all}
+    .alert{background:#fff4d6;border-left:4px solid #e5a400;padding:12px 16px}
+  </style>
+</head>
+<body>
+  <h1>Conectar WhatsApp Cloud API</h1>
+  <ol>
+    <li>No Meta for Developers, crie ou abra um aplicativo e adicione o produto <strong>WhatsApp</strong>.</li>
+    <li>Copie o <strong>WABA ID</strong> (ID da conta do WhatsApp Business) e o <strong>Phone Number ID</strong>.</li>
+    <li>Crie um usuário do sistema no Business Manager e gere um <strong>Access Token permanente</strong>. Tokens temporários expiram e interrompem os envios.</li>
+    <li>No Gestor de Locações, abra <strong>WhatsApp API</strong>, escolha <strong>Oficial</strong>, preencha os dados e salve.</li>
+    <li>Clique em <strong>Validar na Meta</strong>. O teste também confirma se o template e o idioma estão aprovados.</li>
+    <li>Na Meta, configure a URL pública do webhook e use o mesmo <strong>Verify Token</strong> exibido no Gestor de Locações.</li>
+  </ol>
+  <h2>Template de cobrança</h2>
+  <p>Crie e aprove na Meta o template <code>rental-app_cobranca_atraso</code>. Informe no Gestor de Locações exatamente o mesmo nome e idioma, por exemplo <code>pt_BR</code>, com cinco variáveis nomeadas no corpo:</p>
+  <ol>
+    <li>Nome do cliente</li>
+    <li>Placa da motocicleta</li>
+    <li>Dias em atraso</li>
+    <li>Saldo atualizado</li>
+    <li>PIX copia e cola</li>
+  </ol>
+  <p class="alert"><strong>Importante:</strong> a aprovação da empresa na Meta não renova o Access Token e não aprova automaticamente cada idioma do template.</p>
+  <h2>Webhook</h2>
+  <p>Use este formato, trocando pelo seu domínio:</p>
+  <p><code>https://seusite.com/webhooks/whatsapp</code></p>
+  <p class="alert"><strong>Importante:</strong> a Meta não consegue acessar localhost. O endereço precisa ser público e usar HTTPS.</p>
+</body>
+</html>

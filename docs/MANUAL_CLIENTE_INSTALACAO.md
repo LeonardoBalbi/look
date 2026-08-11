@@ -1,10 +1,10 @@
-# Manual do Cliente e Instalacao - LocX
+# Manual do Cliente e Instalacao - Gestor de Locações
 
-Este documento explica, em linguagem simples, o que o sistema LocX faz, como usar no dia a dia e como instalar em um servidor.
+Este documento explica, em linguagem simples, o que o sistema Gestor de Locações faz, como usar no dia a dia e como instalar em um servidor.
 
-## 1. O que e o LocX
+## 1. O que e o Gestor de Locações
 
-O LocX e um sistema para controlar locacao de motos, clientes, contratos, cobrancas, pagamentos, PIX, inadimplencia, WhatsApp, e-mail e CRM.
+O Gestor de Locações e um sistema para controlar locacao de motos, clientes, contratos, cobrancas, pagamentos, PIX, inadimplencia, WhatsApp, e-mail e CRM.
 
 Na pratica, ele ajuda a empresa a responder:
 
@@ -338,7 +338,7 @@ Antes de ligar automacoes reais, teste com simulacao.
 ### Testar CRM sem gravar tarefas
 
 ```bash
-php artisan locx:sincronizar-crm --dry-run
+php artisan rental:sincronizar-crm --dry-run
 ```
 
 Esse comando apenas mostra o que seria criado. Nao cria tarefa, nao manda WhatsApp, nao gera PIX e nao cobra nada.
@@ -346,7 +346,7 @@ Esse comando apenas mostra o que seria criado. Nao cria tarefa, nao manda WhatsA
 ### Testar cobranca recorrente sem gravar
 
 ```bash
-php artisan locx:gerar-cobrancas-recorrentes --dry-run
+php artisan rental:gerar-cobrancas-recorrentes --dry-run
 ```
 
 Esse comando apenas simula as cobrancas que seriam geradas.
@@ -393,8 +393,8 @@ Exemplo:
 
 ```bash
 cd /var/www
-git clone https://github.com/LeonardoBalbi/look.git locx
-cd locx
+git clone https://github.com/LeonardoBalbi/look.git rental-app
+cd rental-app
 ```
 
 Se o projeto ja existe no servidor:
@@ -438,7 +438,7 @@ Exemplo:
 DB_CONNECTION=mysql
 DB_HOST=127.0.0.1
 DB_PORT=3306
-DB_DATABASE=locx
+DB_DATABASE=rental-app
 DB_USERNAME=usuario_do_banco
 DB_PASSWORD=senha_do_banco
 ```
@@ -473,7 +473,7 @@ php artisan migrate --seed --force
 Login inicial, quando o seed for usado:
 
 ```text
-admin@locx.com.br
+admin@rental-app.com.br
 123456
 ```
 
@@ -516,7 +516,7 @@ No Apache ou Nginx, o dominio deve apontar para:
 Exemplo:
 
 ```text
-/var/www/locx/public
+/var/www/rental-app/public
 ```
 
 Se apontar para a raiz do projeto, pode causar erro e tambem expor arquivos sensiveis.
@@ -534,7 +534,7 @@ Configure no servidor:
 Exemplo:
 
 ```bash
-* * * * * cd /var/www/locx && php artisan schedule:run >> /dev/null 2>&1
+* * * * * cd /var/www/rental-app && php artisan schedule:run >> /dev/null 2>&1
 ```
 
 O cron chama o agendador do Laravel a cada minuto. O Laravel decide quais tarefas devem rodar naquele horario.
@@ -550,8 +550,8 @@ Sem cron:
 ### CRM automatico
 
 ```env
-LOCX_CRM_AUTOMACOES_ATIVAS=true
-LOCX_CRM_AUTOMACOES_HORARIO=07:15
+RENTAL_CRM_AUTOMACOES_ATIVAS=true
+RENTAL_CRM_AUTOMACOES_HORARIO=07:15
 ```
 
 Essas variaveis fazem o sistema criar tarefas de cobranca atrasada no CRM.
@@ -559,22 +559,22 @@ Essas variaveis fazem o sistema criar tarefas de cobranca atrasada no CRM.
 ### Recorrencia de cobrancas
 
 ```env
-LOCX_RECORRENCIA_ATIVA=true
-LOCX_RECORRENCIA_GERAR_PIX=true
-LOCX_RECORRENCIA_ENVIAR_WHATSAPP=false
-LOCX_RECORRENCIA_ENVIAR_EMAIL=false
-LOCX_RECORRENCIA_DIAS_ANTECEDENCIA=0
-LOCX_RECORRENCIA_MAX_POR_CONTRATO=12
-LOCX_RECORRENCIA_HORARIO=07:00
+RENTAL_RECORRENCIA_ATIVA=true
+RENTAL_RECORRENCIA_GERAR_PIX=true
+RENTAL_RECORRENCIA_ENVIAR_WHATSAPP=false
+RENTAL_RECORRENCIA_ENVIAR_EMAIL=false
+RENTAL_RECORRENCIA_DIAS_ANTECEDENCIA=0
+RENTAL_RECORRENCIA_MAX_POR_CONTRATO=12
+RENTAL_RECORRENCIA_HORARIO=07:00
 ```
 
 Explicacao:
 
-- `LOCX_RECORRENCIA_ATIVA=true`: liga geracao automatica de cobrancas;
-- `LOCX_RECORRENCIA_GERAR_PIX=true`: gera PIX junto com a cobranca;
-- `LOCX_RECORRENCIA_ENVIAR_WHATSAPP=false`: nao envia WhatsApp automaticamente;
-- `LOCX_RECORRENCIA_ENVIAR_EMAIL=false`: nao envia e-mail automaticamente;
-- `LOCX_RECORRENCIA_HORARIO=07:00`: horario diario da rotina.
+- `RENTAL_RECORRENCIA_ATIVA=true`: liga geracao automatica de cobrancas;
+- `RENTAL_RECORRENCIA_GERAR_PIX=true`: gera PIX junto com a cobranca;
+- `RENTAL_RECORRENCIA_ENVIAR_WHATSAPP=false`: nao envia WhatsApp automaticamente;
+- `RENTAL_RECORRENCIA_ENVIAR_EMAIL=false`: nao envia e-mail automaticamente;
+- `RENTAL_RECORRENCIA_HORARIO=07:00`: horario diario da rotina.
 
 ### E-mail SMTP
 
@@ -588,7 +588,7 @@ MAIL_USERNAME=usuario
 MAIL_PASSWORD=senha
 MAIL_ENCRYPTION=tls
 MAIL_FROM_ADDRESS=financeiro@seudominio.com
-MAIL_FROM_NAME="LocX"
+MAIL_FROM_NAME="Gestor de Locações"
 ```
 
 Sem SMTP, o sistema nao envia e-mail real.
@@ -673,25 +673,25 @@ php artisan view:cache
 ### Simular recorrencia
 
 ```bash
-php artisan locx:gerar-cobrancas-recorrentes --dry-run
+php artisan rental:gerar-cobrancas-recorrentes --dry-run
 ```
 
 ### Executar recorrencia real
 
 ```bash
-php artisan locx:gerar-cobrancas-recorrentes
+php artisan rental:gerar-cobrancas-recorrentes
 ```
 
 ### Simular CRM automatico
 
 ```bash
-php artisan locx:sincronizar-crm --dry-run
+php artisan rental:sincronizar-crm --dry-run
 ```
 
 ### Executar CRM automatico real
 
 ```bash
-php artisan locx:sincronizar-crm
+php artisan rental:sincronizar-crm
 ```
 
 ## 11. Webhooks
@@ -818,12 +818,12 @@ Verifique:
 
 - migration rodada;
 - cron ativo;
-- `LOCX_CRM_AUTOMACOES_ATIVAS=true`;
+- `RENTAL_CRM_AUTOMACOES_ATIVAS=true`;
 - existem cobrancas atrasadas;
 - comando manual funciona:
 
 ```bash
-php artisan locx:sincronizar-crm --dry-run
+php artisan rental:sincronizar-crm --dry-run
 ```
 
 ### Cobrancas recorrentes nao aparecem
@@ -833,11 +833,11 @@ Verifique:
 - contrato ativo;
 - cobranca automatica marcada;
 - cron ativo;
-- `LOCX_RECORRENCIA_ATIVA=true`;
+- `RENTAL_RECORRENCIA_ATIVA=true`;
 - comando manual funciona:
 
 ```bash
-php artisan locx:gerar-cobrancas-recorrentes --dry-run
+php artisan rental:gerar-cobrancas-recorrentes --dry-run
 ```
 
 ## 14. Checklist para colocar em producao
@@ -863,7 +863,7 @@ Antes de liberar para uso real:
 
 ## 15. Resumo simples para o cliente
 
-O LocX controla a locacao da moto do inicio ao fim:
+O Gestor de Locações controla a locacao da moto do inicio ao fim:
 
 1. cadastra cliente;
 2. cadastra moto;

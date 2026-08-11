@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Cobranca;
+use App\Support\RentalSupport;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Throwable;
@@ -19,7 +20,7 @@ class EmailCampanhaService
         }
 
         $html = '<div style="font-family:Arial,sans-serif;line-height:1.55;color:#172033;max-width:640px;margin:auto">'
-            .'<div style="background:#0f766e;color:#fff;padding:18px 22px;border-radius:12px 12px 0 0"><strong>LocX · Central de Cobranças</strong></div>'
+            .'<div style="background:#0f766e;color:#fff;padding:18px 22px;border-radius:12px 12px 0 0"><strong>'.e(RentalSupport::storeName()).' · Central de Cobranças</strong></div>'
             .'<div style="border:1px solid #dbe6ea;border-top:0;padding:24px;border-radius:0 0 12px 12px">'
             .nl2br(e($mensagem)).'</div></div>';
 
