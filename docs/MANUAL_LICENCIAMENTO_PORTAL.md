@@ -281,6 +281,27 @@ Também são reconhecidos `confirmed`, `received`, `pago`, `cancelled`, `refunde
 
 Na tela de login, clique em **Esqueci minha senha**. O link enviado por e-mail expira em 60 minutos. Para o envio funcionar em produção, configure as variáveis `MAIL_*` do `.env`.
 
+### Portal Minha Licença para o cliente
+
+O cliente acessa:
+
+```text
+https://seu-dominio.com/minha-licenca/login
+```
+
+Para liberar o acesso, abra o cliente na Administração comercial, informe um e-mail exclusivo, selecione **Portal Minha Licença: liberado** e cadastre uma senha de pelo menos oito caracteres. Também é possível deixar a senha vazia e pedir que o cliente use **Esqueci minha senha**.
+
+No portal, o cliente vê somente os dados da própria empresa:
+
+- plano, status e vencimento;
+- limites de lojas e usuários;
+- valor mensal e tipo de renovação;
+- cobranças e histórico de pagamentos;
+- botão **Pagar agora** quando a cobrança possui link;
+- formulário para solicitar renovação por 1, 3, 6 ou 12 meses.
+
+Quando o cliente solicita renovação, uma cobrança pendente aparece na Administração comercial. Edite a cobrança, selecione o gateway, informe a referência externa e cole o link criado no provedor. O botão **Pagar agora** aparecerá imediatamente para o cliente. Depois da confirmação pelo webhook, o status e o novo vencimento são atualizados.
+
 Nesta implementacao inicial, o portal administrativo ja pode ser acessado em:
 
 `/licencas-portal`

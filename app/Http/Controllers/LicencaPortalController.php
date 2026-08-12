@@ -13,6 +13,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\Rule;
 use Illuminate\View\View;
 
@@ -35,6 +36,7 @@ class LicencaPortalController extends Controller
             'clienteEdit' => $request->integer('cliente_edit') ? LicencaPortalCliente::findOrFail($request->integer('cliente_edit')) : null,
             'planoEdit' => $request->integer('plano_edit') ? LicencaPortalPlano::findOrFail($request->integer('plano_edit')) : null,
             'licencaEdit' => $request->integer('licenca_edit') ? LicencaPortalLicenca::findOrFail($request->integer('licenca_edit')) : null,
+            'pagamentoEdit' => $request->integer('pagamento_edit') ? LicencaPortalPagamento::findOrFail($request->integer('pagamento_edit')) : null,
         ]);
     }
 
@@ -49,12 +51,23 @@ class LicencaPortalController extends Controller
             'id' => ['nullable', 'integer'],
             'nome' => ['required', 'string', 'max:180'],
             'documento' => ['nullable', 'string', 'max:30'],
-            'email' => ['nullable', 'email', 'max:160'],
+            'email' => ['nullable', 'email', 'max:160', Rule::unique('licenca_portal_clientes', 'email')->ignore($cliente->id)],
             'telefone' => ['nullable', 'string', 'max:40'],
             'status' => ['required', Rule::in(['ativo', 'bloqueado', 'cancelado'])],
+            'portal_ativo' => ['nullable', 'boolean'],
+            'senha_portal' => ['nullable', 'string', 'min:8', 'max:120'],
         ]);
 
-        $cliente->fill(collect($dados)->except('id')->all() + ['atualizado_em' => now()]);
+        if ($request->boolean('portal_ativo') && blank($dados['email'] ?? null)) {
+            return back()->withInput()->withErrors(['email' => 'Informe o e-mail para liberar o portal Minha Licença.']);
+        }
+        $cliente->fill(collect($dados)->except(['id', 'senha_portal'])->all() + [
+            'portal_ativo' => $request->boolean('portal_ativo'),
+            'atualizado_em' => now(),
+        ]);
+        if (filled($dados['senha_portal'] ?? null)) {
+            $cliente->senha = Hash::make((string) $dados['senha_portal']);
+        }
         $cliente->save();
 
         return redirect(url('/licencas-portal#clientes'))->with('success', 'Cliente salvo no portal.');
@@ -172,11 +185,15 @@ class LicencaPortalController extends Controller
     public function salvarPagamento(Request $request): RedirectResponse
     {
         $this->autorizarPortal($request->user());
+        $pagamento = $request->integer('id')
+            ? LicencaPortalPagamento::findOrFail($request->integer('id'))
+            : new LicencaPortalPagamento;
         $dados = $request->validate([
+            'id' => ['nullable', 'integer'],
             'licenca_id' => ['required', 'exists:licenca_portal_licencas,id'],
             'plano_id' => ['nullable', 'exists:licenca_portal_planos,id'],
             'gateway' => ['required', Rule::in(['manual', 'asaas', 'pagbank', 'mercadopago', 'stripe', 'outro'])],
-            'referencia_externa' => ['nullable', 'string', 'max:160', 'unique:licenca_portal_pagamentos,referencia_externa'],
+            'referencia_externa' => ['nullable', 'string', 'max:160', Rule::unique('licenca_portal_pagamentos', 'referencia_externa')->ignore($pagamento->id)],
             'valor' => ['required', 'numeric', 'min:0'],
             'status' => ['required', Rule::in(['pendente', 'pago', 'cancelado', 'estornado', 'falhou'])],
             'meses_renovacao' => ['required', 'integer', 'min:1', 'max:24'],
@@ -184,20 +201,21 @@ class LicencaPortalController extends Controller
             'link_pagamento' => ['nullable', 'url', 'max:1000'],
         ]);
         $licenca = LicencaPortalLicenca::findOrFail($dados['licenca_id']);
-        $pagamento = LicencaPortalPagamento::create([
+        $pagamento->fill([
             'licenca_id' => $licenca->id,
             'cliente_id' => $licenca->cliente_id,
             'plano_id' => $dados['plano_id'] ?? $licenca->plano_id,
             'gateway' => $dados['gateway'],
-            'referencia_externa' => ($dados['referencia_externa'] ?? null) ?: 'PORTAL-'.strtoupper(Str::random(16)),
+            'referencia_externa' => ($dados['referencia_externa'] ?? null) ?: ($pagamento->referencia_externa ?: 'PORTAL-'.strtoupper(Str::random(16))),
             'valor_centavos' => (int) round(((float) $dados['valor']) * 100),
             'status' => $dados['status'],
             'meses_renovacao' => $dados['meses_renovacao'],
             'vencimento' => $dados['vencimento'] ?? null,
             'link_pagamento' => $dados['link_pagamento'] ?? null,
-            'pago_em' => $dados['status'] === 'pago' ? now() : null,
+            'pago_em' => $dados['status'] === 'pago' ? ($pagamento->pago_em ?: now()) : null,
             'atualizado_em' => now(),
         ]);
+        $pagamento->save();
         if ($pagamento->status === 'pago') {
             $this->pagamentosService->confirmar($pagamento, ['origem' => 'portal_administrativo'], true);
         }

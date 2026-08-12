@@ -182,6 +182,8 @@ Na tela de entrada, clique em **Esqueci minha senha**, informe seu e-mail e abra
 
 Essa área é exclusiva do Super Admin. Ela permite editar clientes e planos, trocar o plano de uma licença, bloquear ou desbloquear, renovar manualmente, registrar cobranças e consultar o histórico de pagamentos. O gateway renova automaticamente uma licença somente depois de confirmar o pagamento e quando a renovação automática estiver ativa.
 
+O cliente da aplicação pode acessar **Minha Licença** em `/minha-licenca/login`. Nessa área ele consulta o plano e o vencimento, solicita renovação, abre o link de pagamento e acompanha o histórico sem acessar dados administrativos ou informações de outras empresas.
+
 ## Portal do cliente
 
 Quando liberado, o cliente acessa um endereço próprio para consultar:

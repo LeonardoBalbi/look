@@ -4,6 +4,8 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\ClienteAuthController;
 use App\Http\Controllers\ClientePortalController;
 use App\Http\Controllers\LicencaPortalController;
+use App\Http\Controllers\LicencaClienteAuthController;
+use App\Http\Controllers\LicencaClientePortalController;
 use App\Http\Controllers\RentalController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
@@ -87,6 +89,21 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/lojas', [RentalController::class, 'salvarLoja'])->name('rental.lojas.salvar');
     Route::post('/usuarios', [RentalController::class, 'salvarUsuario'])->name('rental.usuarios.salvar');
     Route::post('/usuarios/perfis', [RentalController::class, 'salvarUsuarioPerfil'])->name('rental.usuarios.perfis.salvar');
+});
+
+Route::prefix('minha-licenca')->middleware('guest:licenca_cliente')->group(function (): void {
+    Route::get('/login', [LicencaClienteAuthController::class, 'create'])->name('licenca-cliente.login');
+    Route::post('/login', [LicencaClienteAuthController::class, 'store'])->name('licenca-cliente.login.store');
+    Route::get('/esqueci-senha', [LicencaClienteAuthController::class, 'solicitarSenha'])->name('licenca-cliente.password.request');
+    Route::post('/esqueci-senha', [LicencaClienteAuthController::class, 'enviarRecuperacao'])->middleware('throttle:5,1')->name('licenca-cliente.password.email');
+    Route::get('/redefinir-senha/{token}', [LicencaClienteAuthController::class, 'redefinirSenha'])->name('licenca-cliente.password.reset');
+    Route::post('/redefinir-senha', [LicencaClienteAuthController::class, 'salvarNovaSenha'])->middleware('throttle:5,1')->name('licenca-cliente.password.update');
+});
+
+Route::prefix('minha-licenca')->middleware('auth:licenca_cliente')->group(function (): void {
+    Route::get('/', [LicencaClientePortalController::class, 'index'])->name('licenca-cliente.portal');
+    Route::post('/renovacoes', [LicencaClientePortalController::class, 'solicitarRenovacao'])->name('licenca-cliente.renovacoes.solicitar');
+    Route::post('/logout', [LicencaClienteAuthController::class, 'destroy'])->name('licenca-cliente.logout');
 });
 
 Route::match(['get', 'post'], '/webhooks/whatsapp', [WebhookController::class, 'whatsapp'])->name('rental.webhook-whatsapp');

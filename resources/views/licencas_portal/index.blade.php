@@ -47,6 +47,10 @@
         </div>
         <a class="btn secondary" href="#licencas">Gerar chave</a>
     </div>
+    <div class="api-box">
+        <div><strong>Portal de pagamento do cliente</strong><br><code>{{ route('licenca-cliente.login') }}</code></div>
+        <a class="btn secondary" href="{{ route('licenca-cliente.login') }}" target="_blank" rel="noopener">Abrir Minha Licença</a>
+    </div>
 
     <section class="cards">
         <div class="metric"><span>Clientes</span><strong>{{ $clientes->count() }}</strong></div>
@@ -66,6 +70,8 @@
                 <label>Status<select name="status">@foreach(['ativo','bloqueado','cancelado'] as $status)<option value="{{ $status }}" @selected(old('status',$clienteEdit?->status ?? 'ativo')===$status)>{{ $status }}</option>@endforeach</select></label>
                 <label>E-mail<input type="email" name="email" maxlength="160" value="{{ old('email', $clienteEdit?->email) }}"></label>
                 <label>Telefone<input name="telefone" maxlength="40" value="{{ old('telefone', $clienteEdit?->telefone) }}"></label>
+                <label>Portal Minha Licença<select name="portal_ativo"><option value="1" @selected(old('portal_ativo',$clienteEdit?->portal_ativo ?? false))>liberado</option><option value="0" @selected(!old('portal_ativo',$clienteEdit?->portal_ativo ?? false))>bloqueado</option></select></label>
+                <label>Senha do portal<input type="password" name="senha_portal" minlength="8" autocomplete="new-password" placeholder="deixe vazio para manter ou enviar recuperação"></label>
                 <div class="span-2"><button>Salvar cliente</button> @if($clienteEdit)<a class="btn secondary" href="{{ url('/licencas-portal#clientes') }}">Cancelar</a>@endif</div>
             </form>
         </section>
@@ -139,7 +145,7 @@
                 <thead><tr><th>Nome</th><th>Documento</th><th>Status</th><th>Licencas</th><th>Ação</th></tr></thead>
                 <tbody>
                 @forelse($clientes as $cliente)
-                    <tr><td>{{ $cliente->nome }}</td><td>{{ $cliente->documento ?: '-' }}</td><td><span class="badge {{ $cliente->status }}">{{ $cliente->status }}</span></td><td>{{ $cliente->licencas_count }}</td><td><a class="btn secondary small" href="{{ route('licencas-portal.index',['cliente_edit'=>$cliente->id]).'#clientes' }}">Editar</a></td></tr>
+                    <tr><td>{{ $cliente->nome }}<br><small>{{ $cliente->email ?: 'sem e-mail' }}</small></td><td>{{ $cliente->documento ?: '-' }}</td><td><span class="badge {{ $cliente->status }}">{{ $cliente->status }}</span><br><small>Minha Licença: {{ $cliente->portal_ativo ? 'liberado' : 'bloqueado' }}</small></td><td>{{ $cliente->licencas_count }}</td><td><a class="btn secondary small" href="{{ route('licencas-portal.index',['cliente_edit'=>$cliente->id]).'#clientes' }}">Editar</a></td></tr>
                 @empty
                     <tr><td colspan="5" class="muted">Nenhum cliente cadastrado.</td></tr>
                 @endforelse
@@ -169,19 +175,20 @@
     </div>
 
     <section class="panel" id="pagamentos">
-        <h2>Registrar cobrança ou pagamento</h2>
+        <h2>{{ $pagamentoEdit ? 'Editar cobrança ou pagamento' : 'Registrar cobrança ou pagamento' }}</h2>
         <form class="form-grid" method="post" action="{{ route('licencas-portal.pagamentos.salvar') }}">
             @csrf
-            <label>Licença<select name="licenca_id" required><option value="">Selecione</option>@foreach($licencas as $licenca)<option value="{{ $licenca->id }}">{{ $licenca->cliente?->nome }} · {{ $licenca->plano?->nome }}</option>@endforeach</select></label>
-            <label>Novo plano (opcional)<select name="plano_id"><option value="">Manter plano atual</option>@foreach($planos as $plano)<option value="{{ $plano->id }}">{{ $plano->nome }}</option>@endforeach</select></label>
-            <label>Gateway<select name="gateway">@foreach(['manual','asaas','pagbank','mercadopago','stripe','outro'] as $gateway)<option>{{ $gateway }}</option>@endforeach</select></label>
-            <label>Referência externa<input name="referencia_externa" maxlength="160" placeholder="ID informado pelo gateway"></label>
-            <label>Valor<input type="number" name="valor" min="0" step="0.01" required value="0.00"></label>
-            <label>Status<select name="status"><option value="pendente">pendente</option><option value="pago">pago</option><option value="cancelado">cancelado</option><option value="estornado">estornado</option><option value="falhou">falhou</option></select></label>
-            <label>Meses de renovação<input type="number" name="meses_renovacao" min="1" max="24" value="1" required></label>
-            <label>Vencimento<input type="date" name="vencimento" value="{{ now()->addDays(5)->format('Y-m-d') }}"></label>
-            <label class="span-2">Link de pagamento<input type="url" name="link_pagamento" maxlength="1000" placeholder="https://gateway.example/pagar/..."></label>
-            <div class="span-2"><button>Registrar pagamento</button></div>
+            <input type="hidden" name="id" value="{{ $pagamentoEdit?->id }}">
+            <label>Licença<select name="licenca_id" required><option value="">Selecione</option>@foreach($licencas as $licenca)<option value="{{ $licenca->id }}" @selected(old('licenca_id',$pagamentoEdit?->licenca_id)==$licenca->id)>{{ $licenca->cliente?->nome }} · {{ $licenca->plano?->nome }}</option>@endforeach</select></label>
+            <label>Novo plano (opcional)<select name="plano_id"><option value="">Manter plano atual</option>@foreach($planos as $plano)<option value="{{ $plano->id }}" @selected(old('plano_id',$pagamentoEdit?->plano_id)==$plano->id)>{{ $plano->nome }}</option>@endforeach</select></label>
+            <label>Gateway<select name="gateway">@foreach(['manual','asaas','pagbank','mercadopago','stripe','outro'] as $gateway)<option @selected(old('gateway',$pagamentoEdit?->gateway ?? 'manual')===$gateway)>{{ $gateway }}</option>@endforeach</select></label>
+            <label>Referência externa<input name="referencia_externa" maxlength="160" value="{{ old('referencia_externa',$pagamentoEdit?->referencia_externa) }}" placeholder="ID informado pelo gateway"></label>
+            <label>Valor<input type="number" name="valor" min="0" step="0.01" required value="{{ old('valor',$pagamentoEdit ? number_format($pagamentoEdit->valor_centavos/100,2,'.','') : '0.00') }}"></label>
+            <label>Status<select name="status">@foreach(['pendente','pago','cancelado','estornado','falhou'] as $status)<option value="{{ $status }}" @selected(old('status',$pagamentoEdit?->status ?? 'pendente')===$status)>{{ $status }}</option>@endforeach</select></label>
+            <label>Meses de renovação<input type="number" name="meses_renovacao" min="1" max="24" value="{{ old('meses_renovacao',$pagamentoEdit?->meses_renovacao ?? 1) }}" required></label>
+            <label>Vencimento<input type="date" name="vencimento" value="{{ old('vencimento',$pagamentoEdit?->vencimento?->format('Y-m-d') ?? now()->addDays(5)->format('Y-m-d')) }}"></label>
+            <label class="span-2">Link de pagamento<input type="url" name="link_pagamento" maxlength="1000" value="{{ old('link_pagamento',$pagamentoEdit?->link_pagamento) }}" placeholder="https://gateway.example/pagar/..."></label>
+            <div class="span-2"><button>{{ $pagamentoEdit ? 'Salvar cobrança' : 'Registrar pagamento' }}</button> @if($pagamentoEdit)<a class="btn secondary" href="{{ url('/licencas-portal#pagamentos') }}">Cancelar</a>@endif</div>
         </form>
         <p class="help">Quando um pagamento é confirmado, a licença é ativada e o vencimento é estendido apenas uma vez. Webhook: <code>{{ $webhookUrl }}</code></p>
     </section>
@@ -199,7 +206,7 @@
                     <td>R$ {{ number_format($pagamento->valor_centavos/100,2,',','.') }}</td>
                     <td><span class="badge {{ $pagamento->status }}">{{ $pagamento->status }}</span><br><small>{{ $pagamento->pago_em?->format('d/m/Y H:i') }}</small></td>
                     <td>{{ $pagamento->meses_renovacao }} mês(es)<br><small>{{ $pagamento->renovado_em ? 'aplicada em '.$pagamento->renovado_em->format('d/m/Y H:i') : 'não aplicada' }}</small></td>
-                    <td>@if($pagamento->status !== 'pago')<form method="post" action="{{ route('licencas-portal.pagamentos.confirmar',$pagamento) }}">@csrf<button class="small">Confirmar pagamento</button></form>@else — @endif</td>
+                    <td class="actions-cell"><a class="btn secondary small" href="{{ route('licencas-portal.index',['pagamento_edit'=>$pagamento->id]).'#pagamentos' }}">Editar / inserir link</a>@if($pagamento->status !== 'pago')<form method="post" action="{{ route('licencas-portal.pagamentos.confirmar',$pagamento) }}">@csrf<button class="small">Confirmar pagamento</button></form>@endif</td>
                 </tr>
             @empty
                 <tr><td colspan="7" class="muted">Nenhum pagamento registrado.</td></tr>

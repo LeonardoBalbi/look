@@ -26,9 +26,11 @@ return Application::configure(basePath: dirname(__DIR__))
                 | Request::HEADER_X_FORWARDED_PROTO
         );
 
-        $middleware->redirectGuestsTo(fn (Request $request) => $request->is('portal*')
-            ? route('cliente.login')
-            : route('rental.login'));
+        $middleware->redirectGuestsTo(fn (Request $request) => match (true) {
+            $request->is('minha-licenca*') => route('licenca-cliente.login'),
+            $request->is('portal*') => route('cliente.login'),
+            default => route('rental.login'),
+        });
 
         $middleware->validateCsrfTokens(except: [
             'webhooks/*',
