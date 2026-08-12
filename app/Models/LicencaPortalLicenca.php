@@ -13,6 +13,7 @@ class LicencaPortalLicenca extends BaseModel
         'vence_em' => 'date',
         'ultimo_check_em' => 'datetime',
         'atualizado_em' => 'datetime',
+        'renovacao_automatica' => 'boolean',
     ];
 
     public function cliente(): BelongsTo
@@ -28,5 +29,10 @@ class LicencaPortalLicenca extends BaseModel
     public function logs(): HasMany
     {
         return $this->hasMany(LicencaPortalValidacaoLog::class, 'licenca_id');
+    }
+
+    public function pagamentos(): HasMany
+    {
+        return $this->hasMany(LicencaPortalPagamento::class, 'licenca_id');
     }
 }

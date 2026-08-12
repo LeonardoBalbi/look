@@ -18,4 +18,9 @@ class LicencaPortalPlano extends BaseModel
     {
         return $this->hasMany(LicencaPortalLicenca::class, 'plano_id');
     }
+
+    public function pagamentos(): HasMany
+    {
+        return $this->hasMany(LicencaPortalPagamento::class, 'plano_id');
+    }
 }

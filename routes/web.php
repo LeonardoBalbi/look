@@ -11,6 +11,10 @@ use Illuminate\Support\Facades\Route;
 Route::middleware('guest')->group(function (): void {
     Route::get('/login', [AuthController::class, 'create'])->name('rental.login');
     Route::post('/login', [AuthController::class, 'store'])->name('rental.login.store');
+    Route::get('/esqueci-senha', [AuthController::class, 'solicitarSenha'])->name('password.request');
+    Route::post('/esqueci-senha', [AuthController::class, 'enviarRecuperacao'])->middleware('throttle:5,1')->name('password.email');
+    Route::get('/redefinir-senha/{token}', [AuthController::class, 'redefinirSenha'])->name('password.reset');
+    Route::post('/redefinir-senha', [AuthController::class, 'salvarNovaSenha'])->middleware('throttle:5,1')->name('password.update');
 });
 
 Route::middleware('guest:cliente')->group(function (): void {
@@ -32,6 +36,10 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/licencas-portal/clientes', [LicencaPortalController::class, 'salvarCliente'])->name('licencas-portal.clientes.salvar');
     Route::post('/licencas-portal/planos', [LicencaPortalController::class, 'salvarPlano'])->name('licencas-portal.planos.salvar');
     Route::post('/licencas-portal/licencas', [LicencaPortalController::class, 'salvarLicenca'])->name('licencas-portal.licencas.salvar');
+    Route::post('/licencas-portal/licencas/{licenca}/bloqueio', [LicencaPortalController::class, 'alternarBloqueio'])->name('licencas-portal.licencas.bloqueio');
+    Route::post('/licencas-portal/licencas/{licenca}/renovar', [LicencaPortalController::class, 'renovar'])->name('licencas-portal.licencas.renovar');
+    Route::post('/licencas-portal/pagamentos', [LicencaPortalController::class, 'salvarPagamento'])->name('licencas-portal.pagamentos.salvar');
+    Route::post('/licencas-portal/pagamentos/{pagamento}/confirmar', [LicencaPortalController::class, 'confirmarPagamento'])->name('licencas-portal.pagamentos.confirmar');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('rental.logout');
     Route::post('/clientes', [RentalController::class, 'salvarCliente'])->name('rental.clientes.salvar');
     Route::post('/reservas', [RentalController::class, 'salvarReserva'])->name('rental.reservas.salvar');

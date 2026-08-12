@@ -56,3 +56,5 @@ php artisan config:cache
 ## Segurança
 
 Documentos novos de clientes são armazenados no disco privado e baixados somente por rota autenticada. Ações de escrita são registradas em `audit_logs`. Em produção, use HTTPS, backups externos testados, credenciais exclusivas por cliente e `APP_DEBUG=false`.
+
+A recuperação de senha utiliza token expirável e resposta que não revela se o usuário existe. Os webhooks de pagamento das licenças exigem `LICENSE_PAYMENT_WEBHOOK_TOKEN`.

@@ -246,6 +246,41 @@ Status recomendados:
 
 ## 12. Renovacao e pagamento
 
+O portal agora permite editar a licença, alterar o plano, bloquear ou desbloquear, desvincular uma instalação antiga e renovar por um ou mais meses. Toda renovação manual cria um pagamento no histórico. Se a licença estiver válida, os meses são acrescentados ao vencimento atual; se estiver vencida, a contagem começa na data da renovação.
+
+Na opção **Renovação automática**, o vencimento será ampliado quando o gateway confirmar um pagamento pendente pelo webhook.
+
+### Configurar o webhook de pagamento
+
+No `.env` do servidor central, defina um segredo longo:
+
+```env
+LICENSE_PAYMENT_WEBHOOK_TOKEN=gere-um-token-longo-e-secreto
+```
+
+Cadastre a cobrança em **Administração comercial > Registrar cobrança ou pagamento**, usando a mesma referência externa do gateway. Configure o provedor para chamar:
+
+```text
+POST https://seu-dominio.com/api/licencas-portal/webhooks/pagamentos/asaas
+```
+
+Troque `asaas` pelo nome do provedor. Envie o segredo como Bearer Token ou no cabeçalho `X-License-Webhook-Token`.
+
+Payload genérico aceito:
+
+```json
+{
+  "external_reference": "pay_123",
+  "status": "paid"
+}
+```
+
+Também são reconhecidos `confirmed`, `received`, `pago`, `cancelled`, `refunded` e `failed`. Uma confirmação repetida não renova duas vezes. O portal é independente de gateway; o checkout ou link de cobrança deve ser criado no provedor contratado e pode ser salvo no campo **Link de pagamento**.
+
+### Recuperação de senha
+
+Na tela de login, clique em **Esqueci minha senha**. O link enviado por e-mail expira em 60 minutos. Para o envio funcionar em produção, configure as variáveis `MAIL_*` do `.env`.
+
 Nesta implementacao inicial, o portal administrativo ja pode ser acessado em:
 
 `/licencas-portal`

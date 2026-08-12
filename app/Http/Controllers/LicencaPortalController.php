@@ -4,9 +4,11 @@ namespace App\Http\Controllers;
 
 use App\Models\LicencaPortalCliente;
 use App\Models\LicencaPortalLicenca;
+use App\Models\LicencaPortalPagamento;
 use App\Models\LicencaPortalPlano;
 use App\Models\LicencaPortalValidacaoLog;
 use App\Models\User;
+use App\Services\LicencaPagamentoService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -16,6 +18,8 @@ use Illuminate\View\View;
 
 class LicencaPortalController extends Controller
 {
+    public function __construct(private readonly LicencaPagamentoService $pagamentosService) {}
+
     public function index(Request $request): View
     {
         $this->autorizarPortal($request->user());
@@ -23,9 +27,14 @@ class LicencaPortalController extends Controller
         return view('licencas_portal.index', [
             'clientes' => LicencaPortalCliente::query()->withCount('licencas')->latest('id')->get(),
             'planos' => LicencaPortalPlano::query()->withCount('licencas')->orderBy('nome')->get(),
-            'licencas' => LicencaPortalLicenca::query()->with('cliente', 'plano')->latest('id')->get(),
+            'licencas' => LicencaPortalLicenca::query()->with('cliente', 'plano')->withCount('pagamentos')->latest('id')->get(),
+            'pagamentos' => LicencaPortalPagamento::query()->with('cliente', 'licenca', 'plano')->latest('id')->limit(100)->get(),
             'logs' => LicencaPortalValidacaoLog::query()->with('licenca.cliente')->latest('id')->limit(20)->get(),
             'apiUrl' => url('/api/licencas-portal'),
+            'webhookUrl' => url('/api/licencas-portal/webhooks/pagamentos/{gateway}'),
+            'clienteEdit' => $request->integer('cliente_edit') ? LicencaPortalCliente::findOrFail($request->integer('cliente_edit')) : null,
+            'planoEdit' => $request->integer('plano_edit') ? LicencaPortalPlano::findOrFail($request->integer('plano_edit')) : null,
+            'licencaEdit' => $request->integer('licenca_edit') ? LicencaPortalLicenca::findOrFail($request->integer('licenca_edit')) : null,
         ]);
     }
 
@@ -99,16 +108,131 @@ class LicencaPortalController extends Controller
             'status' => ['required', Rule::in(['ativa', 'trial', 'teste', 'bloqueada', 'vencida', 'pendente'])],
             'vence_em' => ['nullable', 'date'],
             'tolerancia_offline_dias' => ['required', 'integer', 'min:1', 'max:60'],
+            'renovacao_automatica' => ['nullable', 'boolean'],
+            'meses_por_renovacao' => ['nullable', 'integer', 'min:1', 'max:24'],
+            'desvincular_instancia' => ['nullable', 'boolean'],
             'mensagem' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $licenca->fill(collect($dados)->except(['id', 'chave'])->all() + [
+        $licenca->fill(collect($dados)->except(['id', 'chave', 'desvincular_instancia'])->all() + [
             'chave' => blank($dados['chave'] ?? null) ? ($licenca->chave ?: $this->gerarChave()) : strtoupper((string) $dados['chave']),
+            'renovacao_automatica' => $request->boolean('renovacao_automatica'),
+            'meses_por_renovacao' => $dados['meses_por_renovacao'] ?? $licenca->meses_por_renovacao ?? 1,
             'atualizado_em' => now(),
         ]);
+        if ($request->boolean('desvincular_instancia')) {
+            $licenca->instancia_id = null;
+        }
         $licenca->save();
 
         return redirect(url('/licencas-portal#licencas'))->with('success', 'Licenca salva no portal.');
+    }
+
+    public function alternarBloqueio(Request $request, LicencaPortalLicenca $licenca): RedirectResponse
+    {
+        $this->autorizarPortal($request->user());
+        $bloquear = $licenca->status !== 'bloqueada';
+        $licenca->update([
+            'status' => $bloquear ? 'bloqueada' : 'ativa',
+            'mensagem' => $bloquear ? 'Licença bloqueada pela administração comercial.' : 'Licença liberada pela administração comercial.',
+            'atualizado_em' => now(),
+        ]);
+
+        return redirect(url('/licencas-portal#licencas'))
+            ->with('success', $bloquear ? 'Licença bloqueada.' : 'Licença desbloqueada.');
+    }
+
+    public function renovar(Request $request, LicencaPortalLicenca $licenca): RedirectResponse
+    {
+        $this->autorizarPortal($request->user());
+        $dados = $request->validate([
+            'meses' => ['required', 'integer', 'min:1', 'max:24'],
+            'valor' => ['nullable', 'numeric', 'min:0'],
+            'plano_id' => ['nullable', 'exists:licenca_portal_planos,id'],
+        ]);
+
+        $pagamento = LicencaPortalPagamento::create([
+            'licenca_id' => $licenca->id,
+            'cliente_id' => $licenca->cliente_id,
+            'plano_id' => $dados['plano_id'] ?? $licenca->plano_id,
+            'gateway' => 'manual',
+            'referencia_externa' => 'MANUAL-'.strtoupper(Str::random(16)),
+            'valor_centavos' => (int) round(((float) ($dados['valor'] ?? 0)) * 100),
+            'status' => 'pago',
+            'meses_renovacao' => (int) $dados['meses'],
+            'vencimento' => today(),
+            'pago_em' => now(),
+            'atualizado_em' => now(),
+        ]);
+        $this->pagamentosService->confirmar($pagamento, ['origem' => 'renovacao_manual'], true);
+
+        return redirect(url('/licencas-portal#licencas'))->with('success', 'Licença renovada e pagamento registrado.');
+    }
+
+    public function salvarPagamento(Request $request): RedirectResponse
+    {
+        $this->autorizarPortal($request->user());
+        $dados = $request->validate([
+            'licenca_id' => ['required', 'exists:licenca_portal_licencas,id'],
+            'plano_id' => ['nullable', 'exists:licenca_portal_planos,id'],
+            'gateway' => ['required', Rule::in(['manual', 'asaas', 'pagbank', 'mercadopago', 'stripe', 'outro'])],
+            'referencia_externa' => ['nullable', 'string', 'max:160', 'unique:licenca_portal_pagamentos,referencia_externa'],
+            'valor' => ['required', 'numeric', 'min:0'],
+            'status' => ['required', Rule::in(['pendente', 'pago', 'cancelado', 'estornado', 'falhou'])],
+            'meses_renovacao' => ['required', 'integer', 'min:1', 'max:24'],
+            'vencimento' => ['nullable', 'date'],
+            'link_pagamento' => ['nullable', 'url', 'max:1000'],
+        ]);
+        $licenca = LicencaPortalLicenca::findOrFail($dados['licenca_id']);
+        $pagamento = LicencaPortalPagamento::create([
+            'licenca_id' => $licenca->id,
+            'cliente_id' => $licenca->cliente_id,
+            'plano_id' => $dados['plano_id'] ?? $licenca->plano_id,
+            'gateway' => $dados['gateway'],
+            'referencia_externa' => ($dados['referencia_externa'] ?? null) ?: 'PORTAL-'.strtoupper(Str::random(16)),
+            'valor_centavos' => (int) round(((float) $dados['valor']) * 100),
+            'status' => $dados['status'],
+            'meses_renovacao' => $dados['meses_renovacao'],
+            'vencimento' => $dados['vencimento'] ?? null,
+            'link_pagamento' => $dados['link_pagamento'] ?? null,
+            'pago_em' => $dados['status'] === 'pago' ? now() : null,
+            'atualizado_em' => now(),
+        ]);
+        if ($pagamento->status === 'pago') {
+            $this->pagamentosService->confirmar($pagamento, ['origem' => 'portal_administrativo'], true);
+        }
+
+        return redirect(url('/licencas-portal#pagamentos'))->with('success', 'Pagamento registrado.');
+    }
+
+    public function confirmarPagamento(Request $request, LicencaPortalPagamento $pagamento): RedirectResponse
+    {
+        $this->autorizarPortal($request->user());
+        $this->pagamentosService->confirmar($pagamento, ['origem' => 'confirmacao_manual'], true);
+
+        return redirect(url('/licencas-portal#pagamentos'))->with('success', 'Pagamento confirmado e licença renovada.');
+    }
+
+    public function webhookPagamento(Request $request, string $gateway): JsonResponse
+    {
+        $tokenConfigurado = (string) config('services.license_payments.webhook_token');
+        $tokenRecebido = (string) ($request->bearerToken() ?: $request->header('X-License-Webhook-Token'));
+        if ($tokenConfigurado === '' || ! hash_equals($tokenConfigurado, $tokenRecebido)) {
+            return response()->json(['ok' => false, 'mensagem' => 'Webhook não autorizado.'], 401);
+        }
+
+        $pagamento = $this->pagamentosService->processarWebhook(Str::slug($gateway, '_'), $request->all());
+        if (! $pagamento) {
+            return response()->json(['ok' => false, 'mensagem' => 'Referência de pagamento não encontrada.'], 404);
+        }
+
+        return response()->json([
+            'ok' => true,
+            'pagamento_id' => $pagamento->id,
+            'status' => $pagamento->status,
+            'licenca_status' => $pagamento->licenca?->status,
+            'vence_em' => $pagamento->licenca?->vence_em?->format('Y-m-d'),
+        ]);
     }
 
     public function validar(Request $request): JsonResponse

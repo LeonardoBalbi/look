@@ -174,6 +174,14 @@ Administradores podem criar usuários, atribuir perfis e liberar lojas. Conceda 
 
 As configurações de bancos, WhatsApp e Telegram devem ser preenchidas somente por pessoa autorizada. Credenciais, tokens, chaves e certificados não devem ser enviados por mensagens ou copiados para documentos públicos.
 
+### Recuperar a senha
+
+Na tela de entrada, clique em **Esqueci minha senha**, informe seu e-mail e abra a mensagem recebida. O link vale por 60 minutos e a nova senha deve ter no mínimo oito caracteres. Se a mensagem não chegar, confira a pasta de spam e peça ao administrador para verificar seu e-mail cadastrado.
+
+### Administração comercial e licenças
+
+Essa área é exclusiva do Super Admin. Ela permite editar clientes e planos, trocar o plano de uma licença, bloquear ou desbloquear, renovar manualmente, registrar cobranças e consultar o histórico de pagamentos. O gateway renova automaticamente uma licença somente depois de confirmar o pagamento e quando a renovação automática estiver ativa.
+
 ## Portal do cliente
 
 Quando liberado, o cliente acessa um endereço próprio para consultar:

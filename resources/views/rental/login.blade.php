@@ -14,9 +14,13 @@
     @if ($errors->any())
         <div class="alert">{{ $errors->first() }}</div>
     @endif
+    @if (session('status'))
+        <div class="notice">{{ session('status') }}</div>
+    @endif
     <input name="email" type="email" placeholder="E-mail" required autofocus value="{{ old('email') }}" autocomplete="username">
     <input name="senha" type="password" placeholder="Senha" required autocomplete="current-password">
     <button type="submit">Entrar</button>
+    <a href="{{ route('password.request') }}">Esqueci minha senha</a>
     <small>Use o acesso fornecido pelo administrador da sua empresa.</small>
 </form>
 </body>

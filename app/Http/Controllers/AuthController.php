@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
 use Illuminate\View\View;
 
@@ -58,5 +59,56 @@ class AuthController extends Controller
         $request->session()->regenerateToken();
 
         return redirect()->route('rental.login');
+    }
+
+    public function solicitarSenha(): View
+    {
+        return view('rental.forgot-password');
+    }
+
+    public function enviarRecuperacao(Request $request): RedirectResponse
+    {
+        $dados = $request->validate(['email' => ['required', 'email']]);
+        $email = strtolower($dados['email']);
+        if (User::query()->whereRaw('LOWER(email) = ?', [$email])->where('status', 'ativo')->exists()) {
+            Password::broker()->sendResetLink(['email' => $email]);
+        }
+
+        return back()->with('status', 'Se o e-mail estiver cadastrado e ativo, enviaremos as instruções de recuperação.');
+    }
+
+    public function redefinirSenha(Request $request, string $token): View
+    {
+        return view('rental.reset-password', [
+            'token' => $token,
+            'email' => $request->string('email')->toString(),
+        ]);
+    }
+
+    public function salvarNovaSenha(Request $request): RedirectResponse
+    {
+        $dados = $request->validate([
+            'token' => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'senha' => ['required', 'string', 'min:8', 'confirmed'],
+        ]);
+
+        $status = Password::broker()->reset([
+            'email' => strtolower($dados['email']),
+            'password' => $dados['senha'],
+            'password_confirmation' => $dados['senha'],
+            'token' => $dados['token'],
+        ], function (User $user, string $senha): void {
+            $user->senha = Hash::make($senha);
+            $user->save();
+        });
+
+        if ($status !== Password::PASSWORD_RESET) {
+            return back()->withInput($request->only('email'))->withErrors([
+                'email' => 'O link é inválido ou expirou. Solicite uma nova recuperação.',
+            ]);
+        }
+
+        return redirect()->route('rental.login')->with('status', 'Senha redefinida. Você já pode entrar.');
     }
 }
