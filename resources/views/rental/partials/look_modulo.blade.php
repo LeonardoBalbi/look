@@ -38,6 +38,9 @@
                 <form method="post" action="{{ route('rental.look-modulos.salvar') }}" class="form-grid">
                     @csrf
                     <input type="hidden" name="modulo" value="{{ $page }}">
+                    @if($singleStore)
+                        <input type="hidden" name="loja_id" value="{{ $lojaUnica?->id }}">
+                    @else
                     <label>Loja
                         <select name="loja_id">
                             <option value="">Geral</option>
@@ -46,6 +49,7 @@
                             @endforeach
                         </select>
                     </label>
+                    @endif
                     <label class="span-2">{{ $lookModulo['form']['titulo'] }}<input name="titulo" required value="{{ old('titulo') }}"></label>
                     <label>{{ $lookModulo['form']['pessoa'] }}<input name="pessoa" value="{{ old('pessoa') }}"></label>
                     <label>{{ $lookModulo['form']['documento'] }}<input name="documento" value="{{ old('documento') }}"></label>
@@ -92,14 +96,14 @@
         </div>
         <div class="table-wrap">
             <table>
-                <tr><th>ID</th><th>Titulo</th><th>Pessoa</th><th>Referencia</th><th>Loja</th><th>Valor</th><th>Prazo</th><th>Status</th><th>Criado por</th></tr>
+                <tr><th>ID</th><th>Titulo</th><th>Pessoa</th><th>Referencia</th>@unless($singleStore)<th>Loja</th>@endunless<th>Valor</th><th>Prazo</th><th>Status</th><th>Criado por</th></tr>
                 @forelse($lookRegistros as $registro)
                     <tr>
                         <td>#{{ $registro->id }}</td>
                         <td>{{ $registro->titulo }}<br><small>{{ \Illuminate\Support\Str::limit($registro->descricao, 80) }}</small></td>
                         <td>{{ $registro->pessoa ?: '-' }}<br><small>{{ $registro->telefone ?: '' }}</small></td>
                         <td>{{ $registro->documento ?: '-' }}</td>
-                        <td>{{ $registro->loja?->nome ?? 'Geral' }}</td>
+                        @unless($singleStore)<td>{{ $registro->loja?->nome ?? 'Geral' }}</td>@endunless
                         <td>{{ \App\Support\RentalSupport::moeda($registro->valor) }}</td>
                         <td>{{ $registro->vencimento?->format('d/m/Y') ?? '-' }}</td>
                         <td>{!! \App\Support\RentalSupport::status($registro->status) !!}</td>

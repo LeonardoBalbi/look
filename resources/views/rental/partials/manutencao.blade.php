@@ -11,7 +11,7 @@
         <form method="post" action="{{ route('rental.manutencao.ordens.salvar') }}" class="form-grid">
             @csrf
             <input type="hidden" name="id" value="{{ $ordemEdit?->id }}">
-            <label>Loja<select name="loja_id"><option value="">Selecione</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$ordemEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+            @if($singleStore)<input type="hidden" name="loja_id" value="{{ $ordemEdit?->loja_id ?: $lojaUnica?->id }}">@else<label>Loja<select name="loja_id"><option value="">Selecione</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$ordemEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>@endif
             <label>Moto<select name="motocicleta_id"><option value="">Sem moto</option>@foreach($motos as $moto)<option value="{{ $moto->id }}" @selected(old('motocicleta_id',$ordemEdit?->motocicleta_id)==$moto->id)>{{ $moto->placa ?: 'sem placa' }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
             <label>Cliente<select name="cliente_id"><option value="">Sem cliente</option>@foreach($clientes as $cliente)<option value="{{ $cliente->id }}" @selected(old('cliente_id',$ordemEdit?->cliente_id)==$cliente->id)>{{ $cliente->nome }}</option>@endforeach</select></label>
             <label>Tipo<select name="tipo">@foreach(['preventiva','corretiva','vistoria','sinistro'] as $tipo)<option value="{{ $tipo }}" @selected(old('tipo',$ordemEdit?->tipo ?? 'corretiva')===$tipo)>{{ ucfirst($tipo) }}</option>@endforeach</select></label>

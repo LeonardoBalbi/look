@@ -11,7 +11,7 @@
         <form method="post" action="{{ route('rental.estoque.produtos.salvar') }}" class="form-grid">
             @csrf
             <input type="hidden" name="id" value="{{ $produtoEdit?->id }}">
-            <label>Loja<select name="loja_id"><option value="">Geral</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$produtoEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+            @if($singleStore)<input type="hidden" name="loja_id" value="{{ $produtoEdit?->loja_id ?: $lojaUnica?->id }}">@else<label>Loja<select name="loja_id"><option value="">Geral</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$produtoEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>@endif
             <label class="span-2">Nome<input name="nome" required value="{{ old('nome',$produtoEdit?->nome) }}"></label>
             <label>SKU<input name="sku" value="{{ old('sku',$produtoEdit?->sku) }}"></label>
             <label>Grupo<input name="grupo" value="{{ old('grupo',$produtoEdit?->grupo) }}"></label>
@@ -26,7 +26,7 @@
         <form method="post" action="{{ route('rental.estoque.movimentos.salvar') }}" class="form-grid">
             @csrf
             <label class="span-2">Produto<select name="produto_id">@foreach($produtosEstoque as $produto)<option value="{{ $produto->id }}">{{ $produto->nome }}</option>@endforeach</select></label>
-            <label>Loja<select name="loja_id"><option value="">Geral</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>
+            @if($singleStore)<input type="hidden" name="loja_id" value="{{ $lojaUnica?->id }}">@else<label>Loja<select name="loja_id"><option value="">Geral</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>@endif
             <label>Tipo<select name="tipo"><option value="entrada">entrada</option><option value="saida">saída</option><option value="ajuste">ajuste</option></select></label>
             <label>Quantidade<input type="number" step="0.01" name="quantidade" required></label>
             <label>Valor unitário<input type="number" step="0.01" name="valor_unitario" value="0"></label>
@@ -37,10 +37,10 @@
     </div>
     <div class="panel">
         <h2>Produtos em Estoque</h2>
-        <div class="table-wrap"><table><tr><th>Produto</th><th>Loja</th><th>Saldo</th><th>Mínimo</th><th>Custo</th><th>Status</th><th>Ações</th></tr>
+        <div class="table-wrap"><table><tr><th>Produto</th>@unless($singleStore)<th>Loja</th>@endunless<th>Saldo</th><th>Mínimo</th><th>Custo</th><th>Status</th><th>Ações</th></tr>
             @foreach($produtosEstoque as $produto)
                 @php($saldo = (float) ($estoqueSaldos[$produto->id] ?? 0))
-                <tr><td>{{ $produto->nome }}<br><small>{{ $produto->sku ?: $produto->grupo }}</small></td><td>{{ $produto->loja?->nome ?? 'Geral' }}</td><td>{{ number_format($saldo, 2, ',', '.') }} {{ $produto->unidade }}</td><td>{{ number_format((float) $produto->estoque_minimo, 2, ',', '.') }}</td><td>{{ \App\Support\RentalSupport::moeda($produto->custo_unitario) }}</td><td>{!! \App\Support\RentalSupport::status($produto->status) !!}</td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'estoque','edit'=>$produto->id]) }}">Editar</a></td></tr>
+                <tr><td>{{ $produto->nome }}<br><small>{{ $produto->sku ?: $produto->grupo }}</small></td>@unless($singleStore)<td>{{ $produto->loja?->nome ?? 'Geral' }}</td>@endunless<td>{{ number_format($saldo, 2, ',', '.') }} {{ $produto->unidade }}</td><td>{{ number_format((float) $produto->estoque_minimo, 2, ',', '.') }}</td><td>{{ \App\Support\RentalSupport::moeda($produto->custo_unitario) }}</td><td>{!! \App\Support\RentalSupport::status($produto->status) !!}</td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'estoque','edit'=>$produto->id]) }}">Editar</a></td></tr>
             @endforeach
         </table></div>
         <hr>

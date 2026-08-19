@@ -88,9 +88,14 @@ class RentalController extends Controller
             abort_if($bloqueio = $this->licenca->bloqueioParaAcao($page, 'visualizar'), 403, $bloqueio);
         }
 
+        $pages = RentalSupport::MODULOS;
+        if (config('installation.single_store')) {
+            $pages['lojas'] = 'Configuração da empresa';
+        }
+
         $data = [
             'page' => $page,
-            'pages' => RentalSupport::MODULOS,
+            'pages' => $pages,
             'acoes' => RentalSupport::ACOES,
             'user' => $user,
             'lojas' => Loja::query()->orderBy('nome')->get(),

@@ -25,12 +25,16 @@
             <form method="post" action="{{ route('rental.reservas.salvar') }}" class="form-grid">
                 @csrf
                 <input type="hidden" name="id" value="{{ $reservaEdit?->id }}">
+                @if($singleStore)
+                    <input type="hidden" name="loja_id" value="{{ $reservaEdit?->loja_id ?: $lojaUnica?->id }}">
+                @else
                 <label>Unidade
                     <select name="loja_id">
                         <option value="">Central</option>
                         @foreach($lojasReserva as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id', $reservaEdit?->loja_id) == $loja->id)>{{ $loja->nome }}</option>@endforeach
                     </select>
                 </label>
+                @endif
                 <label class="span-2">Cliente
                     <select name="cliente_id">
                         <option value="">Cliente ainda não cadastrado</option>

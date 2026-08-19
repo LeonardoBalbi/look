@@ -10,6 +10,10 @@
     <link rel="stylesheet" href="{{ \App\Support\RentalSupport::asset('assets/css/style.css') }}">
 </head>
 <body data-store-name="{{ $branding['store_name'] }}" data-product-name="{{ $branding['product_name'] }}">
+@php
+    $singleStore = config('installation.single_store');
+    $lojaUnica = $singleStore ? $lojas->first() : null;
+@endphp
 <header class="mobile-header">
     <x-brand />
     <button type="button" class="mobile-menu-toggle">☰</button>
@@ -22,11 +26,11 @@
         <div class="nav-title">Navegação</div>
         @php
             $moduleDetails = [
-            'dashboard' => 'Painel executivo com indicadores de receita, cobranças, inadimplência, frota e operação por loja.',
+            'dashboard' => $singleStore ? 'Painel executivo com indicadores de receita, cobranças, inadimplência e frota.' : 'Painel executivo com indicadores de receita, cobranças, inadimplência, frota e operação por loja.',
             'reservas' => 'Controle pedidos de reserva, disponibilidade da frota, previsão de retirada e oportunidades antes de virar contrato.',
             'crm' => 'Centralize conversas, notas internas, tarefas de follow-up, histórico do cliente e acompanhamento comercial.',
-            'clientes' => 'Cadastre dados pessoais, documentos, contatos, portal do cliente, status e vínculos com lojas.',
-            'motos' => 'Gerencie placa, modelo, cor, ano, loja, status operacional, manutenção e histórico da frota.',
+            'clientes' => $singleStore ? 'Cadastre dados pessoais, documentos, contatos, portal e status dos clientes.' : 'Cadastre dados pessoais, documentos, contatos, portal do cliente, status e vínculos com lojas.',
+            'motos' => $singleStore ? 'Gerencie placa, modelo, cor, ano, status operacional, manutenção e histórico da frota.' : 'Gerencie placa, modelo, cor, ano, loja, status operacional, manutenção e histórico da frota.',
             'contratos' => 'Crie contratos de locação, acompanhe vigência, valores, recorrência de cobrança e vínculo com moto e cliente.',
             'manutencao' => 'Registre ordens de serviço, vistorias, custos, previsão de conclusão e indisponibilidade da moto.',
             'estoque' => 'Controle peças, entradas, saídas e custos ligados à operação e manutenção.',
@@ -43,9 +47,9 @@
             'whatsapp' => 'Configure envios automáticos, cobranças, testes de integração e histórico de mensagens.',
             'telegram' => 'Configure bots de aviso e atendimento, vínculo de clientes e logs de envio.',
             'documentos' => 'Centralize anexos, contratos, comprovantes, documentos do cliente e controle de assinatura.',
-            'relatorios' => 'Analise indicadores, faturamento por loja, clientes, frota, cobranças e resultados operacionais.',
-            'lojas' => 'Compare unidades, motos, recebidos, atrasos e desempenho por loja.',
-            'usuarios' => 'Administre usuários, perfis, permissões por módulo e lojas liberadas.',
+            'relatorios' => $singleStore ? 'Analise indicadores, faturamento, clientes, frota, cobranças e resultados operacionais.' : 'Analise indicadores, faturamento por loja, clientes, frota, cobranças e resultados operacionais.',
+            'lojas' => $singleStore ? 'Edite os dados da empresa desta licença.' : 'Compare unidades, motos, recebidos, atrasos e desempenho por loja.',
+            'usuarios' => $singleStore ? 'Administre usuários, perfis e permissões por módulo.' : 'Administre usuários, perfis, permissões por módulo e lojas liberadas.',
             'configuracoes' => 'Acesse integrações, canais, gateways e parâmetros operacionais do sistema.',
             ];
         @endphp
@@ -84,7 +88,7 @@
             $pageSubtitles = [
                 'dashboard' => 'Indicadores essenciais da operação, financeiro e cobrança em um só lugar.',
                 'clientes' => 'Cadastro, portal do cliente e relacionamento reunidos para consulta rápida.',
-                'motos' => 'Controle da frota por loja, placa e status operacional.',
+                'motos' => $singleStore ? 'Controle da frota, placas e status operacional.' : 'Controle da frota por loja, placa e status operacional.',
                 'contratos' => 'Locações ativas, recorrência de cobrança e documentos de contrato.',
                 'cobrancas' => 'Geração de PIX, canais de cobrança e acompanhamento de status.',
                 'inadimplencia' => 'Clientes em atraso, saldos atualizados e prioridades de recuperação.',
@@ -109,7 +113,7 @@
             <div class="topbar-title">
                 <span>{{ $page === 'dashboard' ? 'Painel executivo' : 'Área operacional' }}</span>
                 <h1>{{ $pages[$page] }}</h1>
-                <p>{{ $pageSubtitles[$page] ?? $branding['product_name'].' para '.$branding['store_name'].', com gestão multiunidades, operação, financeiro e cobrança.' }}</p>
+                <p>{{ $pageSubtitles[$page] ?? ($singleStore ? $branding['product_name'].' para '.$branding['store_name'].', com operação, financeiro e cobrança em uma única empresa.' : $branding['product_name'].' para '.$branding['store_name'].', com gestão multiunidades, operação, financeiro e cobrança.') }}</p>
             </div>
             <div class="toolbar">
                 @foreach ($quickActions as $action)
@@ -158,7 +162,7 @@
             <div class="chart-row four">
                 <div class="panel chart-card"><div class="chart-head"><div><span>RECEITA</span><h2>Composição financeira</h2></div><strong>{{ \App\Support\RentalSupport::moeda($recebidoMes + $aReceber) }}</strong></div><div id="chartReceita" class="donut-premium"></div></div>
                 <div class="panel chart-card"><div class="chart-head"><div><span>STATUS</span><h2>Cobranças</h2></div><strong>{{ array_sum($cobrancasStatus) }}</strong></div><div id="chartStatus" class="donut-premium"></div></div>
-                <div class="panel chart-card"><div class="chart-head"><div><span>RECEBIDO</span><h2>Por loja</h2></div><strong>{{ \App\Support\RentalSupport::moeda(array_sum($lojaRecebido)) }}</strong></div><div id="chartRecebidoLojas" class="mini-bars-premium"></div></div>
+                <div class="panel chart-card"><div class="chart-head"><div><span>RECEBIDO</span><h2>{{ $singleStore ? 'Nesta empresa' : 'Por loja' }}</h2></div><strong>{{ \App\Support\RentalSupport::moeda(array_sum($lojaRecebido)) }}</strong></div><div id="chartRecebidoLojas" class="mini-bars-premium"></div></div>
                 <div class="panel chart-card"><div class="chart-head"><div><span>OPERAÇÃO</span><h2>Frota</h2></div><strong>{{ $totalMotos }} motos</strong></div><div id="chartOperacao" class="donut-premium"></div></div>
             </div>
             <div class="panel chart-wide-panel"><div class="chart-head"><div><span>EVOLUÇÃO</span><h2>Receita recebida - últimos 30 dias</h2></div><strong>{{ \App\Support\RentalSupport::moeda(array_sum($recebidos30)) }}</strong></div><div id="chartReceb30" class="chart-bars chart-wide clean"></div></div>
@@ -194,7 +198,7 @@
                 <div class="panel"><h2>{{ $clienteEdit ? 'Editar' : 'Novo' }} Cliente</h2>
                     <form method="post" action="{{ route('rental.clientes.salvar') }}" enctype="multipart/form-data" class="form-grid">@csrf
                         <input type="hidden" name="id" value="{{ $clienteEdit?->id }}">
-                        <label>Loja<select name="loja_id"><option value="">Selecione</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$clienteEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                        @if($singleStore)<input type="hidden" name="loja_id" value="{{ $clienteEdit?->loja_id ?: $lojaUnica?->id }}">@else<label>Loja<select name="loja_id"><option value="">Selecione</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$clienteEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>@endif
                         <label>Nome<input name="nome" required value="{{ old('nome',$clienteEdit?->nome) }}"></label>
                         <label>CPF<input name="cpf" value="{{ old('cpf',$clienteEdit?->cpf) }}"></label>
                         <label>RG<input name="rg" value="{{ old('rg',$clienteEdit?->rg) }}"></label>
@@ -230,7 +234,7 @@
                     @if($user->pode('motos', $motoEdit ? 'editar' : 'criar'))
                         <h2>{{ $motoEdit ? 'Editar' : 'Nova' }} Motocicleta</h2><form method="post" action="{{ route('rental.motos.salvar') }}" class="form-grid">@csrf
                             <input type="hidden" name="id" value="{{ $motoEdit?->id }}">
-                            <label>Loja<select name="loja_id" required>@foreach($lojasMoto as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$motoEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                            @if($singleStore)<input type="hidden" name="loja_id" value="{{ $motoEdit?->loja_id ?: $lojaUnica?->id }}">@else<label>Loja<select name="loja_id" required>@foreach($lojasMoto as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$motoEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>@endif
                             <label>Marca<input name="marca" list="marcas-moto" value="{{ old('marca',$motoEdit?->marca_nome ?? $motoEdit?->marca) }}"></label><label>Modelo<input name="modelo" list="modelos-moto" required value="{{ old('modelo',$motoEdit?->modelo_nome ?? $motoEdit?->modelo) }}"></label>
                             <datalist id="marcas-moto">@foreach($marcasMoto as $marca)<option value="{{ $marca }}"></option>@endforeach</datalist>
                             <datalist id="modelos-moto">@foreach($modelosMoto as $modelo)<option value="{{ $modelo }}"></option>@endforeach</datalist>
@@ -246,8 +250,8 @@
                         <p class="empty">Este perfil consulta a frota, mas não altera motocicletas.</p>
                     @endif
                 </div>
-                <div class="panel"><h2>Frota Cadastrada</h2><div class="table-wrap"><table><tr><th>Loja</th><th>Placa</th><th>Modelo</th><th>Cor</th><th>Ano</th><th>Status</th><th>Ações</th></tr>
-                    @foreach($motos as $moto)<tr><td>{{ $moto->loja?->nome }}</td><td>{{ $moto->placa }}</td><td>{{ $moto->modelo_nome }}</td><td>{{ $moto->cor ?: '-' }}</td><td>{{ $moto->ano }}</td><td>{!! \App\Support\RentalSupport::status($moto->status_operacional) !!}</td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'motos','edit'=>$moto->id]) }}">Editar</a></td></tr>@endforeach
+                <div class="panel"><h2>Frota Cadastrada</h2><div class="table-wrap"><table><tr>@unless($singleStore)<th>Loja</th>@endunless<th>Placa</th><th>Modelo</th><th>Cor</th><th>Ano</th><th>Status</th><th>Ações</th></tr>
+                    @foreach($motos as $moto)<tr>@unless($singleStore)<td>{{ $moto->loja?->nome }}</td>@endunless<td>{{ $moto->placa }}</td><td>{{ $moto->modelo_nome }}</td><td>{{ $moto->cor ?: '-' }}</td><td>{{ $moto->ano }}</td><td>{!! \App\Support\RentalSupport::status($moto->status_operacional) !!}</td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'motos','edit'=>$moto->id]) }}">Editar</a></td></tr>@endforeach
                 </table></div></div>
             </div>
 
@@ -258,7 +262,7 @@
                         <h2>Novo Contrato</h2><form method="post" action="{{ route('rental.contratos.salvar') }}" class="form-grid">@csrf
                             <label>Cliente<select name="cliente_id">@foreach($clientes as $cliente)<option value="{{ $cliente->id }}">{{ $cliente->nome }}</option>@endforeach</select></label>
                             <label>Moto<select name="motocicleta_id">@foreach($motos as $moto)<option value="{{ $moto->id }}">{{ $moto->placa }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
-                            <label>Loja<select name="loja_id">@foreach($lojasContrato as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>
+                            @if($singleStore)<input type="hidden" name="loja_id" value="{{ $lojaUnica?->id }}">@else<label>Loja<select name="loja_id">@foreach($lojasContrato as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>@endif
                             <label>Data início<input type="date" name="data_inicio" value="{{ old('data_inicio',today()->format('Y-m-d')) }}"></label><label>Valor contratado<input type="number" step="0.01" name="valor_contratado" value="{{ old('valor_contratado','500.00') }}"></label>
                             <label>Forma<select name="forma_cobranca"><option>semanal</option><option>quinzenal</option><option>mensal</option></select></label><label>Status<select name="status"><option>ativo</option><option>suspenso</option><option>encerrado</option></select></label>
                             <label>Próxima cobrança<input type="date" name="proxima_cobranca_em" value="{{ old('proxima_cobranca_em', today()->format('Y-m-d')) }}"></label>
@@ -270,8 +274,8 @@
                         <p class="empty">Este perfil consulta contratos, mas não cria novas locações.</p>
                     @endif
                 </div>
-                <div class="panel"><h2>Contratos</h2><div class="table-wrap"><table><tr><th>ID</th><th>Cliente</th><th>Moto</th><th>Loja</th><th>Valor</th><th>Recorrência</th><th>Status</th><th>Ações</th></tr>
-                    @foreach($contratos as $contrato)<tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->cliente?->nome }}</td><td>{{ $contrato->motocicleta?->placa }}</td><td>{{ $contrato->loja?->nome }}</td><td>{{ \App\Support\RentalSupport::moeda($contrato->valor_contratado) }}</td><td>{{ $contrato->cobranca_automatica ? $contrato->forma_cobranca : 'manual' }}<br><small>{{ $contrato->proxima_cobranca_em ? 'Próx. '.$contrato->proxima_cobranca_em->format('d/m/Y') : 'sem data' }}</small></td><td>{!! \App\Support\RentalSupport::status($contrato->status) !!}</td><td><button type="button" class="btn contract-generate-btn" data-contract-open="contrato-preview-{{ $contrato->id }}">Gerar contrato</button></td></tr>@endforeach
+                <div class="panel"><h2>Contratos</h2><div class="table-wrap"><table><tr><th>ID</th><th>Cliente</th><th>Moto</th>@unless($singleStore)<th>Loja</th>@endunless<th>Valor</th><th>Recorrência</th><th>Status</th><th>Ações</th></tr>
+                    @foreach($contratos as $contrato)<tr><td>#{{ $contrato->id }}</td><td>{{ $contrato->cliente?->nome }}</td><td>{{ $contrato->motocicleta?->placa }}</td>@unless($singleStore)<td>{{ $contrato->loja?->nome }}</td>@endunless<td>{{ \App\Support\RentalSupport::moeda($contrato->valor_contratado) }}</td><td>{{ $contrato->cobranca_automatica ? $contrato->forma_cobranca : 'manual' }}<br><small>{{ $contrato->proxima_cobranca_em ? 'Próx. '.$contrato->proxima_cobranca_em->format('d/m/Y') : 'sem data' }}</small></td><td>{!! \App\Support\RentalSupport::status($contrato->status) !!}</td><td><button type="button" class="btn contract-generate-btn" data-contract-open="contrato-preview-{{ $contrato->id }}">Gerar contrato</button></td></tr>@endforeach
                 </table></div></div>
             </div>
             @foreach($contratos as $contrato)
@@ -487,25 +491,27 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
             </div>
 
         @elseif ($page === 'relatorios')
-            <div class="grid report-charts"><div class="panel report-chart-card"><h2>Faturamento por loja</h2><div id="chartLojas" class="chart-bars report-bars"></div></div><div class="panel report-chart-card"><h2>Clientes por status</h2><div id="donutClientes" class="donut-box report-donut"></div></div></div>
+            <div class="grid report-charts"><div class="panel report-chart-card"><h2>{{ $singleStore ? 'Faturamento da empresa' : 'Faturamento por loja' }}</h2><div id="chartLojas" class="chart-bars report-bars"></div></div><div class="panel report-chart-card"><h2>Clientes por status</h2><div id="donutClientes" class="donut-box report-donut"></div></div></div>
             <div class="panel"><h2>Relatório financeiro detalhado</h2>@include('rental.partials.cobrancas_qr')</div>
             <script>window.addEventListener('load',()=>{rentalBars('chartLojas',@json($relatorioLojas->pluck('label')),@json($relatorioLojas->pluck('value')));rentalDonut('donutClientes',[{label:'Ativos',value:@json($clientesStatus['ativo'])},{label:'Inadimplentes',value:@json($clientesStatus['inadimplente'])},{label:'Bloqueados',value:@json($clientesStatus['bloqueado'])},{label:'Encerrados',value:@json($clientesStatus['encerrado'])}]);});</script>
 
         @elseif ($page === 'lojas')
-            <div class="grid side">
-                <div class="panel"><h2>{{ config('installation.single_store') ? 'Configuração da loja' : ($lojaEdit ? 'Editar loja' : 'Nova loja') }}</h2>@if(!$podeCriarLoja && !$lojaEdit)<div class="notice warn">Seu perfil pode visualizar lojas, mas nao criar novas unidades.</div>@endif
+            <div class="grid {{ $singleStore ? '' : 'side' }}">
+                <div class="panel"><h2>{{ $singleStore ? 'Dados da empresa' : ($lojaEdit ? 'Editar loja' : 'Nova loja') }}</h2>@if(!$podeCriarLoja && !$lojaEdit)<div class="notice warn">Seu perfil pode visualizar lojas, mas nao criar novas unidades.</div>@endif
                     <form method="post" action="{{ route('rental.lojas.salvar') }}" class="form-grid">@csrf
                         <input type="hidden" name="id" value="{{ $lojaEdit?->id }}">
                         <label>Nome<input name="nome" required maxlength="120" value="{{ old('nome', $lojaEdit?->nome) }}" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)></label>
                         <label>Cidade<input name="cidade" maxlength="120" value="{{ old('cidade', $lojaEdit?->cidade) }}" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)></label>
                         <label>Status<select name="status" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)><option value="ativa" @selected(old('status', $lojaEdit?->status ?? 'ativa')==='ativa')>ativa</option><option value="inativa" @selected(old('status', $lojaEdit?->status)==='inativa')>inativa</option></select></label>
-                        <div><button @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)>Salvar loja</button></div>
+                        <div><button @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)>Salvar {{ $singleStore ? 'empresa' : 'loja' }}</button></div>
                     </form>
-                    @if($lojaEdit)<p><a class="btn secondary" href="{{ route('rental.index', ['page' => 'bancos', 'loja_id' => $lojaEdit->id]) }}">Configurar bancos desta loja</a></p>@endif
+                    @if($lojaEdit)<p><a class="btn secondary" href="{{ route('rental.index', ['page' => 'bancos', 'loja_id' => $lojaEdit->id]) }}">{{ $singleStore ? 'Configurar integrações de pagamento' : 'Configurar bancos desta loja' }}</a></p>@endif
                 </div>
+                @unless($singleStore)
                 <div class="panel"><h2>Controle por Loja</h2><div class="table-wrap"><table><tr><th>Loja</th><th>Status</th><th>Motos</th><th>Alugadas</th><th>Disponiveis</th><th>Recebido</th><th>Em atraso</th><th>Acoes</th></tr>
                     @foreach($resumoLojas as $item)<tr><td>{{ $item['loja']->nome }}<br><small>{{ $item['loja']->cidade ?: '-' }}</small></td><td>{!! \App\Support\RentalSupport::status($item['loja']->status) !!}</td><td>{{ $item['motos'] }}</td><td>{{ $item['alugadas'] }}</td><td>{{ $item['disponiveis'] }}</td><td>{{ \App\Support\RentalSupport::moeda($item['recebido']) }}</td><td>{{ \App\Support\RentalSupport::moeda($item['atraso']) }}</td><td><a class="btn secondary" href="{{ route('rental.index', ['page' => 'lojas', 'edit' => $item['loja']->id]) }}">Editar</a> <a class="btn secondary" href="{{ route('rental.index', ['page' => 'bancos', 'loja_id' => $item['loja']->id]) }}">Bancos</a></td></tr>@endforeach
                 </table></div></div>
+                @endunless
             </div>
 
         @elseif ($page === 'usuarios')
@@ -519,9 +525,9 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                         <label>Senha<input type="password" name="senha" {{ $usuarioEdit ? '' : 'required' }} placeholder="{{ $usuarioEdit ? 'Manter senha atual' : 'Minimo de 6 caracteres' }}" @disabled(!$podeGerenciarUsuarios)></label>
                         <label>Perfil<select name="perfil" @disabled(!$podeGerenciarUsuarios)>@foreach($perfis as $perfil)@continue(!$podeGerenciarPerfis && $perfil->codigo === 'super_admin')<option value="{{ $perfil->codigo }}" @selected(old('perfil',$usuarioEdit?->perfil ?? 'atendente')===$perfil->codigo)>{{ $perfil->nome }}</option>@endforeach</select></label>
                         <div class="role-preset-grid" aria-label="Perfis cadastrados">@foreach($perfis as $perfil)@continue(!$podeGerenciarPerfis && $perfil->codigo === 'super_admin')<article class="{{ ($usuarioEdit?->perfil ?? 'atendente') === $perfil->codigo ? 'is-active' : '' }}"><strong>{{ $perfil->nome }}</strong><span>{{ $perfil->descricao ?: 'Perfil definido pelo super admin.' }}</span>@if($podeGerenciarPerfis)<a class="btn secondary" href="{{ route('rental.index', ['page' => 'usuarios', 'perfil_edit' => $perfil->id]) }}">Editar perfil</a>@endif</article>@endforeach</div>
-                        <label>Loja principal<select name="loja_id" @disabled(!$podeGerenciarUsuarios)><option value="">Central / Todas</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$usuarioEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                        @if($singleStore)<input type="hidden" name="loja_id" value="{{ $lojaUnica?->id }}"><input type="hidden" name="lojas[]" value="{{ $lojaUnica?->id }}">@else<label>Loja principal<select name="loja_id" @disabled(!$podeGerenciarUsuarios)><option value="">Central / Todas</option>@foreach($lojas as $loja)<option value="{{ $loja->id }}" @selected(old('loja_id',$usuarioEdit?->loja_id)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>@endif
                         <label>Status<select name="status" @disabled(!$podeGerenciarUsuarios)><option value="ativo" @selected(($usuarioEdit?->status ?? 'ativo')==='ativo')>ativo</option><option value="bloqueado" @selected($usuarioEdit?->status==='bloqueado')>bloqueado</option></select></label>
-                        <h3>Lojas liberadas</h3><div class="checkgrid">@foreach($lojas as $loja)<label><input type="checkbox" name="lojas[]" value="{{ $loja->id }}" @checked(in_array($loja->id,$lojasSelecionadas,true)) @disabled(!$podeGerenciarUsuarios)> {{ $loja->nome }}</label>@endforeach</div>
+                        @unless($singleStore)<h3>Lojas liberadas</h3><div class="checkgrid">@foreach($lojas as $loja)<label><input type="checkbox" name="lojas[]" value="{{ $loja->id }}" @checked(in_array($loja->id,$lojasSelecionadas,true)) @disabled(!$podeGerenciarUsuarios)> {{ $loja->nome }}</label>@endforeach</div>@endunless
                         <br><button type="submit" @disabled(!$podeGerenciarUsuarios)>Salvar Usuario</button>
                     </form>
                 </div>
@@ -540,8 +546,8 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                         </form>
                     </div>
                 @endif
-                <div class="panel"><h2>Usuarios</h2><div class="table-wrap"><table><tr><th>Nome</th><th>E-mail</th><th>Perfil</th><th>Loja principal</th><th>Status</th><th>Acoes</th></tr>
-                    @foreach($usuarios as $usuario)<tr><td>{{ $usuario->nome }}</td><td>{{ $usuario->email }}</td><td>{{ $usuario->perfilAcesso?->nome ?? \App\Support\RentalSupport::perfil($usuario->perfil) }}</td><td>{{ $usuario->loja?->nome ?? 'Todas / Central' }}</td><td>{!! \App\Support\RentalSupport::status($usuario->status) !!}</td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'usuarios','edit'=>$usuario->id]) }}">Editar</a></td></tr>@endforeach
+                <div class="panel"><h2>Usuarios</h2><div class="table-wrap"><table><tr><th>Nome</th><th>E-mail</th><th>Perfil</th>@unless($singleStore)<th>Loja principal</th>@endunless<th>Status</th><th>Acoes</th></tr>
+                    @foreach($usuarios as $usuario)<tr><td>{{ $usuario->nome }}</td><td>{{ $usuario->email }}</td><td>{{ $usuario->perfilAcesso?->nome ?? \App\Support\RentalSupport::perfil($usuario->perfil) }}</td>@unless($singleStore)<td>{{ $usuario->loja?->nome ?? 'Todas / Central' }}</td>@endunless<td>{!! \App\Support\RentalSupport::status($usuario->status) !!}</td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'usuarios','edit'=>$usuario->id]) }}">Editar</a></td></tr>@endforeach
                 </table></div></div>
             </div>
 
@@ -551,7 +557,7 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                 <h2>Integrações de pagamento</h2>
                 <form method="get" action="{{ route('rental.index') }}" class="form-grid">
                     <input type="hidden" name="page" value="bancos">
-                    <label>Loja<select name="loja_id" onchange="this.form.submit()">@if($user->isAdmin())<option value="">Central / fallback</option>@endif @foreach(($lojasBanco ?? $lojas) as $loja)<option value="{{ $loja->id }}" @selected(($lojaBancoId ?? null)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>
+                    @if($singleStore)<input type="hidden" name="loja_id" value="{{ $lojaUnica?->id }}">@else<label>Loja<select name="loja_id" onchange="this.form.submit()">@if($user->isAdmin())<option value="">Central / fallback</option>@endif @foreach(($lojasBanco ?? $lojas) as $loja)<option value="{{ $loja->id }}" @selected(($lojaBancoId ?? null)==$loja->id)>{{ $loja->nome }}</option>@endforeach</select></label>@endif
                     <label>Selecionar integração<select name="banco" onchange="this.form.submit()"><option value="pagbank" @selected($bancoSelecionado==='pagbank')>PagBank</option><option value="asaas" @selected($bancoSelecionado==='asaas')>Asaas</option><option value="sicoob" @selected($bancoSelecionado==='sicoob')>Sicoob</option><option value="itau" @selected($bancoSelecionado==='itau')>Itau</option></select></label>
                     <div><button class="btn secondary" type="submit">Abrir integração</button></div>
                 </form>
@@ -762,7 +768,7 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                     <p>{{ $licencaStatus['mensagem'] ?? '-' }}</p>
                     <p><strong>Plano:</strong> {{ $licencaConfig?->plano ?: '-' }}<br><strong>Vence em:</strong> {{ $licencaConfig?->vence_em?->format('d/m/Y') ?: '-' }}<br><strong>Ultima validacao:</strong> {{ $licencaConfig?->ultima_validacao_ok_em?->format('d/m/Y H:i') ?: '-' }}</p>
                     <p><strong>Instancia:</strong><br><code>{{ $licencaConfig?->instancia_id ?: '-' }}</code></p>
-                    <div class="cards"><div class="metric"><span>Lojas</span><strong>{{ $licencaUso['lojas'] ?? 0 }}</strong><small>limite {{ $licencaConfig?->max_lojas ?: 'livre' }}</small></div><div class="metric"><span>Usuarios</span><strong>{{ $licencaUso['usuarios'] ?? 0 }}</strong><small>limite {{ $licencaConfig?->max_usuarios ?: 'livre' }}</small></div></div>
+                    <div class="cards">@unless($singleStore)<div class="metric"><span>Lojas</span><strong>{{ $licencaUso['lojas'] ?? 0 }}</strong><small>limite {{ $licencaConfig?->max_lojas ?: 'livre' }}</small></div>@endunless<div class="metric"><span>Usuarios</span><strong>{{ $licencaUso['usuarios'] ?? 0 }}</strong><small>limite {{ $licencaConfig?->max_usuarios ?: 'livre' }}</small></div></div>
                 </div>
             </div>
         @endif
