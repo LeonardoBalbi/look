@@ -22,7 +22,7 @@ class EnsureApplicationRole
 
         if ($role === 'license_server') {
             if ($request->is('/')) {
-                return redirect()->route($request->user() ? 'licencas-portal.index' : 'rental.login');
+                return redirect()->route('licencas-portal.index');
             }
 
             if (! $this->isLicenseServerPath($request) && ! $this->isSharedAccessPath($request)) {
