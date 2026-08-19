@@ -77,7 +77,7 @@ class LicencaPortalTest extends TestCase
         ]);
     }
 
-    public function test_licenca_bloqueada_permite_visualizar_mas_impede_salvar(): void
+    public function test_licenca_bloqueada_impede_visualizar_e_salvar_modulos_operacionais(): void
     {
         $admin = User::where('email', 'admin@example.com')->firstOrFail();
         LicencaConfig::atual()->update([
@@ -89,7 +89,12 @@ class LicencaPortalTest extends TestCase
 
         $this->actingAs($admin)
             ->get('/?page=lojas')
-            ->assertOk();
+            ->assertForbidden();
+
+        $this->actingAs($admin)
+            ->get('/?page=dashboard')
+            ->assertOk()
+            ->assertSee('Pagamento pendente no portal.');
 
         $this->actingAs($admin)
             ->post('/lojas', [
@@ -140,7 +145,7 @@ class LicencaPortalTest extends TestCase
             ->assertForbidden();
     }
 
-    public function test_super_admin_nao_e_bloqueado_pelos_modulos_da_licenca(): void
+    public function test_super_admin_da_loja_tambem_obedece_a_licenca(): void
     {
         $superAdmin = User::where('email', 'superadmin@example.com')->firstOrFail();
         LicencaConfig::atual()->update([
@@ -153,8 +158,7 @@ class LicencaPortalTest extends TestCase
 
         $this->actingAs($superAdmin)
             ->get('/?page=whatsapp')
-            ->assertOk()
-            ->assertSee('WhatsApp API');
+            ->assertForbidden();
     }
 
     public function test_comando_valida_licenca_online(): void

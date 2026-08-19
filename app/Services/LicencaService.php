@@ -41,10 +41,6 @@ class LicencaService
             return 'Modulo nao liberado para esta licenca.';
         }
 
-        if ($acao === 'visualizar') {
-            return null;
-        }
-
         $status = $this->statusLocal($config);
         $codigo = (string) ($status['codigo'] ?? '');
         if (! in_array($codigo, ['ativa', 'trial', 'teste'], true)) {
