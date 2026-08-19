@@ -3,6 +3,7 @@
 return [
     /* Nome comercial do produto de software. Não deve ser o nome da locadora. */
     'product_name' => env('APP_NAME', 'Gestor de Locações'),
+    'product_logo' => env('PRODUCT_LOGO'),
 
     /* Identidade da empresa que utiliza esta instalação. */
     'store_name' => env('STORE_NAME', 'Minha Locadora'),

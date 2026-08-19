@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 980 420" role="img" aria-label="locX Aluguel de Motos">
+  <rect width="980" height="420" fill="#fff"/>
+
+  <!-- Wordmark -->
+  <g fill="#000">
+    <rect x="75" y="82" width="52" height="225" rx="4"/>
+    <path d="M210 130h170c58 0 92 32 92 88v2c0 56-34 88-92 88H210c-58 0-92-32-92-88v-2c0-56 34-88 92-88zm20 45c-38 0-55 13-55 43v2c0 30 17 43 55 43h130c38 0 55-13 55-43v-2c0-30-17-43-55-43H230z"/>
+    <path d="M560 130h128l45 45H585c-40 0-60 15-60 44v1c0 29 20 43 60 43h150v45H560c-60 0-96-33-96-88v-2c0-55 36-88 96-88z"/>
+    <path d="M690 127h72l70 78 71-78h71L867 240l112 124h-73l-76-85-77 85h-72l113-123z"/>
+  </g>
+
+  <!-- Red ascending arrow -->
+  <g fill="#d6001c">
+    <path d="M610 386 850 88 892 113 650 405z"/>
+    <path d="M828 70 945 48 920 165z"/>
+  </g>
+
+  <!-- Subtitle -->
+  <text x="78" y="366" fill="#000" font-family="Arial, Helvetica, sans-serif" font-size="58" font-weight="700" letter-spacing="-2">
+    Aluguel de Motos
+  </text>
+</svg>

@@ -19,8 +19,20 @@ class CommercialReadinessTest extends TestCase
     {
         parent::setUp();
         config()->set('branding.product_name', 'Gestor Comercial');
+        config()->set('branding.product_logo');
         config()->set('branding.store_name', 'Moto Exemplo');
         $this->seed(ApplicationInitialSeeder::class);
+    }
+
+    public function test_logo_do_produto_pode_ser_configurada_sem_acoplar_o_nome_da_loja(): void
+    {
+        config()->set('branding.product_logo', '/locx/assets/img/logo-locx.svg');
+
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('/locx/assets/img/logo-locx.svg', false)
+            ->assertSee('alt="Gestor Comercial"', false)
+            ->assertSee('Moto Exemplo');
     }
 
     public function test_identidade_da_loja_e_produto_sao_independentes(): void
