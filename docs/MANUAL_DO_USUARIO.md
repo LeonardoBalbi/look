@@ -138,9 +138,9 @@ Use **Financeiro** para registrar pagamentos e consultar valores em aberto, pago
 
 A área reúne clientes com pagamentos vencidos e mostra o saldo atualizado conforme a regra financeira configurada. Utilize os canais de cobrança autorizados e registre acordos ou contatos no CRM.
 
-### CRM e atendimento
+### Relacionamento com Clientes (CRM)
 
-O CRM reúne clientes, notas, tarefas e conversas do portal. Use-o para:
+A área de Relacionamento com Clientes reúne clientes, notas, tarefas e conversas do portal. Use-a para:
 
 - registrar o histórico do atendimento;
 - criar tarefas com prazo;

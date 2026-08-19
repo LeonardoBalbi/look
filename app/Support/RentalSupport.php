@@ -60,7 +60,7 @@ class RentalSupport
     public const MODULOS = [
         'dashboard' => 'Dashboard',
         'reservas' => 'Reservas',
-        'crm' => 'CRM',
+        'crm' => 'Relacionamento com Clientes',
         'clientes' => 'Clientes',
         'motos' => 'Motocicletas',
         'contratos' => 'Contratos',
