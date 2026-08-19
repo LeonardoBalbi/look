@@ -1,3 +1,16 @@
+@php
+    $code = $code ?? 500;
+    $title = $title ?? match ((int) $code) {
+        419 => 'Página expirada',
+        403 => 'Acesso não autorizado',
+        404 => 'Página não encontrada',
+        default => 'Não foi possível concluir',
+    };
+    $message = $message ?? match ((int) $code) {
+        419 => 'Sua sessão ou o formulário expirou. Atualize a página e tente novamente.',
+        default => 'Ocorreu um erro inesperado. Atualize a página e tente novamente.',
+    };
+@endphp
 <!doctype html>
 <html lang="pt-BR">
 <head>
