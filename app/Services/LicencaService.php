@@ -67,9 +67,11 @@ class LicencaService
         }
 
         return match ($recurso) {
-            'lojas' => $config->max_lojas && Loja::query()->count() >= (int) $config->max_lojas
-                ? 'Limite de lojas da licenca atingido.'
-                : null,
+            'lojas' => config('installation.single_store') && Loja::query()->exists()
+                ? 'Esta instalação possui uma única loja.'
+                : ($config->max_lojas && Loja::query()->count() >= (int) $config->max_lojas
+                    ? 'Limite de lojas da licenca atingido.'
+                    : null),
             'usuarios' => $config->max_usuarios && User::query()->count() >= (int) $config->max_usuarios
                 ? 'Limite de usuarios da licenca atingido.'
                 : null,

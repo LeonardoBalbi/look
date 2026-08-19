@@ -493,7 +493,7 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
 
         @elseif ($page === 'lojas')
             <div class="grid side">
-                <div class="panel"><h2>{{ $lojaEdit ? 'Editar loja' : 'Nova loja' }}</h2>@if(!$podeCriarLoja && !$lojaEdit)<div class="notice warn">Seu perfil pode visualizar lojas, mas nao criar novas unidades.</div>@endif
+                <div class="panel"><h2>{{ config('installation.single_store') ? 'Configuração da loja' : ($lojaEdit ? 'Editar loja' : 'Nova loja') }}</h2>@if(!$podeCriarLoja && !$lojaEdit)<div class="notice warn">Seu perfil pode visualizar lojas, mas nao criar novas unidades.</div>@endif
                     <form method="post" action="{{ route('rental.lojas.salvar') }}" class="form-grid">@csrf
                         <input type="hidden" name="id" value="{{ $lojaEdit?->id }}">
                         <label>Nome<input name="nome" required maxlength="120" value="{{ old('nome', $lojaEdit?->nome) }}" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)></label>

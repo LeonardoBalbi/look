@@ -367,6 +367,9 @@ class RentalController extends Controller
     {
         $loja = $request->integer('id') ? Loja::findOrFail($request->integer('id')) : new Loja;
         $this->autorizar($request->user(), 'lojas', $loja->exists ? 'editar' : 'criar');
+        if (config('installation.single_store') && ! $loja->exists && Loja::query()->exists()) {
+            abort(422, 'Esta instalação aceita somente uma loja. Edite a loja já cadastrada.');
+        }
         if (! $request->user()->isSuperAdmin()
             && ! $loja->exists
             && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('lojas'))) {
@@ -2327,14 +2330,17 @@ class RentalController extends Controller
 
     private function lojas(Request $request, User $user): array
     {
-        $lojaEdit = $request->integer('edit') ? Loja::findOrFail($request->integer('edit')) : null;
+        $lojaEdit = $request->integer('edit')
+            ? Loja::findOrFail($request->integer('edit'))
+            : (config('installation.single_store') ? Loja::query()->first() : null);
         if ($lojaEdit) {
             $this->autorizar($user, 'lojas', 'editar');
         }
 
         return [
             'lojaEdit' => $lojaEdit,
-            'podeCriarLoja' => $user->pode('lojas', 'criar'),
+            'podeCriarLoja' => $user->pode('lojas', 'criar')
+                && (! config('installation.single_store') || ! Loja::query()->exists()),
             'podeEditarLoja' => $user->pode('lojas', 'editar'),
             'resumoLojas' => Loja::orderBy('nome')->get()->map(fn (Loja $loja) => [
                 'loja' => $loja,

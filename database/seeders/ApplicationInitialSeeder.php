@@ -23,7 +23,7 @@ class ApplicationInitialSeeder extends Seeder
         $superAdminEmail = (string) env('INITIAL_SUPER_ADMIN_EMAIL', 'superadmin@example.com');
         $hash = password_hash($senhaInicial, PASSWORD_DEFAULT);
 
-        $lojasIniciais = app()->environment('production') ? [
+        $lojasIniciais = config('installation.single_store') || app()->environment('production') ? [
             ['id' => 1, 'nome' => config('branding.store_name'), 'cidade' => env('STORE_CITY'), 'status' => 'ativa'],
         ] : [
             ['id' => 1, 'nome' => 'Barra da Tijuca', 'cidade' => 'Rio de Janeiro', 'status' => 'ativa'],
