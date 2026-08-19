@@ -6,5 +6,5 @@ return [
      * license_server: portal central de licenças em domínio separado.
      * combined: disponível somente para testes e desenvolvimento legado.
      */
-    'role' => env('APP_ROLE', 'store'),
+    'role' => env('APP_ROLE', 'license_server'),
 ];
