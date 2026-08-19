@@ -84,9 +84,7 @@ class RentalController extends Controller
             : 'dashboard';
         abort_unless($user->pode($page), 403, 'Acesso negado para este módulo.');
 
-        if (! $user->isSuperAdmin()) {
-            abort_if($bloqueio = $this->licenca->bloqueioParaAcao($page, 'visualizar'), 403, $bloqueio);
-        }
+        abort_if($bloqueio = $this->licenca->bloqueioParaAcao($page, 'visualizar'), 403, $bloqueio);
 
         $pages = RentalSupport::MODULOS;
         if (config('installation.single_store')) {
@@ -99,6 +97,7 @@ class RentalController extends Controller
             'acoes' => RentalSupport::ACOES,
             'user' => $user,
             'lojas' => Loja::query()->orderBy('nome')->get(),
+            'licencaStatusGlobal' => $this->licenca->resumo()['status'],
         ];
 
         return view('rental.index', array_merge($data, match ($page) {
@@ -375,8 +374,7 @@ class RentalController extends Controller
         if (config('installation.single_store') && ! $loja->exists && Loja::query()->exists()) {
             abort(422, 'Esta instalação aceita somente uma loja. Edite a loja já cadastrada.');
         }
-        if (! $request->user()->isSuperAdmin()
-            && ! $loja->exists
+        if (! $loja->exists
             && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('lojas'))) {
             abort(403, $bloqueio);
         }
@@ -1588,8 +1586,7 @@ class RentalController extends Controller
         $this->autorizar($request->user(), 'usuarios', $request->integer('id') ? 'editar' : 'criar');
         abort_unless($request->user()->podeGerenciarUsuarios(), 403, 'Somente Super Admin ou Administrador Geral podem gerenciar usuarios.');
         $usuario = $request->integer('id') ? User::findOrFail($request->integer('id')) : new User;
-        if (! $request->user()->isSuperAdmin()
-            && ! $usuario->exists
+        if (! $usuario->exists
             && ($bloqueio = $this->licenca->bloqueioParaCriarRecurso('usuarios'))) {
             abort(403, $bloqueio);
         }
@@ -2451,9 +2448,7 @@ class RentalController extends Controller
     private function autorizar(User $user, string $modulo, string $acao): void
     {
         abort_unless($user->pode($modulo, $acao), 403, 'Acesso negado para esta ação.');
-        if (! $user->isSuperAdmin()) {
-            abort_if($bloqueio = $this->licenca->bloqueioParaAcao($modulo, $acao), 403, $bloqueio);
-        }
+        abort_if($bloqueio = $this->licenca->bloqueioParaAcao($modulo, $acao), 403, $bloqueio);
     }
 
     private function autorizarResponderPortal(User $user): void

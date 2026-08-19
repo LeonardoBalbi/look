@@ -126,6 +126,9 @@
 
         @if (session('success'))<div class="notice"><strong>{{ session('success') }}</strong></div>@endif
         @if ($errors->any())<div class="alert"><strong>{{ $errors->first() }}</strong></div>@endif
+        @if(!in_array($licencaStatusGlobal['codigo'] ?? 'local', ['local', 'ativa', 'trial', 'teste'], true))
+            <div class="alert"><strong>Licença {{ $licencaStatusGlobal['codigo'] ?? 'pendente' }}:</strong> {{ $licencaStatusGlobal['mensagem'] ?? 'Regularize a licença para liberar os módulos operacionais.' }}</div>
+        @endif
 
         @if ($page === 'dashboard')
             <section class="rental-today" aria-labelledby="rentalTodayTitle">
