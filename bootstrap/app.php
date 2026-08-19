@@ -6,6 +6,7 @@ use Illuminate\Foundation\Configuration\Middleware;
 use Illuminate\Http\Request;
 use App\Http\Middleware\SecurityHeaders;
 use App\Http\Middleware\AuditMutations;
+use App\Http\Middleware\EnsureApplicationRole;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
@@ -15,6 +16,7 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        $middleware->prepend(EnsureApplicationRole::class);
         $middleware->append(SecurityHeaders::class);
         $middleware->append(AuditMutations::class);
 

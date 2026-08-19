@@ -25,9 +25,11 @@ class LicencaConfig extends BaseModel
         return self::query()->firstOrCreate(
             ['id' => 1],
             [
-                'modo' => 'local',
-                'status' => 'local',
+                'modo' => filled(env('RENTAL_LICENSE_API_URL')) && filled(env('RENTAL_LICENSE_KEY')) ? 'online' : 'local',
+                'status' => filled(env('RENTAL_LICENSE_API_URL')) && filled(env('RENTAL_LICENSE_KEY')) ? 'pendente' : 'local',
                 'instancia_id' => (string) Str::uuid(),
+                'api_url' => env('RENTAL_LICENSE_API_URL'),
+                'licenca_chave' => env('RENTAL_LICENSE_KEY'),
                 'tolerancia_offline_dias' => 7,
                 'ativo' => true,
             ]
