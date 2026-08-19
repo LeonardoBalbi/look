@@ -25,7 +25,7 @@ class ApplicationRoleIsolationTest extends TestCase
         $this->seed(ApplicationInitialSeeder::class);
         $superAdmin = User::query()->where('email', 'superadmin@example.com')->firstOrFail();
 
-        $this->get('/')->assertRedirect('/login');
+        $this->get('/')->assertRedirect('/licencas-portal');
         $this->actingAs($superAdmin)->get('/')->assertRedirect('/licencas-portal');
         $this->actingAs($superAdmin)->get('/?page=crm')->assertRedirect('/licencas-portal');
         $this->actingAs($superAdmin)->post('/motos', [])->assertNotFound();
