@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 118" role="img" aria-labelledby="title description">
+  <title id="title">LocX Aluguel de Motos</title>
+  <desc id="description">Logotipo preto LocX com uma seta vermelha ascendente.</desc>
+  <g fill="#050505">
+    <path d="M25 24h18v58H25z"/>
+    <path d="M39 68h18v14H39z"/>
+    <path fill-rule="evenodd" d="M61 39h50c16 0 28 8 28 21s-12 22-28 22H61c-16 0-28-9-28-22s12-21 28-21Zm1 14c-7 0-11 3-11 7 0 5 4 8 11 8h48c7 0 11-3 11-8 0-4-4-7-11-7H62Z"/>
+    <path d="M164 39h49l-12 14h-35c-7 0-11 3-11 7 0 5 4 8 11 8h35l12 14h-49c-16 0-28-9-28-22s12-21 28-21Z"/>
+    <path d="m211 39 21 21-22 22h23l11-12 12 12h24l-24-24 20-19h-23l-9 9-9-9z"/>
+  </g>
+  <path d="m207 87 52-63-10-7 35-8-7 34-8-8-50 61z" fill="#d90429"/>
+  <text x="27" y="105" fill="#050505" font-family="Arial, Helvetica, sans-serif" font-size="15" font-weight="700">Aluguel de Motos</text>
+</svg>

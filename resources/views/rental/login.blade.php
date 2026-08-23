@@ -10,18 +10,26 @@
 <form class="login-card" method="post" action="{{ route('rental.login.store') }}">
     @csrf
     <x-brand class="login-brand" />
-    <p>Gestão financeira e operacional</p>
+    <p class="login-subtitle">Gestão financeira e operacional</p>
     @if ($errors->any())
         <div class="alert">{{ $errors->first() }}</div>
     @endif
     @if (session('status'))
         <div class="notice">{{ session('status') }}</div>
     @endif
-    <input name="email" type="email" placeholder="E-mail" required autofocus value="{{ old('email') }}" autocomplete="username">
-    <input name="senha" type="password" placeholder="Senha" required autocomplete="current-password">
-    <button type="submit">Entrar</button>
-    <a href="{{ route('password.request') }}">Esqueci minha senha</a>
-    <small>Use o acesso fornecido pelo administrador da sua empresa.</small>
+    <label class="login-field">
+        <span>E-mail</span>
+        <input name="email" type="email" placeholder="seu@email.com.br" required autofocus value="{{ old('email') }}" autocomplete="username">
+    </label>
+    <label class="login-field">
+        <span>Senha</span>
+        <input name="senha" type="password" placeholder="Digite sua senha" required autocomplete="current-password">
+    </label>
+    <button class="login-submit" type="submit">Entrar</button>
+    <div class="login-footer">
+        <a href="{{ route('password.request') }}">Esqueci minha senha</a>
+        <small>Use o acesso fornecido pelo administrador da sua empresa.</small>
+    </div>
 </form>
 </body>
 </html>

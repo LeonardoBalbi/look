@@ -15,13 +15,20 @@ class AuthenticationTest extends TestCase
     {
         $this->seed(ApplicationInitialSeeder::class);
 
+        $this->get('/login')
+            ->assertOk()
+            ->assertSee('assets/img/locx-logo.svg');
+
         $this->post('/login', [
             'email' => 'admin@example.com',
             'senha' => '123456',
         ])->assertRedirect('/');
 
         $this->assertAuthenticatedAs(User::where('email', 'admin@example.com')->first());
-        $this->get('/')->assertOk()->assertSee('Dashboard');
+        $this->get('/')
+            ->assertOk()
+            ->assertSee('Dashboard')
+            ->assertSee('assets/img/locx-logo.svg');
     }
 
     public function test_senha_invalida_nao_autentica(): void

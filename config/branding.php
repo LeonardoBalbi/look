@@ -5,7 +5,7 @@ return [
     'product_name' => env('APP_NAME', 'Gestor de Locações'),
 
     /* Identidade da empresa que utiliza esta instalação. */
-    'store_name' => env('STORE_NAME', 'Minha Locadora'),
+    'store_name' => env('STORE_NAME', 'LocX Aluguel de Motos'),
     'store_legal_name' => env('STORE_LEGAL_NAME'),
     'store_document' => env('STORE_DOCUMENT'),
 
