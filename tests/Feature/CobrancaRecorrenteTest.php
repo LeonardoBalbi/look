@@ -64,6 +64,42 @@ class CobrancaRecorrenteTest extends TestCase
         $this->assertEquals(today()->addWeek()->format('Y-m-d'), $contrato->fresh()->proxima_cobranca_em->format('Y-m-d'));
     }
 
+    public function test_contrato_automatico_ja_cria_a_primeira_cobranca(): void
+    {
+        $cliente = Cliente::query()->create([
+            'loja_id' => 1,
+            'nome' => 'Cliente Novo Contrato',
+            'cpf' => '98765432100',
+            'status' => 'ativo',
+        ]);
+        $moto = Motocicleta::query()->create([
+            'loja_id' => 1,
+            'modelo' => 'Moto Novo Contrato',
+            'placa' => 'AUT1M23',
+            'status_operacional' => 'disponivel',
+        ]);
+        $usuario = User::where('email', 'admin@example.com')->firstOrFail();
+        $vencimento = today()->addWeek();
+
+        $this->actingAs($usuario)->post('/contratos', [
+            'cliente_id' => $cliente->id,
+            'motocicleta_id' => $moto->id,
+            'loja_id' => 1,
+            'data_inicio' => today()->format('Y-m-d'),
+            'valor_contratado' => 455,
+            'forma_cobranca' => 'semanal',
+            'cobranca_automatica' => 1,
+            'proxima_cobranca_em' => $vencimento->format('Y-m-d'),
+            'status' => 'ativo',
+        ])->assertRedirect('/?page=contratos');
+
+        $contrato = Contrato::query()->where('cliente_id', $cliente->id)->firstOrFail();
+        $cobranca = Cobranca::query()->where('contrato_id', $contrato->id)->firstOrFail();
+        $this->assertTrue($cobranca->vencimento->isSameDay($vencimento));
+        $this->assertEquals(455, (float) $cobranca->valor_principal);
+        $this->assertTrue($contrato->fresh()->proxima_cobranca_em->isSameDay($vencimento->copy()->addWeek()));
+    }
+
     public function test_gerar_pix_em_demo_nao_chama_api_externa(): void
     {
         Http::fake();

@@ -5,6 +5,10 @@
 
     RewriteEngine On
 
+    # The domain document root already points to this public directory.
+    # Redirect old addresses that incorrectly repeat /public.
+    RewriteRule ^public(?:/index\.php)?/?$ / [R=301,L]
+
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
 

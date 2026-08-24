@@ -7,7 +7,7 @@ return [
         'cache_horas' => (int) env('RENTAL_LICENCA_CACHE_HORAS', 12),
     ],
     'recorrencia' => [
-        'ativa' => env('RENTAL_RECORRENCIA_ATIVA', false),
+        'ativa' => env('RENTAL_RECORRENCIA_ATIVA', true),
         'gerar_pix' => env('RENTAL_RECORRENCIA_GERAR_PIX', false),
         'enviar_whatsapp' => env('RENTAL_RECORRENCIA_ENVIAR_WHATSAPP', false),
         'enviar_email' => env('RENTAL_RECORRENCIA_ENVIAR_EMAIL', false),

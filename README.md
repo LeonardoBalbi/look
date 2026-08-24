@@ -52,6 +52,7 @@ php artisan config:cache
 - Manual do usuário: `docs/MANUAL_DO_USUARIO.md`
 - Implantação e entrega: `docs/GUIA_IMPLANTACAO_COMERCIAL.md`
 - Manual técnico existente: `docs/MANUAL_CLIENTE_INSTALACAO.md`
+- Cron e cobranças automáticas: `docs/ORIENTACOES_CRON_E_COBRANCAS.md`
 
 ## Segurança
 

@@ -67,6 +67,52 @@ class CobrancaRecorrenteService
         return $resultado;
     }
 
+    public function gerarParaContrato(
+        Contrato $contrato,
+        ?CarbonInterface $ate = null,
+        bool $gerarPix = false,
+        bool $enviarWhatsApp = false,
+        bool $enviarEmail = false,
+        bool $enviarTelegram = false,
+        int $maxPorContrato = 12,
+    ): array {
+        $ate = Carbon::parse($ate ?: today())->startOfDay();
+        $resultado = [
+            'dry_run' => false,
+            'ate' => $ate->format('Y-m-d'),
+            'contratos' => 0,
+            'criadas' => 0,
+            'existentes' => 0,
+            'pix_gerados' => 0,
+            'whatsapp_enviados' => 0,
+            'emails_enviados' => 0,
+            'telegram_enviados' => 0,
+            'limitados' => 0,
+            'itens' => [],
+            'erros' => [],
+        ];
+
+        if ($contrato->status !== 'ativo' || ! $contrato->cobranca_automatica) {
+            return $resultado;
+        }
+
+        $resultado['contratos'] = 1;
+        $contrato->loadMissing('cliente');
+        $this->processarContrato(
+            $contrato,
+            $ate,
+            false,
+            $gerarPix,
+            $enviarWhatsApp,
+            $enviarEmail,
+            $enviarTelegram,
+            max(1, $maxPorContrato),
+            $resultado,
+        );
+
+        return $resultado;
+    }
+
     private function processarContrato(
         Contrato $contrato,
         CarbonInterface $ate,

@@ -33,6 +33,7 @@ use App\Models\TelegramConfig;
 use App\Models\TelegramLog;
 use App\Services\AsaasService;
 use App\Services\CobrancaCalculator;
+use App\Services\CobrancaRecorrenteService;
 use App\Services\CobrancaCampanhaService;
 use App\Services\CrmAutomationService;
 use App\Services\EmailCobrancaService;
@@ -61,6 +62,7 @@ class RentalController extends Controller
 {
     public function __construct(
         private readonly CobrancaCalculator $calculator,
+        private readonly CobrancaRecorrenteService $cobrancaRecorrente,
         private readonly PagBankService $pagBank,
         private readonly AsaasService $asaas,
         private readonly SicoobService $sicoob,
@@ -505,11 +507,11 @@ class RentalController extends Controller
             'cliente_id' => ['required', 'exists:clientes,id'],
             'motocicleta_id' => ['required', 'exists:motocicletas,id'],
             'loja_id' => ['required', 'exists:lojas,id'],
-            'data_inicio' => ['required', 'date'],
+            'data_inicio' => ['required', 'date_format:Y-m-d', 'after_or_equal:2000-01-01', 'before_or_equal:2100-12-31'],
             'valor_contratado' => ['required', 'numeric', 'min:0.01'],
             'forma_cobranca' => ['required', Rule::in(['semanal', 'quinzenal', 'mensal'])],
             'cobranca_automatica' => ['nullable', 'boolean'],
-            'proxima_cobranca_em' => ['nullable', 'date'],
+            'proxima_cobranca_em' => ['nullable', 'date_format:Y-m-d', 'after_or_equal:data_inicio', 'before_or_equal:2100-12-31'],
             'status' => ['required', Rule::in(['ativo', 'suspenso', 'encerrado'])],
         ]);
         $dados['cobranca_automatica'] = $request->boolean('cobranca_automatica');
@@ -524,12 +526,32 @@ class RentalController extends Controller
         $cliente = Cliente::findOrFail($dados['cliente_id']);
         abort_if($lojasPermitidas && $cliente->loja_id && ! in_array((int) $cliente->loja_id, $lojasPermitidas, true), 403, 'Cliente fora do seu acesso.');
 
-        DB::transaction(function () use ($dados): void {
-            Contrato::create($dados + ['historico_alteracoes' => 'Contrato criado em '.now()->format('d/m/Y H:i')]);
+        $contrato = DB::transaction(function () use ($dados): Contrato {
+            $contrato = Contrato::create($dados + ['historico_alteracoes' => 'Contrato criado em '.now()->format('d/m/Y H:i')]);
             Motocicleta::whereKey($dados['motocicleta_id'])->update(['status_operacional' => 'alugada']);
+
+            return $contrato;
         });
 
-        return $this->voltar('contratos', 'Contrato criado.');
+        $mensagem = 'Contrato criado.';
+        if ($contrato->cobranca_automatica && $contrato->status === 'ativo') {
+            $primeiroVencimento = $contrato->proxima_cobranca_em ?: $contrato->data_inicio;
+            $ate = $primeiroVencimento->isFuture() ? $primeiroVencimento : today();
+            $resultado = $this->cobrancaRecorrente->gerarParaContrato(
+                $contrato,
+                ate: $ate,
+                gerarPix: (bool) config('rental.recorrencia.gerar_pix'),
+                enviarWhatsApp: (bool) config('rental.recorrencia.enviar_whatsapp'),
+                enviarEmail: (bool) config('rental.recorrencia.enviar_email'),
+                enviarTelegram: (bool) config('rental.recorrencia.enviar_telegram'),
+                maxPorContrato: (int) config('rental.recorrencia.max_por_contrato', 12),
+            );
+            $mensagem .= $resultado['criadas'] === 1
+                ? ' Primeira cobrança gerada automaticamente.'
+                : ' '.$resultado['criadas'].' cobranças geradas automaticamente.';
+        }
+
+        return $this->voltar('contratos', $mensagem);
     }
 
     public function salvarOrdemServico(Request $request): RedirectResponse
