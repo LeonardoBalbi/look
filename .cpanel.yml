@@ -1,0 +1,9 @@
+---
+deployment:
+  tasks:
+    - export DEPLOYPATH=/home4/jose2576/public_html
+    - /bin/cp -R app config database resources routes vendor $DEPLOYPATH/
+    - /bin/cp bootstrap/app.php bootstrap/providers.php artisan composer.json composer.lock $DEPLOYPATH/
+    - /bin/mkdir -p $DEPLOYPATH/public/application
+    - /bin/cp -R public/application/. $DEPLOYPATH/public/application/
+    - /bin/cp public/.htaccess public/index.php $DEPLOYPATH/public/
