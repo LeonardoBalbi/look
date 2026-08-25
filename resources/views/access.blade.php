@@ -15,7 +15,7 @@
 <body class="access-body">
 <header class="access-header">
     <a href="/" aria-label="Voltar para a página inicial">
-        <img src="{{ \App\Support\RentalSupport::asset('assets/img/locx-logo.svg') }}" alt="LocX Aluguel de Motos" width="320" height="118">
+        <img src="{{ \App\Support\RentalSupport::asset('assets/img/logo-locx.jpg') }}" alt="LocX Aluguel de Motos" width="980" height="436">
     </a>
     <a href="/">← Voltar ao site</a>
 </header>

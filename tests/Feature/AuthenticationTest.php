@@ -46,7 +46,7 @@ class AuthenticationTest extends TestCase
 
         $this->get('/login')
             ->assertOk()
-            ->assertSee('assets/img/locx-logo.svg');
+            ->assertSee('assets/img/logo-locx.jpg');
 
         $this->post('/login', [
             'email' => 'admin@example.com',
@@ -61,7 +61,7 @@ class AuthenticationTest extends TestCase
         $this->get('/painel')
             ->assertOk()
             ->assertSee('Dashboard')
-            ->assertSee('assets/img/locx-logo.svg');
+            ->assertSee('assets/img/logo-locx.jpg');
     }
 
     public function test_senha_invalida_nao_autentica(): void

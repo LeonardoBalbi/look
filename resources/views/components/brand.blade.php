@@ -3,10 +3,10 @@
 @if($usesLocxLogo)
     <div {{ $attributes->merge(['class' => 'brand-logo']) }} aria-label="{{ $branding['store_name'] }} — {{ $branding['product_name'] }}">
         <img
-            src="{{ \App\Support\RentalSupport::asset('assets/img/locx-logo.svg') }}"
+            src="{{ \App\Support\RentalSupport::asset('assets/img/logo-locx.jpg') }}"
             alt="LocX Aluguel de Motos"
-            width="320"
-            height="118"
+            width="980"
+            height="436"
         >
         <small class="brand-store-name">{{ $branding['store_name'] }}</small>
     </div>

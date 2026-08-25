@@ -25,7 +25,7 @@
 <header class="site-header" data-site-header>
     <div class="nav-shell">
         <a class="home-logo" href="#inicio" aria-label="LocX — página inicial">
-            <img src="{{ \App\Support\RentalSupport::asset('assets/img/locx-logo.svg') }}" alt="LocX Aluguel de Motos" width="320" height="118">
+            <img src="{{ \App\Support\RentalSupport::asset('assets/img/logo-locx.jpg') }}" alt="LocX Aluguel de Motos" width="980" height="436">
         </a>
 
         <button class="menu-toggle" type="button" aria-expanded="false" aria-controls="homeMenu" data-menu-toggle>
@@ -167,7 +167,7 @@
 
 <footer class="site-footer">
     <div class="footer-shell">
-        <img src="{{ \App\Support\RentalSupport::asset('assets/img/locx-logo.svg') }}" alt="LocX Aluguel de Motos" width="320" height="118">
+        <img src="{{ \App\Support\RentalSupport::asset('assets/img/logo-locx.jpg') }}" alt="LocX Aluguel de Motos" width="980" height="436">
         <p>Aluguel de motos · Compra e venda</p>
         <nav aria-label="Links do rodapé">
             <a href="#servicos">Serviços</a>

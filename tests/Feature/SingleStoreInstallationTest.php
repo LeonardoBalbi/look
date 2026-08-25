@@ -70,7 +70,7 @@ class SingleStoreInstallationTest extends TestCase
         $this->get('/painel?page=dashboard')
             ->assertOk()
             ->assertSee('Barra')
-            ->assertSee('assets/img/locx-logo.svg')
+            ->assertSee('assets/img/logo-locx.jpg')
             ->assertDontSee('Nome inicial do ambiente');
     }
 }
