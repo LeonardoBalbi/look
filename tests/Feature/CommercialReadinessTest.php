@@ -20,6 +20,7 @@ class CommercialReadinessTest extends TestCase
         parent::setUp();
         config()->set('branding.product_name', 'Gestor Comercial');
         config()->set('branding.store_name', 'Moto Exemplo');
+        config()->set('branding.use_locx_logo', false);
         $this->seed(ApplicationInitialSeeder::class);
     }
 

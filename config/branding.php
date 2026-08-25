@@ -8,6 +8,7 @@ return [
     'store_name' => env('STORE_NAME', 'LocX Aluguel de Motos'),
     'store_legal_name' => env('STORE_LEGAL_NAME'),
     'store_document' => env('STORE_DOCUMENT'),
+    'use_locx_logo' => env('BRAND_USE_LOCX_LOGO', false),
 
     /* Contatos exibidos na documentação e nas telas de ajuda. */
     'support_email' => env('SUPPORT_EMAIL'),

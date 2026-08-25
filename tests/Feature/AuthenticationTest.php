@@ -13,6 +13,7 @@ class AuthenticationTest extends TestCase
 
     public function test_usuario_pode_entrar_e_ver_o_dashboard(): void
     {
+        config()->set('branding.use_locx_logo', true);
         $this->seed(ApplicationInitialSeeder::class);
 
         $this->get('/login')

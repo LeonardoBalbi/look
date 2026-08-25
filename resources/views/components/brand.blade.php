@@ -1,4 +1,4 @@
-@php($usesLocxLogo = str_contains(mb_strtolower($branding['store_name']), 'locx'))
+@php($usesLocxLogo = $branding['use_locx_logo'] ?? false)
 
 @if($usesLocxLogo)
     <div {{ $attributes->merge(['class' => 'brand-logo']) }} aria-label="{{ $branding['store_name'] }} — {{ $branding['product_name'] }}">
@@ -8,6 +8,7 @@
             width="320"
             height="118"
         >
+        <small class="brand-store-name">{{ $branding['store_name'] }}</small>
     </div>
 @else
     <div {{ $attributes->merge(['class' => 'brand brand-identity']) }}>

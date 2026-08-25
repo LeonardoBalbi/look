@@ -503,7 +503,7 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
                 <div class="panel"><h2>{{ $singleStore ? 'Dados da empresa' : ($lojaEdit ? 'Editar loja' : 'Nova loja') }}</h2>@if(!$podeCriarLoja && !$lojaEdit)<div class="notice warn">Seu perfil pode visualizar lojas, mas nao criar novas unidades.</div>@endif
                     <form method="post" action="{{ route('rental.lojas.salvar') }}" class="form-grid">@csrf
                         <input type="hidden" name="id" value="{{ $lojaEdit?->id }}">
-                        <label>Nome<input name="nome" required maxlength="120" value="{{ old('nome', $lojaEdit?->nome) }}" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)></label>
+                        <label>Nome exibido<input name="nome" required maxlength="120" value="{{ old('nome', $lojaEdit?->nome) }}" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)><small>Este nome aparece no cabeçalho, login, contratos, e-mails e portal do cliente.</small></label>
                         <label>Cidade<input name="cidade" maxlength="120" value="{{ old('cidade', $lojaEdit?->cidade) }}" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)></label>
                         <label>Status<select name="status" @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)><option value="ativa" @selected(old('status', $lojaEdit?->status ?? 'ativa')==='ativa')>ativa</option><option value="inativa" @selected(old('status', $lojaEdit?->status)==='inativa')>inativa</option></select></label>
                         <div><button @disabled($lojaEdit ? !$podeEditarLoja : !$podeCriarLoja)>Salvar {{ $singleStore ? 'empresa' : 'loja' }}</button></div>

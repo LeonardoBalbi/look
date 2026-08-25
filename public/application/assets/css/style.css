@@ -2663,6 +2663,16 @@ html[data-theme="dark"] .rental-flow{background:#111c2e;border-color:#2b3c56}htm
   max-width:100%;
   height:auto;
 }
+.brand-store-name{
+  display:block;
+  margin-top:6px;
+  color:var(--muted);
+  font-size:12px;
+  font-weight:800;
+  letter-spacing:.04em;
+  text-transform:uppercase;
+}
+.login-card .brand-store-name{text-align:center}
 .mobile-header .brand-logo{
   width:auto;
   margin:0;

@@ -2,9 +2,12 @@
 
 namespace App\Support;
 
+use App\Models\Loja;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\HtmlString;
+use Throwable;
 
 class RentalSupport
 {
@@ -15,12 +18,33 @@ class RentalSupport
 
     public static function storeName(): string
     {
-        return trim((string) config('branding.store_name', 'Minha Locadora')) ?: 'Minha Locadora';
+        $request = app()->bound('request') ? app('request') : null;
+        if ($request?->attributes->has('rental.store_name')) {
+            return (string) $request->attributes->get('rental.store_name');
+        }
+
+        $storeName = '';
+        if (config('application_role.role') === 'store' && config('installation.single_store')) {
+            try {
+                if (Schema::hasTable('lojas')) {
+                    $storeName = trim((string) Loja::query()->orderBy('id')->value('nome'));
+                }
+            } catch (Throwable) {
+                // Durante instalacao ou indisponibilidade do banco, usa a identidade do .env.
+            }
+        }
+
+        $storeName = $storeName !== ''
+            ? $storeName
+            : (trim((string) config('branding.store_name', 'Minha Locadora')) ?: 'Minha Locadora');
+        $request?->attributes->set('rental.store_name', $storeName);
+
+        return $storeName;
     }
 
-    public static function storeInitials(): string
+    public static function storeInitials(?string $storeName = null): string
     {
-        return collect(preg_split('/\s+/u', self::storeName()) ?: [])
+        return collect(preg_split('/\s+/u', $storeName ?: self::storeName()) ?: [])
             ->filter()
             ->take(2)
             ->map(fn (string $word): string => mb_strtoupper(mb_substr($word, 0, 1)))

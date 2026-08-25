@@ -14,6 +14,7 @@ class SingleStoreInstallationTest extends TestCase
 
     private function seedSingleStore(): User
     {
+        config()->set('application_role.role', 'store');
         config()->set('installation.single_store', true);
         $this->seed(ApplicationInitialSeeder::class);
 
@@ -50,5 +51,26 @@ class SingleStoreInstallationTest extends TestCase
         $this->actingAs($admin)->get('/?page=motos')
             ->assertOk()
             ->assertDontSee('<label>Loja<select', false);
+    }
+
+    public function test_editing_the_company_updates_the_name_shown_by_the_application(): void
+    {
+        config()->set('branding.store_name', 'Nome inicial do ambiente');
+        config()->set('branding.use_locx_logo', true);
+        $admin = $this->seedSingleStore();
+        $loja = Loja::query()->firstOrFail();
+
+        $this->actingAs($admin)->post('/lojas', [
+            'id' => $loja->id,
+            'nome' => 'Barra',
+            'cidade' => 'Rio de Janeiro',
+            'status' => 'ativa',
+        ])->assertRedirect('/?page=lojas&edit='.$loja->id);
+
+        $this->get('/?page=dashboard')
+            ->assertOk()
+            ->assertSee('Barra')
+            ->assertSee('assets/img/locx-logo.svg')
+            ->assertDontSee('Nome inicial do ambiente');
     }
 }
