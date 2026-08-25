@@ -11,6 +11,16 @@ use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
 Route::view('/', 'home')->name('home');
+Route::view('/acesso', 'access')->name('access');
+Route::get('/acesso/{type}/{store}', function (string $type, string $store) {
+    abort_unless(in_array($type, ['equipe', 'cliente'], true), 404);
+    $unit = collect(config('domains.stores'))->firstWhere('slug', strtolower($store));
+    abort_unless($unit, 404);
+
+    $path = $type === 'cliente' ? '/portal/login' : '/login';
+
+    return redirect()->away('https://'.$unit['slug'].'.'.config('domains.base_domain').$path);
+})->name('access.store');
 
 Route::get('/login', [AuthController::class, 'create'])->name('rental.login');
 Route::post('/login', [AuthController::class, 'store'])->name('rental.login.store');

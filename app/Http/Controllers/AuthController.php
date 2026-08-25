@@ -45,11 +45,23 @@ class AuthController extends Controller
                 ->onlyInput('email');
         }
 
+        if (config('application_role.role') === 'license_server' && ! $user->isSuperAdmin()) {
+            RateLimiter::hit($limiterKey, 60);
+
+            return back()
+                ->withErrors(['email' => 'Este acesso é exclusivo da administração da plataforma.'])
+                ->onlyInput('email');
+        }
+
         RateLimiter::clear($limiterKey);
         Auth::login($user);
         $request->session()->regenerate();
 
-        return redirect()->intended(route('rental.index'));
+        $destination = config('application_role.role') === 'license_server'
+            ? route('licencas-portal.index')
+            : route('rental.index');
+
+        return redirect()->intended($destination);
     }
 
     public function destroy(Request $request): RedirectResponse

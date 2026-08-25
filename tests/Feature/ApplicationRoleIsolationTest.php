@@ -31,4 +31,22 @@ class ApplicationRoleIsolationTest extends TestCase
         $this->actingAs($superAdmin)->post('/motos', [])->assertNotFound();
         $this->actingAs($superAdmin)->get('/licencas-portal')->assertOk();
     }
+
+    public function test_license_server_accepts_only_super_admin_on_central_login(): void
+    {
+        config()->set('application_role.role', 'license_server');
+        $this->seed(ApplicationInitialSeeder::class);
+
+        $this->post('/login', [
+            'email' => 'admin@example.com',
+            'senha' => '123456',
+        ])->assertSessionHasErrors('email');
+        $this->assertGuest();
+
+        $this->post('/login', [
+            'email' => 'superadmin@example.com',
+            'senha' => '123456',
+        ])->assertRedirect('/licencas-portal');
+        $this->assertAuthenticated();
+    }
 }

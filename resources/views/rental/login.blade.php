@@ -10,7 +10,7 @@
 <form class="login-card" method="post" action="{{ route('rental.login.store') }}">
     @csrf
     <x-brand class="login-brand" />
-    <p class="login-subtitle">Gestão financeira e operacional</p>
+    <p class="login-subtitle">{{ config('application_role.role') === 'license_server' ? 'Acesso exclusivo do Superadmin LocX' : 'Gestão financeira e operacional' }}</p>
     @if ($errors->any())
         <div class="alert">{{ $errors->first() }}</div>
     @endif

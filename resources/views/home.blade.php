@@ -1,3 +1,11 @@
+@php
+    $requestHost = strtolower(request()->getHost());
+    $baseDomain = strtolower((string) config('domains.base_domain'));
+    $isMainSite = in_array($requestHost, [$baseDomain, 'www.'.$baseDomain], true);
+    $adminHref = $isMainSite ? '/acesso?tipo=equipe' : '/login';
+    $clientHref = $isMainSite ? '/acesso?tipo=cliente' : '/portal/login';
+    $canonicalUrl = $isMainSite ? config('domains.site_url').'/' : 'https://'.$requestHost.'/';
+@endphp
 <!doctype html>
 <html lang="pt-BR">
 <head>
@@ -8,8 +16,8 @@
     <meta property="og:title" content="LocX | Aluguel de Motos">
     <meta property="og:description" content="Aluguel de motos, compra e venda com atendimento próximo e processo simples.">
     <meta property="og:type" content="website">
-    <meta property="og:url" content="https://barra.locx.com.br/">
-    <link rel="canonical" href="https://barra.locx.com.br/">
+    <meta property="og:url" content="{{ $canonicalUrl }}">
+    <link rel="canonical" href="{{ $canonicalUrl }}">
     <title>LocX | Aluguel de Motos</title>
     <link rel="stylesheet" href="{{ \App\Support\RentalSupport::asset('assets/css/home.css') }}">
 </head>
@@ -32,8 +40,8 @@
             <a href="#loja">Nossa loja</a>
             <a href="#contato">Contato</a>
             <div class="menu-access">
-                <a class="menu-client" href="/portal/login">Portal do cliente</a>
-                <a class="menu-admin" href="/login">Área administrativa <span aria-hidden="true">↗</span></a>
+                <a class="menu-client" href="{{ $clientHref }}">Portal do cliente</a>
+                <a class="menu-admin" href="{{ $adminHref }}">Área administrativa <span aria-hidden="true">↗</span></a>
             </div>
         </nav>
     </div>
@@ -164,8 +172,8 @@
         <nav aria-label="Links do rodapé">
             <a href="#servicos">Serviços</a>
             <a href="#loja">Nossa loja</a>
-            <a href="/portal/login">Portal do cliente</a>
-            <a href="/login">Área administrativa</a>
+            <a href="{{ $clientHref }}">Portal do cliente</a>
+            <a href="{{ $adminHref }}">Área administrativa</a>
         </nav>
         <small>© {{ date('Y') }} LocX. Todos os direitos reservados.</small>
     </div>
