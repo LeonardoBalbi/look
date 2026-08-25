@@ -9,6 +9,7 @@ use App\Models\LicencaPortalPlano;
 use App\Models\LicencaPortalValidacaoLog;
 use App\Models\User;
 use App\Services\LicencaPagamentoService;
+use App\Support\RentalSupport;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -33,6 +34,7 @@ class LicencaPortalController extends Controller
             'logs' => LicencaPortalValidacaoLog::query()->with('licenca.cliente')->latest('id')->limit(20)->get(),
             'apiUrl' => url('/api/licencas-portal'),
             'webhookUrl' => url('/api/licencas-portal/webhooks/pagamentos/{gateway}'),
+            'modulosDisponiveis' => $this->modulosDisponiveis(),
             'clienteEdit' => $request->integer('cliente_edit') ? LicencaPortalCliente::findOrFail($request->integer('cliente_edit')) : null,
             'planoEdit' => $request->integer('plano_edit') ? LicencaPortalPlano::findOrFail($request->integer('plano_edit')) : null,
             'licencaEdit' => $request->integer('licenca_edit') ? LicencaPortalLicenca::findOrFail($request->integer('licenca_edit')) : null,
@@ -76,6 +78,7 @@ class LicencaPortalController extends Controller
     public function salvarPlano(Request $request): RedirectResponse
     {
         $this->autorizarPortal($request->user());
+        $modulosDisponiveis = $this->modulosDisponiveis();
         $plano = $request->integer('id')
             ? LicencaPortalPlano::findOrFail($request->integer('id'))
             : new LicencaPortalPlano;
@@ -87,7 +90,9 @@ class LicencaPortalController extends Controller
             'preco' => ['nullable', 'numeric', 'min:0'],
             'max_lojas' => ['nullable', 'integer', 'min:1'],
             'max_usuarios' => ['nullable', 'integer', 'min:1'],
-            'modulos' => ['nullable', 'string', 'max:1000'],
+            'todos_modulos' => ['nullable', 'boolean'],
+            'modulos' => ['required_unless:todos_modulos,1', 'array'],
+            'modulos.*' => ['string', Rule::in(array_keys($modulosDisponiveis))],
             'ativo' => ['nullable', 'boolean'],
         ]);
 
@@ -97,7 +102,9 @@ class LicencaPortalController extends Controller
             'preco_centavos' => (int) round(((float) ($dados['preco'] ?? 0)) * 100),
             'max_lojas' => $dados['max_lojas'] ?? null,
             'max_usuarios' => $dados['max_usuarios'] ?? null,
-            'modulos_json' => $this->normalizarModulos($dados['modulos'] ?? ''),
+            'modulos_json' => $request->boolean('todos_modulos')
+                ? []
+                : $this->normalizarModulos($dados['modulos'] ?? [], $modulosDisponiveis),
             'ativo' => $request->boolean('ativo'),
             'atualizado_em' => now(),
         ]);
@@ -343,14 +350,22 @@ class LicencaPortalController extends Controller
         ]);
     }
 
-    private function normalizarModulos(string $modulos): array
+    private function normalizarModulos(array $modulos, array $modulosDisponiveis): array
     {
-        return collect(explode(',', $modulos))
+        return collect($modulos)
             ->map(fn (string $item) => Str::slug(trim($item), '_'))
-            ->filter()
+            ->filter(fn (string $item) => array_key_exists($item, $modulosDisponiveis))
             ->unique()
             ->values()
             ->all();
+    }
+
+    private function modulosDisponiveis(): array
+    {
+        return [
+            'pix' => 'PIX e pagamentos',
+            'multi_loja' => 'Multi-loja',
+        ] + RentalSupport::MODULOS;
     }
 
     private function gerarChave(): string

@@ -28,7 +28,9 @@ class LicencaPortalAdminTest extends TestCase
             ->get('/licencas-portal')
             ->assertOk()
             ->assertSee('Administração comercial')
-            ->assertSee('/api/licencas-portal');
+            ->assertSee('/api/licencas-portal')
+            ->assertSee('name="modulos[]"', false)
+            ->assertSee('Todos os módulos');
 
         $licenca = $this->criarLicencaPeloPortal($admin);
 
@@ -80,6 +82,27 @@ class LicencaPortalAdminTest extends TestCase
             ->assertJsonPath('mensagem', 'Licenca vinculada a outra instalacao.');
     }
 
+    public function test_plano_aceita_apenas_modulos_disponiveis_para_selecao(): void
+    {
+        $admin = User::where('email', 'superadmin@example.com')->firstOrFail();
+
+        $this->actingAs($admin)
+            ->from('/licencas-portal#planos')
+            ->post('/licencas-portal/planos', [
+                'codigo' => 'invalido',
+                'nome' => 'Plano inválido',
+                'preco' => '99.90',
+                'max_lojas' => 1,
+                'max_usuarios' => 5,
+                'modulos' => ['modulo_digitado'],
+                'ativo' => '1',
+            ])
+            ->assertRedirect('/licencas-portal#planos')
+            ->assertSessionHasErrors('modulos.0');
+
+        $this->assertDatabaseMissing('licenca_portal_planos', ['codigo' => 'invalido']);
+    }
+
     private function criarLicencaPeloPortal(User $admin): LicencaPortalLicenca
     {
         $this->actingAs($admin)
@@ -101,7 +124,7 @@ class LicencaPortalAdminTest extends TestCase
                 'preco' => '199.90',
                 'max_lojas' => 5,
                 'max_usuarios' => 20,
-                'modulos' => 'pix, whatsapp, multi_loja, crm',
+                'modulos' => ['pix', 'whatsapp', 'multi_loja', 'crm'],
                 'ativo' => '1',
             ])
             ->assertRedirect();

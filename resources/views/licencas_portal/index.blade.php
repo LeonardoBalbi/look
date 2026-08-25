@@ -18,6 +18,7 @@
         html[data-theme="dark"] .api-box{background:#102a2b;border-color:#1f6f6c}
         html[data-theme="dark"] code{background:#172235;color:#c7d2fe}
         .theme-toggle{min-width:116px;justify-content:center}.btn.danger,button.danger{background:var(--danger)}.btn.small,button.small{padding:6px 9px;font-size:12px}.inline{display:inline-flex;gap:6px;align-items:center;flex-wrap:wrap}.inline input,.inline select{width:auto;min-width:70px}.actions-cell{display:flex;gap:6px;flex-wrap:wrap;min-width:270px}.help{font-size:12px;color:var(--muted);margin-top:5px}.badge.pago{background:#dcfae6;color:var(--ok)}.badge.falhou,.badge.estornado{background:#fee4e2;color:var(--danger)}
+        .module-picker{border:1px solid var(--line);border-radius:8px;padding:14px;background:#f8fafc}.module-picker>span{display:block;margin-bottom:10px;color:var(--ink)}.module-all,.module-option{display:flex;flex-direction:row;align-items:center;gap:9px;color:var(--ink);cursor:pointer}.module-all{padding:10px 12px;border:1px solid var(--line);border-radius:7px;background:var(--panel);margin-bottom:12px}.module-all input,.module-option input{width:auto;margin:0}.module-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}.module-option{padding:9px 10px;border:1px solid var(--line);border-radius:7px;background:var(--panel);font-weight:600}.module-option:has(input:checked){border-color:var(--brand);box-shadow:0 0 0 1px var(--brand);background:#ecfdf3}.module-option:has(input:disabled){opacity:.5;cursor:not-allowed}html[data-theme="dark"] .module-picker{background:#0f1a2b}html[data-theme="dark"] .module-option:has(input:checked){background:#102a2b}@media(max-width:700px){.module-grid{grid-template-columns:1fr 1fr}}
     </style>
 </head>
 <body>
@@ -87,7 +88,20 @@
                 <label>Ativo<select name="ativo"><option value="1" @selected(old('ativo',$planoEdit?->ativo ?? true))>sim</option><option value="0" @selected(!old('ativo',$planoEdit?->ativo ?? true))>nao</option></select></label>
                 <label>Limite lojas<input type="number" min="1" name="max_lojas" value="{{ old('max_lojas', $planoEdit?->max_lojas) }}" placeholder="5"></label>
                 <label>Limite usuarios<input type="number" min="1" name="max_usuarios" value="{{ old('max_usuarios', $planoEdit?->max_usuarios) }}" placeholder="20"></label>
-                <label class="span-2">Modulos<textarea name="modulos" placeholder="pix, whatsapp, multi_loja, crm, financeiro">{{ old('modulos', $planoEdit ? implode(', ', $planoEdit->modulos_json ?: []) : '') }}</textarea></label>
+                @php
+                    $modulosSelecionados = old('modulos', $planoEdit?->modulos_json ?: []);
+                    $todosModulos = old('todos_modulos', empty($modulosSelecionados));
+                @endphp
+                <fieldset class="span-2 module-picker">
+                    <span><strong>Módulos incluídos</strong></span>
+                    <label class="module-all"><input type="checkbox" name="todos_modulos" value="1" data-all-modules @checked($todosModulos)> Todos os módulos</label>
+                    <div class="module-grid">
+                        @foreach($modulosDisponiveis as $codigoModulo => $nomeModulo)
+                            <label class="module-option"><input type="checkbox" name="modulos[]" value="{{ $codigoModulo }}" data-module-option @checked(in_array($codigoModulo, $modulosSelecionados, true)) @disabled($todosModulos)> {{ $nomeModulo }}</label>
+                        @endforeach
+                    </div>
+                    <small class="help">Selecione os módulos liberados no plano ou marque “Todos os módulos”.</small>
+                </fieldset>
                 <div class="span-2"><button>Salvar plano</button> @if($planoEdit)<a class="btn secondary" href="{{ url('/licencas-portal#planos') }}">Cancelar</a>@endif</div>
             </form>
         </section>
@@ -162,7 +176,7 @@
                     <tr>
                         <td>{{ $plano->nome }}<br><small class="muted">{{ $plano->codigo }}</small></td>
                         <td>{{ $plano->max_lojas ?: 'lojas livre' }} lojas<br>{{ $plano->max_usuarios ?: 'usuarios livre' }} usuarios</td>
-                        <td>{{ implode(', ', $plano->modulos_json ?: []) ?: 'todos' }}</td>
+                        <td>{{ collect($plano->modulos_json ?: [])->map(fn($modulo) => $modulosDisponiveis[$modulo] ?? $modulo)->implode(', ') ?: 'Todos os módulos' }}</td>
                         <td><span class="badge {{ $plano->ativo ? 'ativo' : 'bloqueada' }}">{{ $plano->ativo ? 'ativo' : 'inativo' }}</span></td>
                         <td><a class="btn secondary small" href="{{ route('licencas-portal.index',['plano_edit'=>$plano->id]).'#planos' }}">Editar</a></td>
                     </tr>
@@ -251,6 +265,19 @@
     rentalApplyTheme(document.documentElement.dataset.theme || 'light');
     document.querySelectorAll('[data-theme-toggle]').forEach((button) => {
         button.addEventListener('click', () => rentalApplyTheme(document.documentElement.dataset.theme === 'dark' ? 'light' : 'dark'));
+    });
+    document.querySelectorAll('[data-all-modules]').forEach((allModules) => {
+        const form = allModules.closest('form');
+        const options = form.querySelectorAll('[data-module-option]');
+        const syncModules = () => options.forEach((option) => {
+            option.disabled = allModules.checked;
+            if (allModules.checked) option.checked = false;
+        });
+        allModules.addEventListener('change', syncModules);
+        options.forEach((option) => option.addEventListener('change', () => {
+            if (option.checked) allModules.checked = false;
+        }));
+        syncModules();
     });
 </script>
 </body>
