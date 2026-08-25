@@ -4,7 +4,7 @@ Aplicação web em Laravel para administrar locadoras de motocicletas: reservas,
 
 ## Identidade configurável
 
-O produto e a locadora são identidades independentes:
+O produto e a locadoradadaddaa são identidades independentes:
 
 - `APP_NAME`: nome comercial do produto de software;
 - `STORE_NAME`: nome da locadora que utiliza a instalação;
