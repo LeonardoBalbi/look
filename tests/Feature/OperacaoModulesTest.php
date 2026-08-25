@@ -48,9 +48,9 @@ class OperacaoModulesTest extends TestCase
             'status' => 'ativo',
         ]);
 
-        $this->actingAs($usuario)->get('/?page=manutencao')->assertOk()->assertSee('Ordem de Serviço');
-        $this->actingAs($usuario)->get('/?page=estoque')->assertOk()->assertSee('Produto');
-        $this->actingAs($usuario)->get('/?page=multas')->assertOk()->assertSee('Multa');
+        $this->actingAs($usuario)->get('/painel?page=manutencao')->assertOk()->assertSee('Ordem de Serviço');
+        $this->actingAs($usuario)->get('/painel?page=estoque')->assertOk()->assertSee('Produto');
+        $this->actingAs($usuario)->get('/painel?page=multas')->assertOk()->assertSee('Multa');
 
         $this->actingAs($usuario)->post('/manutencao/ordens', [
             'loja_id' => 1,
@@ -61,7 +61,7 @@ class OperacaoModulesTest extends TestCase
             'status' => 'aberta',
             'prioridade' => 'normal',
             'custo_previsto' => 180,
-        ])->assertRedirect('/?page=manutencao');
+        ])->assertRedirect('/painel?page=manutencao');
 
         $this->assertDatabaseHas('ordens_servico', [
             'motocicleta_id' => $moto->id,
@@ -81,7 +81,7 @@ class OperacaoModulesTest extends TestCase
             'estoque_minimo' => 2,
             'custo_unitario' => 180,
             'status' => 'ativo',
-        ])->assertRedirect('/?page=estoque');
+        ])->assertRedirect('/painel?page=estoque');
 
         $produtoId = (int) DB::table('estoque_produtos')->where('sku', 'PNEU-TR')->value('id');
         $this->actingAs($usuario)->post('/estoque/movimentos', [
@@ -91,7 +91,7 @@ class OperacaoModulesTest extends TestCase
             'quantidade' => 4,
             'valor_unitario' => 180,
             'origem' => 'Compra',
-        ])->assertRedirect('/?page=estoque');
+        ])->assertRedirect('/painel?page=estoque');
 
         $this->assertDatabaseHas('estoque_movimentos', [
             'produto_id' => $produtoId,
@@ -110,7 +110,7 @@ class OperacaoModulesTest extends TestCase
             'vencimento' => today()->addDays(10)->format('Y-m-d'),
             'ocorrida_em' => today()->format('Y-m-d'),
             'status' => 'aberta',
-        ])->assertRedirect('/?page=multas');
+        ])->assertRedirect('/painel?page=multas');
 
         $this->assertDatabaseHas('multas_transito', [
             'motocicleta_id' => $moto->id,
@@ -124,7 +124,7 @@ class OperacaoModulesTest extends TestCase
     {
         $usuario = User::where('email', 'admin@example.com')->firstOrFail();
 
-        $this->actingAs($usuario)->get('/?page=lojas')
+        $this->actingAs($usuario)->get('/painel?page=lojas')
             ->assertOk()
             ->assertSee('Nova loja')
             ->assertSee('Controle por Loja');
@@ -139,7 +139,7 @@ class OperacaoModulesTest extends TestCase
         $this->assertSame('Rio de Janeiro', $loja->cidade);
         $this->assertSame('ativa', $loja->status);
 
-        $this->actingAs($usuario)->get('/?page=lojas&edit='.$loja->id)
+        $this->actingAs($usuario)->get('/painel?page=lojas&edit='.$loja->id)
             ->assertOk()
             ->assertSee('Editar loja')
             ->assertSee('Configurar bancos desta loja');

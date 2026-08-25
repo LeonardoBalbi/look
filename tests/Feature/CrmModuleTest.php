@@ -38,7 +38,7 @@ class CrmModuleTest extends TestCase
         ]);
 
         $this->actingAs($usuario)
-            ->get('/?page=crm&cliente='.$cliente->id)
+            ->get('/painel?page=crm&cliente='.$cliente->id)
             ->assertOk()
             ->assertSee('Central de atendimentos')
             ->assertSee('Cliente CRM');
@@ -48,7 +48,7 @@ class CrmModuleTest extends TestCase
             'cliente_id' => $cliente->id,
             'tipo' => 'ligacao',
             'texto' => 'Cliente pediu reenvio do PIX.',
-        ])->assertRedirect('/?page=crm&cliente='.$cliente->id);
+        ])->assertRedirect('/painel?page=crm&cliente='.$cliente->id);
 
         $this->assertDatabaseHas('crm_notas', [
             'cliente_id' => $cliente->id,
@@ -63,7 +63,7 @@ class CrmModuleTest extends TestCase
             'tipo' => 'cobranca',
             'prazo_em' => now()->addDay()->format('Y-m-d H:i:s'),
             'observacao' => 'Verificar retorno do cliente.',
-        ])->assertRedirect('/?page=crm&cliente='.$cliente->id);
+        ])->assertRedirect('/painel?page=crm&cliente='.$cliente->id);
 
         $this->assertDatabaseHas('crm_tarefas', [
             'cliente_id' => $cliente->id,
@@ -84,7 +84,7 @@ class CrmModuleTest extends TestCase
             'tipo' => 'whatsapp',
             'prazo_em' => now()->subMinute()->format('Y-m-d H:i:s'),
             'observacao' => 'Disparo agendado pelo CRM.',
-        ])->assertRedirect('/?page=crm&cliente='.$cobranca->cliente_id)
+        ])->assertRedirect('/painel?page=crm&cliente='.$cobranca->cliente_id)
             ->assertSessionHas('success', fn (string $mensagem) => str_contains($mensagem, 'WhatsApp agendado'));
 
         $this->assertDatabaseHas('crm_tarefas', [
@@ -163,7 +163,7 @@ class CrmModuleTest extends TestCase
             'cobranca_id' => $cobranca->id,
             'valor' => '250.00',
             'forma' => 'pix',
-        ])->assertRedirect('/?page=financeiro');
+        ])->assertRedirect('/painel?page=financeiro');
 
         $this->assertDatabaseHas('cobrancas', [
             'id' => $cobranca->id,

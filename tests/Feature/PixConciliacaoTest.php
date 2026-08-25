@@ -108,7 +108,7 @@ class PixConciliacaoTest extends TestCase
         $this->actingAs($usuario)
             ->withSession(['_token' => 'token-teste'])
             ->post('/pix/conciliar', ['page' => 'pix', '_token' => 'token-teste'])
-            ->assertRedirect('/?page=pix');
+            ->assertRedirect('/painel?page=pix');
 
         $this->assertDatabaseHas('cobrancas', [
             'id' => $cobranca->id,

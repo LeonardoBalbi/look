@@ -25,7 +25,7 @@ class LicencaPortalTest extends TestCase
         $admin = User::where('email', 'admin@example.com')->firstOrFail();
 
         $this->actingAs($admin)
-            ->get('/?page=configuracoes')
+            ->get('/painel?page=configuracoes')
             ->assertOk()
             ->assertSee('Licença de '.config('branding.product_name'));
 
@@ -39,7 +39,7 @@ class LicencaPortalTest extends TestCase
                 'licenca_chave' => 'RENTAL-TESTE-123',
                 'tolerancia_offline_dias' => 5,
             ])
-            ->assertRedirect('/?page=configuracoes');
+            ->assertRedirect('/painel?page=configuracoes');
 
         Http::fake([
             'https://licencas.example.com/api/validar-licenca' => Http::response([
@@ -57,7 +57,7 @@ class LicencaPortalTest extends TestCase
 
         $this->actingAs($admin)
             ->post('/configuracoes/licenca/testar')
-            ->assertRedirect('/?page=configuracoes');
+            ->assertRedirect('/painel?page=configuracoes');
 
         Http::assertSent(fn ($request) => $request->url() === 'https://licencas.example.com/api/validar-licenca'
             && $request['license_key'] === 'RENTAL-TESTE-123'
@@ -88,11 +88,11 @@ class LicencaPortalTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get('/?page=lojas')
+            ->get('/painel?page=lojas')
             ->assertForbidden();
 
         $this->actingAs($admin)
-            ->get('/?page=dashboard')
+            ->get('/painel?page=dashboard')
             ->assertOk()
             ->assertSee('Pagamento pendente no portal.');
 
@@ -137,11 +137,11 @@ class LicencaPortalTest extends TestCase
         ]);
 
         $this->actingAs($admin)
-            ->get('/?page=bancos')
+            ->get('/painel?page=bancos')
             ->assertOk();
 
         $this->actingAs($admin)
-            ->get('/?page=whatsapp')
+            ->get('/painel?page=whatsapp')
             ->assertForbidden();
     }
 
@@ -157,7 +157,7 @@ class LicencaPortalTest extends TestCase
         ]);
 
         $this->actingAs($superAdmin)
-            ->get('/?page=whatsapp')
+            ->get('/painel?page=whatsapp')
             ->assertForbidden();
     }
 

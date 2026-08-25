@@ -59,7 +59,7 @@ class UsuarioPermissoesTest extends TestCase
             'senha' => '123456',
             'perfil' => 'supervisor_patio',
             'status' => 'ativo',
-        ])->assertRedirect('/?page=usuarios');
+        ])->assertRedirect('/painel?page=usuarios');
 
         $usuario = User::where('email', 'supervisor.padrao@rental.test')->firstOrFail();
 
@@ -69,7 +69,7 @@ class UsuarioPermissoesTest extends TestCase
         $this->assertFalse($usuario->pode('financeiro', 'editar'));
 
         $this->actingAs($admin)
-            ->get('/?page=usuarios')
+            ->get('/painel?page=usuarios')
             ->assertOk()
             ->assertDontSee('Super Admin Rental')
             ->assertDontSee('superadmin@example.com')
@@ -77,7 +77,7 @@ class UsuarioPermissoesTest extends TestCase
             ->assertDontSee('Salvar perfil');
 
         $this->actingAs($admin)
-            ->get('/?page=usuarios&edit='.$superAdmin->id)
+            ->get('/painel?page=usuarios&edit='.$superAdmin->id)
             ->assertNotFound();
     }
 
@@ -107,7 +107,7 @@ class UsuarioPermissoesTest extends TestCase
         ])->assertForbidden();
 
         $this->actingAs($diretor)
-            ->get('/?page=usuarios')
+            ->get('/painel?page=usuarios')
             ->assertForbidden();
     }
 
@@ -122,20 +122,20 @@ class UsuarioPermissoesTest extends TestCase
         ]);
 
         $this->actingAs($atendente)
-            ->get('/?page=dashboard')
+            ->get('/painel?page=dashboard')
             ->assertOk()
             ->assertSee('page=motos', false)
             ->assertDontSee('page=usuarios', false)
             ->assertDontSee('page=financeiro', false);
 
         $this->actingAs($atendente)
-            ->get('/?page=motos')
+            ->get('/painel?page=motos')
             ->assertOk()
             ->assertSee('Frota Cadastrada')
             ->assertDontSee('Salvar Moto');
 
         $this->actingAs($atendente)
-            ->get('/?page=cobrancas')
+            ->get('/painel?page=cobrancas')
             ->assertOk()
             ->assertSee('Este perfil consulta cobran')
             ->assertDontSee('Gerar cobran')
@@ -186,7 +186,7 @@ class UsuarioPermissoesTest extends TestCase
         $this->assertSame([1], $atendente->lojaIdsPermitidas());
 
         $this->actingAs($atendente)
-            ->get('/?page=motos')
+            ->get('/painel?page=motos')
             ->assertOk()
             ->assertSee('Nova')
             ->assertSee('Barra da Tijuca')
@@ -203,7 +203,7 @@ class UsuarioPermissoesTest extends TestCase
             ->assertForbidden();
 
         $this->actingAs($atendente)
-            ->get('/?page=contratos')
+            ->get('/painel?page=contratos')
             ->assertOk()
             ->assertSee('Novo Contrato')
             ->assertSee('LOC1234')
@@ -234,12 +234,12 @@ class UsuarioPermissoesTest extends TestCase
         $this->assertTrue($admin->fresh()->pode('usuarios'));
 
         $this->actingAs($admin->fresh())
-            ->get('/?page=dashboard')
+            ->get('/painel?page=dashboard')
             ->assertOk()
             ->assertDontSee('Configurações');
 
         $this->actingAs($admin->fresh())
-            ->get('/?page=configuracoes')
+            ->get('/painel?page=configuracoes')
             ->assertForbidden();
 
         $this->actingAs($admin->fresh())

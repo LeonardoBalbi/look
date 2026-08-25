@@ -91,7 +91,7 @@ class CobrancaRecorrenteTest extends TestCase
             'cobranca_automatica' => 1,
             'proxima_cobranca_em' => $vencimento->format('Y-m-d'),
             'status' => 'ativo',
-        ])->assertRedirect('/?page=contratos');
+        ])->assertRedirect('/painel?page=contratos');
 
         $contrato = Contrato::query()->where('cliente_id', $cliente->id)->firstOrFail();
         $cobranca = Cobranca::query()->where('contrato_id', $contrato->id)->firstOrFail();
@@ -158,7 +158,7 @@ class CobrancaRecorrenteTest extends TestCase
                 'vencimento' => today()->format('Y-m-d'),
                 'valor_principal' => 500,
             ])
-            ->assertRedirect('/?page=financeiro');
+            ->assertRedirect('/painel?page=financeiro');
 
         $cobranca = Cobranca::query()->where('contrato_id', $contrato->id)->firstOrFail();
         $this->assertStringContainsString('RENTAL-ASAAS-DEMO-COBRANCA-'.$cobranca->id, $cobranca->pix_copia_cola);

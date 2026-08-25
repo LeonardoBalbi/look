@@ -10,9 +10,12 @@ use App\Http\Controllers\RentalController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
+Route::view('/', 'home')->name('home');
+
+Route::get('/login', [AuthController::class, 'create'])->name('rental.login');
+Route::post('/login', [AuthController::class, 'store'])->name('rental.login.store');
+
 Route::middleware('guest')->group(function (): void {
-    Route::get('/login', [AuthController::class, 'create'])->name('rental.login');
-    Route::post('/login', [AuthController::class, 'store'])->name('rental.login.store');
     Route::get('/esqueci-senha', [AuthController::class, 'solicitarSenha'])->name('password.request');
     Route::post('/esqueci-senha', [AuthController::class, 'enviarRecuperacao'])->middleware('throttle:5,1')->name('password.email');
     Route::get('/redefinir-senha/{token}', [AuthController::class, 'redefinirSenha'])->name('password.reset');
@@ -33,7 +36,7 @@ Route::middleware('auth:cliente')->group(function (): void {
 });
 
 Route::middleware('auth')->group(function (): void {
-    Route::get('/', [RentalController::class, 'index'])->name('rental.index');
+    Route::get('/painel', [RentalController::class, 'index'])->name('rental.index');
     Route::get('/licencas-portal', [LicencaPortalController::class, 'index'])->name('licencas-portal.index');
     Route::post('/licencas-portal/clientes', [LicencaPortalController::class, 'salvarCliente'])->name('licencas-portal.clientes.salvar');
     Route::post('/licencas-portal/planos', [LicencaPortalController::class, 'salvarPlano'])->name('licencas-portal.planos.salvar');

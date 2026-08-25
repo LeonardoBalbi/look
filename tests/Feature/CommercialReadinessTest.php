@@ -59,11 +59,11 @@ class CommercialReadinessTest extends TestCase
         ];
 
         $this->actingAs($usuario)->post(route('rental.reservas.salvar'), $dados)
-            ->assertRedirect('/?page=reservas');
+            ->assertRedirect('/painel?page=reservas');
         $this->assertDatabaseHas('reservas', ['motocicleta_id' => $moto->id, 'status' => 'confirmada']);
 
-        $this->actingAs($usuario)->from('/?page=reservas')->post(route('rental.reservas.salvar'), $dados)
-            ->assertRedirect('/?page=reservas')
+        $this->actingAs($usuario)->from('/painel?page=reservas')->post(route('rental.reservas.salvar'), $dados)
+            ->assertRedirect('/painel?page=reservas')
             ->assertSessionHasErrors('motocicleta_id');
         $this->assertDatabaseCount('reservas', 1);
         $this->assertDatabaseHas('audit_logs', ['action' => 'rental.reservas.salvar', 'actor_id' => $usuario->id]);
@@ -79,7 +79,7 @@ class CommercialReadinessTest extends TestCase
             'nome' => 'Cliente Documento',
             'status' => 'ativo',
             'foto_documento' => UploadedFile::fake()->image('cnh.jpg'),
-        ])->assertRedirect('/?page=clientes');
+        ])->assertRedirect('/painel?page=clientes');
 
         $cliente = Cliente::where('nome', 'Cliente Documento')->firstOrFail();
         Storage::disk('local')->assertExists($cliente->foto_documento);

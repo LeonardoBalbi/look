@@ -16,7 +16,7 @@ class AuthController extends Controller
 {
     public function create(): View|RedirectResponse
     {
-        return Auth::check() ? redirect()->route('rental.index') : view('rental.login');
+        return view('rental.login');
     }
 
     public function store(Request $request): RedirectResponse

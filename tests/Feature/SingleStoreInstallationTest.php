@@ -40,7 +40,7 @@ class SingleStoreInstallationTest extends TestCase
     {
         $admin = $this->seedSingleStore();
 
-        $this->actingAs($admin)->get('/?page=lojas')
+        $this->actingAs($admin)->get('/painel?page=lojas')
             ->assertOk()
             ->assertSee('Configuração da empresa')
             ->assertSee('Dados da empresa')
@@ -48,7 +48,7 @@ class SingleStoreInstallationTest extends TestCase
             ->assertDontSee('Controle por Loja')
             ->assertDontSee('Lojas liberadas');
 
-        $this->actingAs($admin)->get('/?page=motos')
+        $this->actingAs($admin)->get('/painel?page=motos')
             ->assertOk()
             ->assertDontSee('<label>Loja<select', false);
     }
@@ -65,9 +65,9 @@ class SingleStoreInstallationTest extends TestCase
             'nome' => 'Barra',
             'cidade' => 'Rio de Janeiro',
             'status' => 'ativa',
-        ])->assertRedirect('/?page=lojas&edit='.$loja->id);
+        ])->assertRedirect('/painel?page=lojas&edit='.$loja->id);
 
-        $this->get('/?page=dashboard')
+        $this->get('/painel?page=dashboard')
             ->assertOk()
             ->assertSee('Barra')
             ->assertSee('assets/img/locx-logo.svg')
