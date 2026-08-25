@@ -7,7 +7,7 @@ O produto é entregue como duas aplicações separadas, mantidas em branches dif
 | Aplicação | Branch | Exemplo de domínio | Banco |
 |---|---|---|---|
 | Aplicação da loja | `codex/aplicacao-por-loja` | `cliente.seudominio.com.br` | um banco exclusivo por licença |
-| Portal de licenças | `codex/portal-licencas` | `licencas.seudominio.com.br` | um banco central de licenças |
+| Portal de licenças | `codex/portal-licencas` | `admin.locx.com.br` | um banco central de licenças |
 
 ## Como elas conversam
 
@@ -35,7 +35,10 @@ Cada cliente deve possuir seu próprio `APP_URL`, banco, `APP_KEY` e chave de li
 ```env
 APP_ROLE=license_server
 APP_NAME="Portal de Licenças"
-APP_URL=https://licencas.seudominio.com.br
+APP_URL=https://admin.locx.com.br
+LOCX_BASE_DOMAIN=locx.com.br
+LOCX_SITE_URL=https://locx.com.br
+LOCX_ADMIN_URL=https://admin.locx.com.br
 DB_DATABASE=portal_licencas
 INITIAL_SUPER_ADMIN_EMAIL=seu-email@dominio.com.br
 INITIAL_ADMIN_PASSWORD=uma-senha-longa-e-exclusiva

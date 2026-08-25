@@ -10,7 +10,7 @@
 <form class="login-card" method="post" action="{{ route('rental.login.store') }}">
     @csrf
     <x-brand class="login-brand" />
-    <p>Gestão financeira e operacional</p>
+    <p>{{ config('application_role.role') === 'license_server' ? 'Acesso exclusivo do Superadmin LocX' : 'Gestão financeira e operacional' }}</p>
     @if ($errors->any())
         <div class="alert">{{ $errors->first() }}</div>
     @endif
@@ -21,7 +21,7 @@
     <input name="senha" type="password" placeholder="Senha" required autocomplete="current-password">
     <button type="submit">Entrar</button>
     <a href="{{ route('password.request') }}">Esqueci minha senha</a>
-    <small>Use o acesso fornecido pelo administrador da sua empresa.</small>
+    <small>{{ config('application_role.role') === 'license_server' ? 'Somente contas da administração central podem entrar.' : 'Use o acesso fornecido pelo administrador da sua empresa.' }}</small>
 </form>
 </body>
 </html>
