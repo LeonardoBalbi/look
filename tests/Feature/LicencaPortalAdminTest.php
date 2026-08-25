@@ -54,6 +54,8 @@ class LicencaPortalAdminTest extends TestCase
         $this->assertDatabaseHas('licenca_portal_licencas', [
             'id' => $licenca->id,
             'instancia_id' => 'instancia-teste',
+            'renovacao_automatica' => false,
+            'meses_por_renovacao' => 1,
         ]);
         $this->assertDatabaseHas('licenca_portal_validacao_logs', [
             'licenca_id' => $licenca->id,

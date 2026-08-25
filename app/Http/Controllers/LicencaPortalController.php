@@ -134,12 +134,12 @@ class LicencaPortalController extends Controller
             'mensagem' => ['nullable', 'string', 'max:500'],
         ]);
 
-        $licenca->fill(collect($dados)->except(['id', 'chave', 'desvincular_instancia'])->all() + [
+        $licenca->fill(array_merge(collect($dados)->except(['id', 'chave', 'desvincular_instancia'])->all(), [
             'chave' => blank($dados['chave'] ?? null) ? ($licenca->chave ?: $this->gerarChave()) : strtoupper((string) $dados['chave']),
             'renovacao_automatica' => $request->boolean('renovacao_automatica'),
             'meses_por_renovacao' => $dados['meses_por_renovacao'] ?? $licenca->meses_por_renovacao ?? 1,
             'atualizado_em' => now(),
-        ]);
+        ]));
         if ($request->boolean('desvincular_instancia')) {
             $licenca->instancia_id = null;
         }
