@@ -9,6 +9,7 @@ use App\Models\Loja;
 use App\Models\Motocicleta;
 use App\Models\PortalAtendimento;
 use App\Models\PortalAtendimentoMensagem;
+use App\Models\PortalClienteMensagem;
 use App\Models\User;
 use App\Models\UsuarioPermissao;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -66,7 +67,7 @@ class ClientePortalTest extends TestCase
         $this->assertAuthenticatedAs($cliente, 'cliente');
         $this->get('/portal')
             ->assertOk()
-            ->assertSee('Fatura #1')
+            ->assertSee('Cobrança #1')
             ->assertSee('PIX-COPIA-E-COLA')
             ->assertSee('ABC1D23')
             ->assertSee('Lau');
@@ -256,6 +257,80 @@ class ClientePortalTest extends TestCase
             'id' => $atendimento->id,
             'status' => 'fechado',
         ]);
+    }
+
+    public function test_equipe_envia_comunicado_e_cliente_marca_como_lido(): void
+    {
+        $loja = Loja::create(['nome' => 'Loja Barra']);
+        $cliente = Cliente::create([
+            'loja_id' => $loja->id,
+            'nome' => 'Cliente Mensagens',
+            'email' => 'mensagens@rental.test',
+            'senha' => Hash::make('123456'),
+            'portal_ativo' => true,
+            'status' => 'ativo',
+        ]);
+        $admin = User::create([
+            'nome' => 'Equipe Barra',
+            'email' => 'equipe@rental.test',
+            'senha' => Hash::make('123456'),
+            'perfil' => 'administrador_geral',
+            'status' => 'ativo',
+        ]);
+
+        $this->actingAs($admin)
+            ->post(route('rental.clientes.mensagens.salvar', $cliente), [
+                'tipo' => 'pagamento',
+                'assunto' => 'Pagamento confirmado',
+                'mensagem' => 'Recebemos o seu pagamento e a cobrança já foi baixada.',
+            ])
+            ->assertRedirect(route('rental.index', ['page' => 'clientes', 'edit' => $cliente->id]));
+
+        $mensagem = PortalClienteMensagem::firstOrFail();
+        $this->assertSame($cliente->id, $mensagem->cliente_id);
+        $this->assertNull($mensagem->lida_em);
+
+        $this->actingAs($cliente, 'cliente')
+            ->get('/portal')
+            ->assertOk()
+            ->assertSee('Pagamento confirmado')
+            ->assertSee('Recebemos o seu pagamento e a cobrança já foi baixada.')
+            ->assertSee('1')
+            ->assertSee('mensagem não lida');
+
+        $this->actingAs($cliente, 'cliente')
+            ->post(route('cliente.mensagens.lida', $mensagem))
+            ->assertRedirect(route('cliente.portal').'#mensagens');
+
+        $this->assertNotNull($mensagem->fresh()->lida_em);
+    }
+
+    public function test_cliente_nao_pode_marcar_mensagem_de_outro_cliente(): void
+    {
+        $loja = Loja::create(['nome' => 'Loja Barra']);
+        $cliente = Cliente::create([
+            'loja_id' => $loja->id, 'nome' => 'Cliente Um', 'email' => 'um@rental.test',
+            'senha' => Hash::make('123456'), 'portal_ativo' => true, 'status' => 'ativo',
+        ]);
+        $outro = Cliente::create([
+            'loja_id' => $loja->id, 'nome' => 'Cliente Dois', 'email' => 'dois@rental.test',
+            'senha' => Hash::make('123456'), 'portal_ativo' => true, 'status' => 'ativo',
+        ]);
+        $mensagem = PortalClienteMensagem::create([
+            'cliente_id' => $outro->id,
+            'loja_id' => $loja->id,
+            'tipo' => 'aviso',
+            'assunto' => 'Mensagem privada',
+            'mensagem' => 'Conteúdo exclusivo do outro cliente.',
+            'enviada_em' => now(),
+        ]);
+
+        $this->actingAs($cliente, 'cliente')
+            ->post(route('cliente.mensagens.lida', $mensagem))
+            ->assertNotFound();
+
+        $this->assertNull($mensagem->fresh()->lida_em);
+        $this->actingAs($cliente, 'cliente')->get('/portal')->assertDontSee('Mensagem privada');
     }
 
     public function test_atendente_com_permissao_crm_criar_responde_chat_do_portal(): void

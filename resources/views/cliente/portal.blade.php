@@ -5,38 +5,66 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Minha área | {{ $branding['store_name'] }}</title>
     <link rel="stylesheet" href="{{ \App\Support\RentalSupport::asset('assets/css/style.css') }}">
+    {{-- LOCX V38: CSS crítico garante o menu do Gerência mesmo antes da renovação do cache externo. --}}
+    <style>
+        @media (min-width:769px){
+            .client-mobile-header{display:none!important}
+            .client-app{display:flex!important;align-items:flex-start!important;min-height:100vh!important;background:#f5f7fb!important}
+            .client-app>.client-sidebar{display:flex!important;flex:0 0 252px!important;flex-direction:column!important;position:sticky!important;top:10px!important;width:252px!important;height:calc(100vh - 20px)!important;margin:10px!important;padding:12px 10px!important;border:1px solid #c9d9e8!important;border-radius:18px!important;background:linear-gradient(180deg,#fff 0%,#f7fbff 100%)!important;box-shadow:0 12px 30px rgba(15,23,42,.08)!important}
+            .client-app>.client-main{flex:1!important;min-width:0!important;width:auto!important;max-width:1180px!important;margin:0 auto!important;padding:24px!important}
+        }
+    </style>
 </head>
-<body data-store-name="{{ $branding['store_name'] }}" data-product-name="{{ $branding['product_name'] }}">
-<div class="client-shell">
-    <header class="client-header">
+<body data-store-name="{{ $branding['store_name'] }}" data-product-name="{{ $branding['product_name'] }}" data-portal-version="38">
+<!-- LOCX-PORTAL-V38-MENU-VERTICAL -->
+<header class="mobile-header client-mobile-header">
+    <x-brand />
+    <button type="button" class="mobile-menu-toggle" aria-label="Abrir menu do cliente" aria-controls="sidebarMenu" aria-expanded="false">☰</button>
+</header>
+<div class="mobile-menu-overlay" data-menu-close></div>
+<div class="client-shell client-app app">
+    <aside class="sidebar client-sidebar" id="sidebarMenu" aria-label="Dados do cliente conectado">
+        <button type="button" class="mobile-menu-close" data-menu-close>Fechar</button>
         <x-brand />
-        <div class="client-header-user">
+        <div class="client-sidebar-user">
             <strong>{{ $cliente->nome }}</strong>
             <span>{{ $cliente->email }}</span>
-            <form method="post" action="{{ route('cliente.logout') }}">@csrf<button class="btn secondary" type="submit">Sair</button></form>
         </div>
-    </header>
+        <div class="client-sidebar-spacer"></div>
+        <form class="client-sidebar-logout" method="post" action="{{ route('cliente.logout') }}">
+            @csrf
+            <button class="btn secondary" type="submit">
+                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M10 5H5v14h5M14 8l4 4-4 4M18 12H9"></path></svg>
+                Sair
+            </button>
+        </form>
+    </aside>
 
-    <main class="client-main">
+    <main class="client-main main" id="resumo">
         <section class="client-title">
             <div>
-                <h1>Minha area</h1>
-                <p>Acompanhe debitos, faturas, PIX, contratos e avisos vinculados ao seu cadastro.</p>
+                <span class="client-eyebrow">ÁREA DO CLIENTE</span>
+                <h1>Olá, {{ \Illuminate\Support\Str::before($cliente->nome, ' ') }}</h1>
+                <p>Acompanhe cobranças, pagamentos efetuados e mensagens enviadas pela equipe.</p>
             </div>
             <a class="btn secondary" href="#faturas">Ver faturas</a>
         </section>
 
+        @if (session('message_success'))
+            <div class="notice client-feedback"><strong>{{ session('message_success') }}</strong></div>
+        @endif
+
         <section class="cards">
-            <div class="metric {{ $saldoAberto > 0 ? 'warn' : 'ok' }}"><span>Saldo em aberto</span><strong>{{ \App\Support\RentalSupport::moeda($saldoAberto) }}</strong><small>{{ $cobrancasAbertas->count() }} faturas pendentes</small></div>
-            <div class="metric {{ $saldoAtrasado > 0 ? 'danger' : 'ok' }}"><span>Debito atrasado</span><strong>{{ \App\Support\RentalSupport::moeda($saldoAtrasado) }}</strong><small>{{ $saldoAtrasado > 0 ? 'Regularize para evitar bloqueios' : 'Sem atraso' }}</small></div>
-            <div class="metric"><span>Contratos</span><strong>{{ $contratos->count() }}</strong><small>{{ $contratos->where('status', 'ativo')->count() }} ativos</small></div>
-            <div class="metric ok"><span>Pagamentos</span><strong>{{ $cobrancasPagas->count() }}</strong><small>Faturas quitadas</small></div>
+            <a class="metric {{ $saldoAberto > 0 ? 'warn' : 'ok' }}" href="#faturas"><span>Saldo em aberto</span><strong>{{ \App\Support\RentalSupport::moeda($saldoAberto) }}</strong><small>{{ $cobrancasAbertas->count() }} cobranças pendentes</small></a>
+            <a class="metric {{ $saldoAtrasado > 0 ? 'danger' : 'ok' }}" href="#faturas"><span>Débito atrasado</span><strong>{{ \App\Support\RentalSupport::moeda($saldoAtrasado) }}</strong><small>{{ $saldoAtrasado > 0 ? 'Regularize para evitar bloqueios' : 'Sem atraso' }}</small></a>
+            <a class="metric ok" href="#pagamentos"><span>Pagamentos</span><strong>{{ $pagamentos->count() }}</strong><small>Últimos pagamentos registrados</small></a>
+            <a class="metric {{ $mensagensNaoLidas > 0 ? 'warn' : 'ok' }}" href="#mensagens"><span>Mensagens</span><strong>{{ $mensagensNaoLidas }}</strong><small>{{ $mensagensNaoLidas === 1 ? 'mensagem não lida' : 'mensagens não lidas' }}</small></a>
         </section>
 
         <section class="grid side">
             <div class="panel" id="faturas">
                 <div class="section-head">
-                    <div><h2>Faturas e pagamento</h2><p class="muted">Use o PIX copia e cola ou QR Code quando a fatura estiver gerada.</p></div>
+                    <div><h2>Cobranças e pagamento</h2><p class="muted">Use o PIX copia e cola ou QR Code quando a cobrança estiver gerada.</p></div>
                 </div>
                 <div class="client-invoices">
                     @forelse ($cobrancas as $cobranca)
@@ -44,7 +72,7 @@
                         <article class="invoice-card {{ $cobranca->status === 'paga' ? 'is-paid' : '' }}">
                             <div class="invoice-main">
                                 <div>
-                                    <strong>Fatura #{{ $cobranca->id }}</strong>
+                                    <strong>Cobrança #{{ $cobranca->id }}</strong>
                                     <span>{{ $cobranca->contrato?->motocicleta?->placa ?: 'Contrato #'.$cobranca->contrato_id }}</span>
                                 </div>
                                 {!! \App\Support\RentalSupport::status($cobranca->status) !!}
@@ -60,7 +88,7 @@
                                     @php($qrImagem = \App\Support\PixQrCode::dataUri($cobranca->pix_copia_cola, $cobranca->pix_qrcode))
                                     <div class="client-pix">
                                         @if ($qrImagem)
-                                            <img class="pix-qr" src="{{ $qrImagem }}" alt="QR Code PIX da fatura #{{ $cobranca->id }}">
+                                            <img class="pix-qr" src="{{ $qrImagem }}" alt="QR Code PIX da cobrança #{{ $cobranca->id }}">
                                         @endif
                                         <div>
                                             <code class="pix-code">{{ $cobranca->pix_copia_cola }}</code>
@@ -68,19 +96,19 @@
                                         </div>
                                     </div>
                                 @else
-                                    <div class="notice">Fatura registrada, mas o PIX ainda nao foi gerado pela equipe.</div>
+                                    <div class="notice">Cobrança registrada, mas o PIX ainda não foi gerado pela equipe.</div>
                                 @endif
                             @endif
                         </article>
                     @empty
-                        <div class="empty">Nenhuma fatura encontrada para este cadastro.</div>
+                        <div class="empty">Nenhuma cobrança encontrada para este cadastro.</div>
                     @endforelse
                 </div>
             </div>
 
             <aside>
                 <div class="panel">
-                    <h2>Notificacoes</h2>
+                    <h2>Avisos financeiros</h2>
                     <div class="client-notices">
                         @foreach ($notificacoes as $notificacao)
                             <div class="client-notice {{ $notificacao['tipo'] }}">
@@ -128,6 +156,51 @@
             </aside>
         </section>
 
+        <section class="panel client-messages-panel" id="mensagens">
+            <div class="section-head">
+                <div>
+                    <span class="client-section-kicker">COMUNICAÇÃO</span>
+                    <h2>Mensagens da equipe</h2>
+                    <p class="muted">Comunicados e informações enviados diretamente para você.</p>
+                </div>
+                @if($mensagensNaoLidas > 0)
+                    <form method="post" action="{{ route('cliente.mensagens.lidas') }}">
+                        @csrf
+                        <button type="submit" class="btn secondary">Marcar todas como lidas</button>
+                    </form>
+                @endif
+            </div>
+            <div class="client-message-list">
+                @forelse($mensagensPortal as $mensagem)
+                    @php($tipoLabels = ['informacao' => 'Informação', 'cobranca' => 'Cobrança', 'pagamento' => 'Pagamento', 'documento' => 'Documento', 'aviso' => 'Aviso'])
+                    <article class="client-message {{ $mensagem->lida_em ? 'is-read' : 'is-unread' }} type-{{ $mensagem->tipo }}">
+                        <div class="client-message-head">
+                            <div>
+                                <span class="client-message-type">{{ $tipoLabels[$mensagem->tipo] ?? 'Informação' }}</span>
+                                @if(! $mensagem->lida_em)<span class="client-unread-badge">NOVA</span>@endif
+                            </div>
+                            <time datetime="{{ $mensagem->enviada_em?->toIso8601String() }}">{{ $mensagem->enviada_em?->format('d/m/Y H:i') }}</time>
+                        </div>
+                        <h3>{{ $mensagem->assunto }}</h3>
+                        <p>{{ $mensagem->mensagem }}</p>
+                        <footer>
+                            <small>Enviada por {{ $mensagem->usuario?->nome ?: 'Equipe '.$branding['store_name'] }}</small>
+                            @if(! $mensagem->lida_em)
+                                <form method="post" action="{{ route('cliente.mensagens.lida', $mensagem) }}">
+                                    @csrf
+                                    <button type="submit" class="btn secondary">Marcar como lida</button>
+                                </form>
+                            @else
+                                <small>Lida em {{ $mensagem->lida_em->format('d/m/Y H:i') }}</small>
+                            @endif
+                        </footer>
+                    </article>
+                @empty
+                    <div class="empty client-message-empty">Nenhuma mensagem enviada pela equipe até o momento.</div>
+                @endforelse
+            </div>
+        </section>
+
         <section class="grid two">
             <div class="panel">
                 <h2>Contratos</h2>
@@ -139,11 +212,11 @@
                     @endforelse
                 </table></div>
             </div>
-            <div class="panel">
-                <h2>Ultimos pagamentos</h2>
-                <div class="table-wrap"><table><tr><th>Data</th><th>Fatura</th><th>Forma</th><th>Valor</th></tr>
+            <div class="panel" id="pagamentos">
+                <h2>Últimos pagamentos</h2>
+                <div class="table-wrap"><table><tr><th>Data</th><th>Cobrança</th><th>Forma</th><th>Valor</th></tr>
                     @forelse ($pagamentos as $pagamento)
-                        <tr><td>{{ \Carbon\Carbon::parse($pagamento->pago_em)->format('d/m/Y H:i') }}</td><td>#{{ $pagamento->cobranca_numero }}</td><td>{{ $pagamento->forma }}</td><td>{{ \App\Support\RentalSupport::moeda($pagamento->valor) }}</td></tr>
+                        <tr><td>{{ \Carbon\Carbon::parse($pagamento->pago_em)->format('d/m/Y H:i') }}</td><td>#{{ $pagamento->cobranca_numero }}</td><td>{{ ucfirst(str_replace('_', ' ', $pagamento->forma)) }}</td><td>{{ \App\Support\RentalSupport::moeda($pagamento->valor) }}</td></tr>
                     @empty
                         <tr><td colspan="4" class="empty">Nenhum pagamento registrado.</td></tr>
                     @endforelse

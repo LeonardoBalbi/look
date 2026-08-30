@@ -1,0 +1,26 @@
+LOCX - ALTERAÇÕES IMPLEMENTADAS V31
+
+Este arquivo registra SOMENTE as alterações efetivamente implementadas nesta versão em relação à V30.
+
+1. ESPAÇAMENTO DOS CARDS DO DASHBOARD
+- Restaurado espaçamento interno inferior e lateral nos cards que contêm tabelas no dashboard.
+- Os dados de "Vencimentos próximos" e "Inadimplência - Top clientes" não ficam mais encostados na borda do card.
+- Mantido o espaçamento do título para a tabela e a largura responsiva da tabela.
+
+2. MENU LATERAL
+- Menu lateral redesenhado seguindo o modelo visual enviado como referência.
+- Sidebar passou a ser apresentada como um painel compacto, com borda, sombra leve e fundo claro.
+- Grupos do menu continuam funcionando como accordion, preservando os módulos e permissões já existentes.
+- Cabeçalhos dos grupos receberam ícone, contador de itens e seta de expansão/recolhimento.
+- Itens internos receberam ícones compactos com fundos coloridos.
+- Item ativo recebeu fundo azul-claro e borda destacada.
+- Estados hover foram ajustados para o novo padrão visual.
+- Rodapé da sidebar foi separado visualmente do menu por uma linha discreta.
+- No celular, o menu continua abrindo como painel lateral e ocupa a altura total da tela.
+
+3. ARQUIVOS ALTERADOS NESTA VERSÃO
+- resources/views/rental/index.blade.php
+- public/application/assets/css/style.css
+- ALTERACOES_IMPLEMENTADAS_V31.txt
+
+Nenhuma outra alteração funcional foi incluída nesta versão.

@@ -1,0 +1,26 @@
+LOCX - ALTERAÇÕES IMPLEMENTADAS V32
+
+Este arquivo registra SOMENTE as alterações efetivamente implementadas nesta versão em relação à V31.
+
+1. REDIRECIONAMENTO DA RAIZ DA LOJA BARRA
+- O acesso a https://barra.locxmotos.com.br/ não exibe mais a página institucional pública.
+- A rota raiz da aplicação agora redireciona diretamente para https://barra.locxmotos.com.br/login.
+- A alteração foi implementada também na rota Laravel, para não depender somente do .htaccess da hospedagem.
+
+2. .HTACCESS DA PASTA PUBLIC
+- Adicionado redirecionamento da raiz de barra.locxmotos.com.br para /login.
+- Qualquer hostname diferente de barra.locxmotos.com.br que chegar ao mesmo Document Root é direcionado para https://barra.locxmotos.com.br/login.
+- Endereços antigos contendo /public passam a ser direcionados para /login.
+- Mantidas as regras de Authorization, remoção de barra final e front controller index.php.
+
+3. REDIRECIONAMENTO PARA O DOMÍNIO PRINCIPAL NA HOSTGATOR
+- Atualizado o .htaccess auxiliar da pasta HOSTGATOR_REDIRECT_DOMINIO_PRINCIPAL.
+- O destino agora é https://barra.locxmotos.com.br/login, em vez da raiz do subdomínio Barra.
+
+4. ARQUIVOS ALTERADOS NESTA VERSÃO
+- routes/web.php
+- public/.htaccess
+- HOSTGATOR_REDIRECT_DOMINIO_PRINCIPAL/.htaccess
+- ALTERACOES_IMPLEMENTADAS_V32.txt
+
+Nenhuma outra alteração funcional foi incluída nesta versão.

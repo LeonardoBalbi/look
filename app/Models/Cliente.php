@@ -55,6 +55,11 @@ class Cliente extends Authenticatable
         return $this->hasMany(PortalAtendimento::class);
     }
 
+    public function mensagensPortal(): HasMany
+    {
+        return $this->hasMany(PortalClienteMensagem::class)->orderByDesc('enviada_em')->orderByDesc('id');
+    }
+
     public function crmNotas(): HasMany
     {
         return $this->hasMany(CrmNota::class);

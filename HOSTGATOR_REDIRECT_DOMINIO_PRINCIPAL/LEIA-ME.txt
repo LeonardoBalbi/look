@@ -1,0 +1,17 @@
+HOSTGATOR - REDIRECIONAMENTO DO DOMÍNIO PRINCIPAL
+
+Objetivo:
+  https://locxmotos.com.br      -> https://barra.locxmotos.com.br
+  https://www.locxmotos.com.br  -> https://barra.locxmotos.com.br
+
+No cPanel da HostGator:
+1. Abra Gerenciador de Arquivos.
+2. Entre no Document Root do domínio locxmotos.com.br (normalmente public_html).
+3. Faça backup do .htaccess existente, se houver.
+4. Copie o conteúdo do arquivo .htaccess desta pasta para o .htaccess do domínio principal.
+5. Não coloque este .htaccess no Document Root de barra.locxmotos.com.br caso sejam pastas separadas.
+
+O sistema também recebeu a mesma regra no public/.htaccess de forma condicionada pelo hostname,
+portanto não há loop se ambos os domínios apontarem para o mesmo Document Root.
+
+Antes de testar, confirme no cPanel > Domínios que barra.locxmotos.com.br existe e possui SSL válido.

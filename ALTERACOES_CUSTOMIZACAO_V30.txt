@@ -1,0 +1,9 @@
+LOCX - CUSTOMIZACAO V30
+
+Alteracoes solicitadas:
+1. Todos os valores CSS "border-radius: 999px" do codigo da aplicacao foram alterados para "border-radius: 7px".
+2. Todos os valores CSS de "font-weight" entre 600 e 950 do codigo da aplicacao foram padronizados para 500.
+3. O identificador exibido abaixo do logo passou de "BARRA" para "Loja: Barra" (mantendo o nome da loja configurado no sistema).
+4. Removido o text-transform uppercase do identificador da loja para preservar exatamente "Loja: Barra".
+
+Base: barra-locxmotos-hostgator-logo-redirecionamento-v29.zip

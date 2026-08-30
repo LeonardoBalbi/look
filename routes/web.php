@@ -10,7 +10,7 @@ use App\Http\Controllers\RentalController;
 use App\Http\Controllers\WebhookController;
 use Illuminate\Support\Facades\Route;
 
-Route::view('/', 'home')->name('home');
+Route::get('/', fn () => redirect()->route('rental.login'))->name('home');
 Route::view('/acesso', 'access')->name('access');
 Route::get('/acesso/{type}/{store}', function (string $type, string $store) {
     abort_unless(in_array($type, ['equipe', 'cliente'], true), 404);
@@ -42,6 +42,8 @@ Route::middleware('auth:cliente')->group(function (): void {
     Route::get('/portal/chat/sync', [ClientePortalController::class, 'syncChat'])->name('cliente.chat.sync');
     Route::post('/portal/chat', [ClientePortalController::class, 'storeChat'])->name('cliente.chat.store');
     Route::post('/portal/chat/encerrar', [ClientePortalController::class, 'closeChat'])->name('cliente.chat.close');
+    Route::post('/portal/mensagens/lidas', [ClientePortalController::class, 'marcarTodasMensagensLidas'])->name('cliente.mensagens.lidas');
+    Route::post('/portal/mensagens/{mensagem}/lida', [ClientePortalController::class, 'marcarMensagemLida'])->name('cliente.mensagens.lida');
     Route::post('/portal/logout', [ClienteAuthController::class, 'destroy'])->name('cliente.logout');
 });
 
@@ -57,6 +59,7 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/licencas-portal/pagamentos/{pagamento}/confirmar', [LicencaPortalController::class, 'confirmarPagamento'])->name('licencas-portal.pagamentos.confirmar');
     Route::post('/logout', [AuthController::class, 'destroy'])->name('rental.logout');
     Route::post('/clientes', [RentalController::class, 'salvarCliente'])->name('rental.clientes.salvar');
+    Route::post('/clientes/{cliente}/mensagens', [RentalController::class, 'salvarMensagemPortalCliente'])->name('rental.clientes.mensagens.salvar');
     Route::post('/reservas', [RentalController::class, 'salvarReserva'])->name('rental.reservas.salvar');
     Route::get('/clientes/{cliente}/documentos/{campo}', [RentalController::class, 'baixarDocumentoCliente'])
         ->whereIn('campo', ['foto_cliente', 'foto_documento', 'comprovante_residencia'])

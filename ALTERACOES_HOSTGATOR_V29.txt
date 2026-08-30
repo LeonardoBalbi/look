@@ -1,0 +1,13 @@
+ALTERAÇÕES V29 - HOSTGATOR / LOCX MOTOS
+
+1) Logo do sistema substituído pela imagem enviada.
+   Arquivo: public/application/assets/img/logo-locx.jpg
+
+2) Redirecionamento 301 adicionado ao public/.htaccess:
+   locxmotos.com.br -> https://barra.locxmotos.com.br
+   www.locxmotos.com.br -> https://barra.locxmotos.com.br
+   O caminho e a query string são preservados.
+
+3) Incluída a pasta HOSTGATOR_REDIRECT_DOMINIO_PRINCIPAL com um .htaccess isolado
+   para uso no Document Root do domínio principal, caso a HostGator mantenha
+   locxmotos.com.br e barra.locxmotos.com.br em diretórios separados.

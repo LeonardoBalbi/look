@@ -1,0 +1,5 @@
+RewriteEngine On
+
+# locxmotos.com.br e qualquer outro domínio/subdomínio que use este Document Root
+# são enviados diretamente para o login da unidade Barra.
+RewriteRule ^ https://barra.locxmotos.com.br/login [R=302,L]

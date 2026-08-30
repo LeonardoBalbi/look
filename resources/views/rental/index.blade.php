@@ -63,7 +63,10 @@
                 @if ($itens->isNotEmpty())
                     <details class="menu-group" {{ $itens->contains($page) ? 'open' : '' }}>
                         <summary>
-                            <span>{{ $grupo }}</span>
+                            <span class="menu-group-label">
+                                <i class="menu-group-icon" aria-hidden="true">{!! \App\Support\RentalSupport::icon($itens->first()) !!}</i>
+                                <span>{{ $grupo }}</span>
+                            </span>
                             <small>{{ $itens->count() }}</small>
                         </summary>
                         <div class="menu-group-items">
@@ -76,6 +79,24 @@
                     </details>
                 @endif
             @endforeach
+            <a class="menu-webmail" href="https://titan.hostgator.com.br/login/" target="_blank" rel="noopener noreferrer" title="Abrir Webmail HostGator">
+                <span class="menu-group-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false">
+                        <path d="M4 6h16v12H4z"></path>
+                        <path d="m4 7 8 6 8-6"></path>
+                    </svg>
+                </span>
+                Webmail
+            </a>
+            <a class="menu-webmail menu-client-portal" href="{{ route('cliente.login') }}" target="_blank" rel="noopener noreferrer" title="Abrir login da Área do Cliente">
+                <span class="menu-group-icon" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" role="img" focusable="false">
+                        <circle cx="12" cy="8" r="3"></circle>
+                        <path d="M5 20c.7-4 3-6 7-6s6.3 2 7 6"></path>
+                    </svg>
+                </span>
+                Área do Cliente
+            </a>
         </nav>
         <div class="sidebar-footer">
             Logado como: <strong>{{ $user->nome }}</strong><br>
@@ -225,9 +246,45 @@
                         @endif
                         <div class="span-3"><button type="submit">Salvar Cliente</button></div>
                     </form>
+                    @if($clienteEdit)
+                        <div class="portal-admin-box">
+                            <div class="section-head">
+                                <div>
+                                    <span class="client-section-kicker">ÁREA DO CLIENTE</span>
+                                    <h3>Enviar mensagem para {{ $clienteEdit->nome }}</h3>
+                                    <p class="muted">A mensagem ficará disponível após o login do cliente.</p>
+                                </div>
+                                <a class="btn secondary" href="{{ route('cliente.login') }}" target="_blank" rel="noopener">Abrir login do cliente</a>
+                            </div>
+                            <form method="post" action="{{ route('rental.clientes.mensagens.salvar', $clienteEdit) }}" class="form-grid portal-message-form">
+                                @csrf
+                                <label>Tipo
+                                    <select name="tipo" required>
+                                        @foreach(['informacao' => 'Informação', 'cobranca' => 'Cobrança', 'pagamento' => 'Pagamento', 'documento' => 'Documento', 'aviso' => 'Aviso'] as $valor => $label)
+                                            <option value="{{ $valor }}" @selected(old('tipo') === $valor)>{{ $label }}</option>
+                                        @endforeach
+                                    </select>
+                                </label>
+                                <label class="span-2">Assunto<input name="assunto" maxlength="160" required value="{{ old('assunto') }}" placeholder="Ex.: Documento disponível"></label>
+                                <label class="span-3">Mensagem<textarea name="mensagem" rows="4" maxlength="5000" required placeholder="Digite a mensagem que o cliente receberá no portal.">{{ old('mensagem') }}</textarea></label>
+                                <div class="span-3"><button type="submit">Enviar para o portal</button></div>
+                            </form>
+                            <div class="portal-admin-history">
+                                <strong>Mensagens recentes</strong>
+                                @forelse($clienteEdit->mensagensPortal->take(8) as $mensagem)
+                                    <article>
+                                        <div><b>{{ $mensagem->assunto }}</b><span>{{ ucfirst($mensagem->tipo) }} · {{ $mensagem->enviada_em?->format('d/m/Y H:i') }}</span></div>
+                                        {!! \App\Support\RentalSupport::status($mensagem->lida_em ? 'lida' : 'não lida') !!}
+                                    </article>
+                                @empty
+                                    <p class="empty">Nenhuma mensagem enviada para este cliente.</p>
+                                @endforelse
+                            </div>
+                        </div>
+                    @endif
                 </div>
                 <div class="panel"><h2>Clientes Cadastrados</h2><div class="table-wrap"><table><tr><th>Nome</th><th>CPF</th><th>WhatsApp</th><th>Telegram</th><th>Status</th><th>Portal</th><th>Ações</th></tr>
-                    @foreach($clientes as $cliente)<tr><td>{{ $cliente->nome }}</td><td>{{ $cliente->cpf }}</td><td>{{ $cliente->whatsapp }}</td><td>{!! \App\Support\RentalSupport::status($cliente->telegram_chat_id ? 'vinculado' : 'não vinculado') !!}<br><small>{{ $cliente->telegram_username ? '@'.$cliente->telegram_username : '' }}</small></td><td>{!! \App\Support\RentalSupport::status($cliente->status) !!}</td><td>{!! \App\Support\RentalSupport::status($cliente->portal_ativo ? 'ativo' : 'bloqueado') !!}<br><small>{{ $cliente->ultimo_login_em ? 'Último acesso '.$cliente->ultimo_login_em->format('d/m/Y H:i') : 'sem acesso' }}</small></td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'clientes','edit'=>$cliente->id]) }}">Editar</a> <a class="btn secondary" href="{{ route('rental.index',['page'=>'crm','cliente'=>$cliente->id]) }}">CRM</a></td></tr>@endforeach
+                    @foreach($clientes as $cliente)<tr><td>{{ $cliente->nome }}</td><td>{{ $cliente->cpf }}</td><td>{{ $cliente->whatsapp }}</td><td>{!! \App\Support\RentalSupport::status($cliente->telegram_chat_id ? 'vinculado' : 'não vinculado') !!}<br><small>{{ $cliente->telegram_username ? '@'.$cliente->telegram_username : '' }}</small></td><td>{!! \App\Support\RentalSupport::status($cliente->status) !!}</td><td>{!! \App\Support\RentalSupport::status($cliente->portal_ativo ? 'ativo' : 'bloqueado') !!}<br><small>{{ $cliente->ultimo_login_em ? 'Último acesso '.$cliente->ultimo_login_em->format('d/m/Y H:i') : 'sem acesso' }}</small></td><td><a class="btn secondary" href="{{ route('rental.index',['page'=>'clientes','edit'=>$cliente->id]) }}">Editar</a> <a class="btn secondary" href="{{ route('rental.index',['page'=>'crm','cliente'=>$cliente->id]) }}">CRM</a> <a class="btn secondary" href="{{ route('cliente.login') }}" target="_blank" rel="noopener">Portal</a></td></tr>@endforeach
                 </table></div></div>
             </div>
 
@@ -262,15 +319,15 @@
             <div class="grid side">
                 <div class="panel">
                     @if($user->pode('contratos', 'criar'))
-                        <h2>Novo Contrato</h2><form method="post" action="{{ route('rental.contratos.salvar') }}" class="form-grid">@csrf
-                            <label>Cliente<select name="cliente_id">@foreach($clientes as $cliente)<option value="{{ $cliente->id }}">{{ $cliente->nome }}</option>@endforeach</select></label>
-                            <label>Moto<select name="motocicleta_id">@foreach($motos as $moto)<option value="{{ $moto->id }}">{{ $moto->placa }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
-                            @if($singleStore)<input type="hidden" name="loja_id" value="{{ $lojaUnica?->id }}">@else<label>Loja<select name="loja_id">@foreach($lojasContrato as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>@endif
-                            <label>Data início<input type="date" name="data_inicio" value="{{ old('data_inicio',today()->format('Y-m-d')) }}"></label><label>Valor contratado<input type="number" step="0.01" name="valor_contratado" value="{{ old('valor_contratado','500.00') }}"></label>
-                            <label>Forma<select name="forma_cobranca"><option>semanal</option><option>quinzenal</option><option>mensal</option></select></label><label>Status<select name="status"><option>ativo</option><option>suspenso</option><option>encerrado</option></select></label>
-                            <label>Próxima cobrança<input type="date" name="proxima_cobranca_em" value="{{ old('proxima_cobranca_em', today()->format('Y-m-d')) }}"></label>
-                            <label><input type="checkbox" name="cobranca_automatica" value="1" @checked(old('cobranca_automatica', true))> Cobrança automática</label>
-                            <div class="span-3"><button type="submit">Criar Contrato</button></div>
+                        <h2>Novo Contrato</h2><form method="post" action="{{ route('rental.contratos.salvar') }}" class="form-grid contract-form">@csrf
+                            <label class="contract-field-client">Cliente<select name="cliente_id">@foreach($clientes as $cliente)<option value="{{ $cliente->id }}">{{ $cliente->nome }}</option>@endforeach</select></label>
+                            <label class="contract-field-moto">Moto<select name="motocicleta_id">@foreach($motos as $moto)<option value="{{ $moto->id }}">{{ $moto->placa }} - {{ $moto->modelo_nome }}</option>@endforeach</select></label>
+                            @if($singleStore)<input type="hidden" name="loja_id" value="{{ $lojaUnica?->id }}">@else<label class="contract-field-store">Loja<select name="loja_id">@foreach($lojasContrato as $loja)<option value="{{ $loja->id }}">{{ $loja->nome }}</option>@endforeach</select></label>@endif
+                            <label class="contract-field-start">Data início<input type="date" name="data_inicio" value="{{ old('data_inicio',today()->format('Y-m-d')) }}"></label><label class="contract-field-value">Valor contratado<input type="number" step="0.01" name="valor_contratado" value="{{ old('valor_contratado','500.00') }}"></label>
+                            <label class="contract-field-cycle">Forma<select name="forma_cobranca"><option>semanal</option><option>quinzenal</option><option>mensal</option></select></label><label class="contract-field-status">Status<select name="status"><option>ativo</option><option>suspenso</option><option>encerrado</option></select></label>
+                            <label class="contract-field-next">Próxima cobrança<input type="date" name="proxima_cobranca_em" value="{{ old('proxima_cobranca_em', today()->format('Y-m-d')) }}"></label>
+                            <label class="contract-auto-charge"><input type="checkbox" name="cobranca_automatica" value="1" @checked(old('cobranca_automatica', true))> Cobrança automática</label>
+                            <div class="span-3 contract-submit"><button type="submit">Criar Contrato</button></div>
                         </form>
                     @else
                         <h2>Contratos</h2>
@@ -780,5 +837,4 @@ Caso já tenha pago, desconsidere esta mensagem.") }}</textarea><small>Variávei
 <script src="{{ \App\Support\RentalSupport::asset('assets/js/app.js') }}"></script>
 </body>
 </html>
-
 

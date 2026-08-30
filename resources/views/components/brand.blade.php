@@ -5,10 +5,10 @@
         <img
             src="{{ \App\Support\RentalSupport::asset('assets/img/logo-locx.jpg') }}"
             alt="LocX Aluguel de Motos"
-            width="980"
-            height="436"
+            width="990"
+            height="513"
         >
-        <small class="brand-store-name">{{ $branding['store_name'] }}</small>
+        <small class="brand-store-name">Loja: {{ $branding['store_name'] }}</small>
     </div>
 @else
     <div {{ $attributes->merge(['class' => 'brand brand-identity']) }}>

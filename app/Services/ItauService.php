@@ -13,6 +13,7 @@ use Illuminate\Http\Client\PendingRequest;
 use Illuminate\Http\Client\Response;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Str;
 
 class ItauService
 {
@@ -157,7 +158,7 @@ class ItauService
             ]],
         ];
 
-        $response = $this->request('PUT', '/cob/'.$txid, $payload, config: $config);
+        $response = $this->request('POST', '/cob', $payload, config: $config);
         $this->log(
             $cobranca->id,
             'criar_pix',
@@ -323,6 +324,10 @@ class ItauService
         return $this->httpWithCertificate($config)
             ->acceptJson()
             ->withToken($token['token'])
+            ->withHeaders([
+                'x-itau-apikey' => (string) $config->client_id,
+                'x-itau-correlationID' => (string) Str::uuid(),
+            ])
             ->send($method, $base.'/'.ltrim($path, '/'), array_filter([
                 'query' => $query ?: null,
                 'json' => $payload,

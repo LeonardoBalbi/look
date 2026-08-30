@@ -1,0 +1,19 @@
+ALTERAÇÕES IMPLEMENTADAS - V33
+
+1. NOVO CONTRATO - CAMPO CLIENTE
+- A largura do campo "Cliente" foi aumentada na versão desktop para exibir melhor nomes completos.
+
+2. NOVO CONTRATO - CAMPO MOTO
+- A largura do campo "Moto" foi aumentada na versão desktop para exibir melhor placa e modelo da motocicleta.
+
+3. NOVO CONTRATO - DEMAIS CAMPOS
+- Os campos Data início, Valor contratado, Forma e Status foram redistribuídos em colunas menores para liberar espaço para Cliente e Moto.
+- A distribuição continua responsiva em resoluções menores.
+
+4. NOVO CONTRATO - COBRANÇA AUTOMÁTICA
+- O card/controle "Cobrança automática" foi ajustado para 40px de altura.
+- O controle foi alinhado pela base com os demais campos do formulário, ficando nivelado com a linha dos inputs.
+
+ARQUIVOS ALTERADOS NESTA VERSÃO
+- resources/views/rental/index.blade.php
+- public/application/assets/css/style.css

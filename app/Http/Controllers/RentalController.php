@@ -22,6 +22,7 @@ use App\Models\Pagamento;
 use App\Models\PagbankConfig;
 use App\Models\PortalAtendimento;
 use App\Models\PortalAtendimentoMensagem;
+use App\Models\PortalClienteMensagem;
 use App\Models\Reserva;
 use App\Models\User;
 use App\Models\UsuarioPerfil;
@@ -107,7 +108,7 @@ class RentalController extends Controller
             'reservas' => $this->reservas($request, $user),
             'contas', 'documentos' => $this->lookModulo($page, $user),
             'crm' => $this->crm($request, $user),
-            'clientes' => $this->clientes($request),
+            'clientes' => $this->clientes($request, $user),
             'motos' => $this->motos($request, $user),
             'contratos' => $this->contratos($user),
             'manutencao' => $this->manutencao($request, $user),
@@ -444,6 +445,32 @@ class RentalController extends Controller
         $cliente->save();
 
         return $this->voltar('clientes', 'Cliente salvo com sucesso.');
+    }
+
+    public function salvarMensagemPortalCliente(Request $request, Cliente $cliente): RedirectResponse
+    {
+        $this->autorizar($request->user(), 'clientes', 'editar');
+        $cliente = $this->scope(Cliente::query(), $request->user())->findOrFail($cliente->id);
+        $dados = $request->validate([
+            'tipo' => ['required', Rule::in(['informacao', 'cobranca', 'pagamento', 'documento', 'aviso'])],
+            'assunto' => ['required', 'string', 'min:3', 'max:160'],
+            'mensagem' => ['required', 'string', 'min:3', 'max:5000'],
+        ], [
+            'assunto.required' => 'Informe o assunto da mensagem.',
+            'mensagem.required' => 'Digite a mensagem para o cliente.',
+        ]);
+
+        // AJUSTE: comunicado visivel apenas no portal do cliente selecionado.
+        PortalClienteMensagem::create($dados + [
+            'cliente_id' => $cliente->id,
+            'loja_id' => $cliente->loja_id,
+            'usuario_id' => $request->user()->id,
+            'enviada_em' => now(),
+        ]);
+
+        return redirect()
+            ->route('rental.index', ['page' => 'clientes', 'edit' => $cliente->id])
+            ->with('success', 'Mensagem enviada ao portal do cliente.');
     }
 
     public function baixarDocumentoCliente(Request $request, Cliente $cliente, string $campo): StreamedResponse
@@ -2157,11 +2184,16 @@ class RentalController extends Controller
         ];
     }
 
-    private function clientes(Request $request): array
+    private function clientes(Request $request, User $user): array
     {
+        $clientes = $this->scope(Cliente::query(), $user);
+        $clienteEdit = $request->integer('edit')
+            ? (clone $clientes)->with('mensagensPortal.usuario')->findOrFail($request->integer('edit'))
+            : null;
+
         return [
-            'clienteEdit' => $request->integer('edit') ? Cliente::findOrFail($request->integer('edit')) : null,
-            'clientes' => Cliente::latest('id')->limit(120)->get(),
+            'clienteEdit' => $clienteEdit,
+            'clientes' => (clone $clientes)->latest('id')->limit(120)->get(),
         ];
     }
 

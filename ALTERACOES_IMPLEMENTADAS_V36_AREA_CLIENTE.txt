@@ -1,0 +1,51 @@
+LOCX V36 - AREA DO CLIENTE
+Data: 30/08/2026
+
+ALTERACOES IMPLEMENTADAS
+
+1. Area do Cliente
+- Pagina organizada com atalhos para Resumo, Cobrancas, Pagamentos e Mensagens.
+- Indicadores de saldo em aberto, debito atrasado, pagamentos recentes e mensagens nao lidas.
+- Cobrancas exibidas com vencimento, valor, valor pago, saldo, status, QR Code e PIX copia e cola.
+- Historico dos ultimos pagamentos efetuados.
+- Avisos financeiros, contratos, dados cadastrais e chat de atendimento preservados.
+- Layout responsivo para computador e celular.
+
+2. Caixa de mensagens
+- Nova caixa de comunicados enviados pela equipe para um cliente especifico.
+- Tipos: Informacao, Cobranca, Pagamento, Documento e Aviso.
+- Contador de mensagens nao lidas.
+- Acoes para marcar uma mensagem ou todas as mensagens como lidas.
+- Registro de data/hora, remetente e data/hora de leitura.
+- Isolamento: cada cliente acessa somente suas proprias mensagens.
+
+3. Painel administrativo
+- Formulario de envio de mensagem dentro da edicao do cliente.
+- Historico das mensagens recentes com status de leitura.
+- Atalho Area do Cliente abaixo do Webmail no menu lateral.
+- Botao Portal na listagem de clientes.
+- Consulta de clientes e envio de mensagens respeitando as lojas permitidas ao usuario.
+
+4. Banco de dados
+- Nova tabela portal_cliente_mensagens criada por migracao nao destrutiva.
+
+COMANDO OBRIGATORIO APOS SUBSTITUIR OS ARQUIVOS
+
+php artisan migrate --force
+
+RECOMENDADO APOS A MIGRACAO
+
+php artisan optimize:clear
+
+ALTERNATIVA SEM TERMINAL/SSH
+
+Importe no phpMyAdmin o arquivo:
+database/sql/portal_cliente_mensagens.sql
+
+Use apenas um dos metodos: Artisan ou arquivo SQL.
+
+ACESSO DO CLIENTE
+
+https://barra.locxmotos.com.br/portal/login
+
+Para liberar o acesso, abra Clientes, edite o cliente, informe e-mail e senha do portal e selecione Portal do cliente: liberado.

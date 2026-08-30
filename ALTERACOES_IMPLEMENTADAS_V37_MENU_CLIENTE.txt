@@ -1,0 +1,24 @@
+LOCX V37 - MENU VERTICAL DA AREA DO CLIENTE
+Data: 30/08/2026
+
+ALTERACOES IMPLEMENTADAS
+
+1. O cabecalho horizontal da Area do Cliente foi removido.
+2. A pagina do cliente passou a usar a mesma estrutura lateral do painel do gestor.
+3. A barra lateral exibe somente:
+   - logo e nome da loja;
+   - nome do cliente conectado;
+   - e-mail utilizado no acesso;
+   - botao Sair.
+4. Nenhum item de navegacao foi incluido no menu do cliente.
+5. No celular, a barra lateral fica recolhida e abre pelo botao de menu.
+6. Cobrancas, pagamentos, mensagens, contratos, dados e chat foram preservados.
+
+BANCO DE DADOS
+
+Esta versao nao possui nova alteracao de banco.
+
+Se a migracao da V36 ainda nao foi executada, execute:
+
+php artisan migrate --force
+php artisan optimize:clear

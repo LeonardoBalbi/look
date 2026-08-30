@@ -1,0 +1,13 @@
+ALTERAÇÕES IMPLEMENTADAS - V34 WEBMAIL
+Data: 29/08/2026
+
+1. Adicionado botão "Webmail" no menu lateral, imediatamente abaixo do grupo "Gestão".
+2. Link configurado para: https://titan.hostgator.com.br/login/
+3. O link abre em uma nova aba com rel="noopener noreferrer".
+4. Adicionado ícone de envelope no mesmo padrão visual do menu.
+5. Compatibilidade mantida com tema claro, tema escuro e menu responsivo.
+6. Nenhuma alteração realizada em contratos, banco de dados, rotas, autenticação ou demais módulos.
+
+Arquivos alterados:
+- resources/views/rental/index.blade.php
+- public/application/assets/css/style.css

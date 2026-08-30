@@ -6,6 +6,7 @@ use App\Models\Cliente;
 use App\Models\Cobranca;
 use App\Models\PortalAtendimento;
 use App\Models\PortalAtendimentoMensagem;
+use App\Models\PortalClienteMensagem;
 use App\Services\CobrancaCalculator;
 use App\Services\TelegramService;
 use Illuminate\Http\JsonResponse;
@@ -76,6 +77,16 @@ class ClientePortalController extends Controller
             ->limit(12)
             ->get();
 
+        // AJUSTE: caixa de mensagens administrativas independente do chat de atendimento.
+        $mensagensPortal = $cliente->mensagensPortal()
+            ->with('usuario')
+            ->limit(30)
+            ->get();
+        $mensagensNaoLidas = PortalClienteMensagem::query()
+            ->where('cliente_id', $cliente->id)
+            ->whereNull('lida_em')
+            ->count();
+
         $notificacoes = collect();
 
         $abertas->take(5)->each(function (Cobranca $cobranca) use ($notificacoes): void {
@@ -134,6 +145,8 @@ class ClientePortalController extends Controller
             'cobrancasPagas' => $pagas->sortByDesc('vencimento')->values(),
             'contratos' => $cliente->contratos->sortByDesc('id')->values(),
             'pagamentos' => $pagamentos,
+            'mensagensPortal' => $mensagensPortal,
+            'mensagensNaoLidas' => $mensagensNaoLidas,
             'notificacoes' => $notificacoes,
             'atendimentosPortal' => $atendimentosPortal,
             'chatAtendimento' => $chatAtendimento,
@@ -146,6 +159,31 @@ class ClientePortalController extends Controller
             'telegramAtendimentoLink' => $this->telegram->atendimentoLinkUrl($cliente),
             'telegramConfig' => $this->telegram->config(),
         ]);
+    }
+
+    public function marcarMensagemLida(Request $request, PortalClienteMensagem $mensagem): RedirectResponse
+    {
+        /** @var Cliente $cliente */
+        $cliente = $request->user('cliente');
+        $mensagem = $cliente->mensagensPortal()->whereKey($mensagem->id)->firstOrFail();
+
+        if (! $mensagem->lida_em) {
+            $mensagem->update(['lida_em' => now()]);
+        }
+
+        return redirect(route('cliente.portal').'#mensagens')->with('message_success', 'Mensagem marcada como lida.');
+    }
+
+    public function marcarTodasMensagensLidas(Request $request): RedirectResponse
+    {
+        /** @var Cliente $cliente */
+        $cliente = $request->user('cliente');
+        PortalClienteMensagem::query()
+            ->where('cliente_id', $cliente->id)
+            ->whereNull('lida_em')
+            ->update(['lida_em' => now()]);
+
+        return redirect(route('cliente.portal').'#mensagens')->with('message_success', 'Todas as mensagens foram marcadas como lidas.');
     }
 
     public function storeChat(Request $request): RedirectResponse|JsonResponse

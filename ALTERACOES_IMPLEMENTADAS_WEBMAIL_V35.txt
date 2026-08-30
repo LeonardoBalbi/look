@@ -1,0 +1,12 @@
+LOCX - WEBMAIL V35
+Data: 29/08/2026
+
+Alteracoes:
+1. Adicionado botao WEBMAIL abaixo de Gestao no menu lateral.
+2. Link: https://titan.hostgator.com.br/login/
+3. Link abre em nova aba.
+4. Mantido o restante do sistema sem alteracoes funcionais.
+5. Correcao preventiva do ERRO 403 na HostGator: diretorio public/ definido como permissao 755 no pacote.
+
+Banco de dados: nenhuma alteracao.
+Contratos: nenhuma alteracao.

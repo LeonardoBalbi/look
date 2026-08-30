@@ -5,18 +5,14 @@
 
     RewriteEngine On
 
-    # HostGator: qualquer hostname diferente da unidade Barra
-    # que chegar a este Document Root vai diretamente para o login da Barra.
-    RewriteCond %{HTTP_HOST} !^barra\.locxmotos\.com\.br$ [NC]
-    RewriteRule ^ https://barra.locxmotos.com.br/login [R=302,L]
-
-    # Acesso à raiz da unidade Barra deve abrir o login.
-    RewriteCond %{HTTP_HOST} ^barra\.locxmotos\.com\.br$ [NC]
-    RewriteRule ^$ /login [R=302,L]
+    # HostGator: domínio principal sempre redireciona para a unidade Barra.
+    # A condição por hostname evita loop quando a requisição já está em barra.locxmotos.com.br.
+    RewriteCond %{HTTP_HOST} ^(?:www\.)?locxmotos\.com\.br$ [NC]
+    RewriteRule ^(.*)$ https://barra.locxmotos.com.br/$1 [R=301,L]
 
     # The domain document root already points to this public directory.
     # Redirect old addresses that incorrectly repeat /public.
-    RewriteRule ^public(?:/index\.php)?/?$ /login [R=302,L]
+    RewriteRule ^public(?:/index\.php)?/?$ / [R=301,L]
 
     RewriteCond %{HTTP:Authorization} .
     RewriteRule .* - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]

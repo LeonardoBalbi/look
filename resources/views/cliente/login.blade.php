@@ -10,14 +10,15 @@
 <form class="login-card" method="post" action="{{ route('cliente.login.store') }}">
     @csrf
     <x-brand class="login-brand" />
-    <p>Portal do cliente</p>
+    <h1>Área do Cliente</h1>
+    <p>Acesse suas cobranças, pagamentos e mensagens.</p>
     @if ($errors->any())
         <div class="alert">{{ $errors->first() }}</div>
     @endif
     <input name="email" type="email" placeholder="E-mail" required autofocus value="{{ old('email') }}">
     <input name="senha" type="password" placeholder="Senha" required autocomplete="current-password">
-    <button type="submit">Entrar no portal</button>
-    <small>Acesso liberado pela equipe {{ $branding['store_name'] }} no cadastro do cliente.</small>
+    <button type="submit">Entrar na minha área</button>
+    <small>O acesso é liberado pela equipe {{ $branding['store_name'] }} no cadastro do cliente.</small>
 </form>
 </body>
 </html>
